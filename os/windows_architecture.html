@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Windows OS Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050810;
+    --panel: #090d1a;
+    --border: #1a2540;
+    --accent1: #00c8ff;
+    --accent2: #0066ff;
+    --accent3: #00ff9d;
+    --accent4: #ff6b35;
+    --accent5: #a855f7;
+    --text: #c8d8f0;
+    --dim: #4a6080;
+    --glow1: rgba(0,200,255,0.15);
+    --glow2: rgba(0,255,157,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,120,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,120,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 60px;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .header .eyebrow {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--accent3);
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .header h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(26px, 5vw, 46px);
+    font-weight: 900;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, var(--accent1), var(--accent2), var(--accent5));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  .header p {
+    color: var(--dim);
+    font-size: 14px;
+    letter-spacing: 1px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* Layer Stack */
+  .arch-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 60px;
+  }
+
+  .layer {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.3s;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .layer:hover { border-color: var(--accent2); }
+
+  .layer-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: background 0.2s;
+  }
+
+  .layer-header:hover { background: rgba(255,255,255,0.03); }
+
+  .layer-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--dim);
+    min-width: 28px;
+  }
+
+  .layer-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    min-width: 140px;
+    text-align: center;
+  }
+
+  .layer-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    flex: 1;
+  }
+
+  .layer-subtitle {
+    font-size: 12px;
+    color: var(--dim);
+    font-family: 'Share Tech Mono', monospace;
+    text-align: right;
+    padding-right: 8px;
+  }
+
+  .toggle-icon {
+    font-size: 18px;
+    color: var(--dim);
+    transition: transform 0.3s;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .layer.open .toggle-icon { transform: rotate(180deg); color: var(--accent1); }
+
+  .layer-body {
+    display: none;
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--border);
+    background: rgba(0,0,0,0.3);
+  }
+
+  .layer.open .layer-body { display: block; }
+
+  /* Color schemes per layer */
+  .layer[data-level="user"] .layer-badge { background: rgba(168,85,247,0.2); color: var(--accent5); border: 1px solid rgba(168,85,247,0.4); }
+  .layer[data-level="user"] .layer-title { color: var(--accent5); }
+  .layer[data-level="user"] { border-left: 3px solid var(--accent5); }
+
+  .layer[data-level="subsystem"] .layer-badge { background: rgba(0,200,255,0.15); color: var(--accent1); border: 1px solid rgba(0,200,255,0.3); }
+  .layer[data-level="subsystem"] .layer-title { color: var(--accent1); }
+  .layer[data-level="subsystem"] { border-left: 3px solid var(--accent1); }
+
+  .layer[data-level="ntdll"] .layer-badge { background: rgba(255,107,53,0.15); color: var(--accent4); border: 1px solid rgba(255,107,53,0.3); }
+  .layer[data-level="ntdll"] .layer-title { color: var(--accent4); }
+  .layer[data-level="ntdll"] { border-left: 3px solid var(--accent4); }
+
+  .layer[data-level="kernel"] .layer-badge { background: rgba(0,255,157,0.12); color: var(--accent3); border: 1px solid rgba(0,255,157,0.3); }
+  .layer[data-level="kernel"] .layer-title { color: var(--accent3); }
+  .layer[data-level="kernel"] { border-left: 3px solid var(--accent3); }
+
+  .layer[data-level="hal"] .layer-badge { background: rgba(0,102,255,0.2); color: #7aaeff; border: 1px solid rgba(0,102,255,0.4); }
+  .layer[data-level="hal"] .layer-title { color: #7aaeff; }
+  .layer[data-level="hal"] { border-left: 3px solid #7aaeff; }
+
+  .layer[data-level="hw"] .layer-badge { background: rgba(255,200,0,0.1); color: #ffd060; border: 1px solid rgba(255,200,0,0.3); }
+  .layer[data-level="hw"] .layer-title { color: #ffd060; }
+  .layer[data-level="hw"] { border-left: 3px solid #ffd060; }
+
+  /* Sections inside layer body */
+  .section {
+    margin-top: 18px;
+  }
+
+  .section-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .components-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+  }
+
+  .comp-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 12px 14px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .comp-card:hover {
+    background: rgba(255,255,255,0.03);
+    border-color: var(--accent2);
+  }
+
+  .comp-name {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .comp-desc {
+    font-size: 13px;
+    color: var(--dim);
+    line-height: 1.5;
+  }
+
+  /* Nested list */
+  .nested {
+    margin-top: 10px;
+    padding-left: 16px;
+    border-left: 2px solid var(--border);
+  }
+
+  .nested li {
+    list-style: none;
+    padding: 4px 0;
+    font-size: 13px;
+    color: var(--text);
+    position: relative;
+  }
+
+  .nested li::before {
+    content: '▸';
+    color: var(--accent2);
+    position: absolute;
+    left: -18px;
+    font-size: 10px;
+    top: 6px;
+  }
+
+  .nested li strong {
+    color: var(--accent1);
+    font-weight: 600;
+  }
+
+  .nested.deep {
+    border-left-color: rgba(255,255,255,0.06);
+    margin-left: 6px;
+  }
+
+  .nested.deep li::before { color: var(--accent5); }
+
+  /* Sub-section blocks */
+  .sub-block {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+  }
+
+  .sub-block-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent1);
+    margin-bottom: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  /* Mode indicator */
+  .mode-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-size: 10px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .mode-user { background: rgba(168,85,247,0.2); color: var(--accent5); }
+  .mode-kernel { background: rgba(0,255,157,0.15); color: var(--accent3); }
+
+  /* Flow diagram */
+  .flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+  }
+
+  .flow-node {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 12px;
+    color: var(--accent1);
+    white-space: nowrap;
+  }
+
+  .flow-arrow {
+    color: var(--dim);
+    font-size: 16px;
+  }
+
+  /* Info callout */
+  .callout {
+    background: rgba(0,200,255,0.05);
+    border-left: 3px solid var(--accent1);
+    border-radius: 0 4px 4px 0;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  /* Expand all button */
+  .controls {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+  }
+
+  .btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn:hover { border-color: var(--accent1); color: var(--accent1); }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 30px;
+    padding: 14px 20px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    animation: fadeUp 0.6s ease 0.2s both;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--dim);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .layer:nth-child(1) { animation-delay: 0.1s; }
+  .layer:nth-child(2) { animation-delay: 0.2s; }
+  .layer:nth-child(3) { animation-delay: 0.3s; }
+  .layer:nth-child(4) { animation-delay: 0.4s; }
+  .layer:nth-child(5) { animation-delay: 0.5s; }
+  .layer:nth-child(6) { animation-delay: 0.6s; }
+
+  /* tag pills */
+  .tag {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 2px;
+    font-size: 10px;
+    font-family: 'Share Tech Mono', monospace;
+    background: rgba(0,102,255,0.15);
+    color: #7aaeff;
+    border: 1px solid rgba(0,102,255,0.3);
+    margin: 2px;
+    white-space: nowrap;
+  }
+
+  .tag.green { background: rgba(0,255,157,0.1); color: var(--accent3); border-color: rgba(0,255,157,0.25); }
+  .tag.orange { background: rgba(255,107,53,0.1); color: var(--accent4); border-color: rgba(255,107,53,0.25); }
+  .tag.purple { background: rgba(168,85,247,0.1); color: var(--accent5); border-color: rgba(168,85,247,0.25); }
+
+  hr.divider {
+    border: none;
+    border-top: 1px dashed var(--border);
+    margin: 14px 0;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .two-col, .components-grid { grid-template-columns: 1fr; }
+    .layer-subtitle { display: none; }
+    .flow { font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="eyebrow">// TECHNICAL REFERENCE DOCUMENT</div>
+    <h1>Windows OS Architecture</h1>
+    <p>Comprehensive Multilevel Breakdown · NT Architecture · From Hardware to User Space</p>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent5)"></div> User Applications</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent1)"></div> Subsystems &amp; Services</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent4)"></div> Native API Bridge</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div> Kernel &amp; Executive</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#7aaeff"></div> Hardware Abstraction</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffd060"></div> Hardware Layer</div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" onclick="toggleAll(true)">EXPAND ALL</button>
+    <button class="btn" onclick="toggleAll(false)">COLLAPSE ALL</button>
+  </div>
+
+  <div class="arch-stack">
+
+    <!-- LAYER 1: USER APPLICATIONS -->
+    <div class="layer" data-level="user">
+      <div class="layer-header" onclick="toggle(this)">
+        <span class="layer-num">L6</span>
+        <span class="layer-badge">User Mode</span>
+        <span class="layer-title">User Applications &amp; Environments</span>
+        <span class="layer-subtitle">Ring 3 · Unprivileged</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="callout">
+          User mode code runs at CPU privilege level Ring 3. It cannot directly access hardware or kernel memory. All hardware access must go through system calls into kernel mode via the NT Native API.
+        </div>
+
+        <div class="section">
+          <div class="section-title">// Application Categories</div>
+          <div class="components-grid">
+            <div class="comp-card">
+              <div class="comp-name">Win32 Applications <span class="mode-badge mode-user">USER</span></div>
+              <div class="comp-desc">Traditional Windows desktop apps (EXE/DLL). Interact via Win32 API (kernel32.dll, user32.dll, gdi32.dll). Includes legacy COM-based apps.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>Console Applications</strong> — CLI programs using kernel32 console APIs</li>
+                <li><strong>GUI Applications</strong> — Window message loop, HWND, WndProc</li>
+                <li><strong>Services</strong> — Background processes, no UI, run under SCM</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">.NET / CLR Applications</div>
+              <div class="comp-desc">Managed code running on the Common Language Runtime. JIT-compiled IL bytecode. Sandboxed memory model with garbage collection.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>WinForms</strong> — Thin wrapper over Win32 controls</li>
+                <li><strong>WPF</strong> — XAML-based, DirectX-backed rendering</li>
+                <li><strong>WinUI / MAUI</strong> — Modern Microsoft UI frameworks</li>
+                <li><strong>ASP.NET</strong> — Server-side web apps (Kestrel/IIS)</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">UWP / Windows App SDK</div>
+              <div class="comp-desc">Universal Windows Platform apps run in an AppContainer sandbox with restricted capabilities and mandatory access control.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>AppContainer</strong> — Isolated process with limited token</li>
+                <li><strong>WinRT APIs</strong> — COM-based modern runtime APIs</li>
+                <li><strong>MSIX Packaging</strong> — Virtualized install, no registry pollution</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">WSL2 Linux Binaries</div>
+              <div class="comp-desc">Linux ELF binaries running inside a lightweight Hyper-V VM with a real Linux kernel. Shared filesystem via Plan 9 protocol (9P).</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>WSLg</strong> — GUI Linux apps via Wayland/RDP bridge</li>
+                <li><strong>Interop</strong> — Cross-call between Win32 and Linux binaries</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">POSIX / Cygwin / MSYS2</div>
+              <div class="comp-desc">POSIX compatibility layers that translate Unix syscalls to Win32 API calls. Run unmodified Unix software with minor limitations.</div>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">Scripting Runtimes</div>
+              <div class="comp-desc">PowerShell, VBScript, JScript, Python, Node.js — all user-mode interpreters that access the OS via Win32 or .NET APIs.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>PowerShell</strong> — .NET-based shell, WMI/CIM integration</li>
+                <li><strong>COM Scripting</strong> — WScript.Shell, ADSI, WMI</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAYER 2: SUBSYSTEMS & WIN32 -->
+    <div class="layer" data-level="subsystem">
+      <div class="layer-header" onclick="toggle(this)">
+        <span class="layer-num">L5</span>
+        <span class="layer-badge">Subsystems</span>
+        <span class="layer-title">Environment Subsystems &amp; System Services</span>
+        <span class="layer-subtitle">Ring 3 · Privileged Services</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="callout">
+          Subsystems provide different OS personalities on top of the NT kernel. Win32 is the dominant subsystem. Each subsystem translates its environment's API calls into native NT calls via NTDLL.
+        </div>
+
+        <div class="section">
+          <div class="section-title">// Environment Subsystems</div>
+          <div class="two-col">
+            <div class="sub-block">
+              <div class="sub-block-title">Win32 Subsystem (csrss.exe)</div>
+              <div style="font-size:13px; color:var(--dim); margin-bottom:8px">Client/Server Runtime Subsystem — the core Win32 environment process.</div>
+              <ul class="nested">
+                <li><strong>Console Management</strong> — conhost.exe per console window, ConPTY</li>
+                <li><strong>Process/Thread Tracking</strong> — Maintains process database</li>
+                <li><strong>Win32k.sys Bridge</strong> — Routes GUI calls to kernel-mode Win32</li>
+                <li><strong>Hard Error Handling</strong> — Crash dialogs, WER integration</li>
+                <li><strong>SxS Activation Context</strong> — Side-by-side assembly loading</li>
+              </ul>
+            </div>
+            <div class="sub-block">
+              <div class="sub-block-title">Win32 API DLLs</div>
+              <div style="font-size:13px; color:var(--dim); margin-bottom:8px">Core user-mode DLLs that expose the Win32 API surface.</div>
+              <ul class="nested">
+                <li><strong>kernel32.dll / kernelbase.dll</strong> — Process, thread, file, memory APIs</li>
+                <li><strong>user32.dll</strong> — Window management, message loop, controls</li>
+                <li><strong>gdi32.dll</strong> — Graphics Device Interface, 2D drawing</li>
+                <li><strong>advapi32.dll</strong> — Registry, security, services, crypto</li>
+                <li><strong>combase.dll</strong> — COM runtime, IUnknown, marshalling</li>
+                <li><strong>shell32.dll</strong> — Shell namespace, SHGetKnownFolderPath</li>
+                <li><strong>ole32.dll</strong> — OLE automation, structured storage</li>
+                <li><strong>rpcrt4.dll</strong> — Remote Procedure Call runtime</li>
+              </ul>
+            </div>
+          </div>
+          <div class="two-col" style="margin-top:10px">
+            <div class="sub-block">
+              <div class="sub-block-title">Session Manager (smss.exe)</div>
+              <ul class="nested">
+                <li><strong>Boot Initialization</strong> — First user-mode process after kernel boot</li>
+                <li><strong>Session Creation</strong> — Creates Win32 subsystem per session</li>
+                <li><strong>Pagefile Setup</strong> — Configures virtual memory paging files</li>
+                <li><strong>Known DLL Mapping</strong> — Pre-maps frequently used DLLs</li>
+                <li><strong>Autochk.exe</strong> — Schedules chkdsk on dirty volumes</li>
+              </ul>
+            </div>
+            <div class="sub-block">
+              <div class="sub-block-title">Windows Service Subsystem</div>
+              <ul class="nested">
+                <li><strong>SCM (services.exe)</strong> — Service Control Manager, starts/stops services</li>
+                <li><strong>svchost.exe</strong> — Shared service host, isolates service DLLs</li>
+                <li><strong>WMI (winmgmt)</strong> — Management instrumentation infrastructure</li>
+                <li><strong>DCOM / RPC Endpoint Mapper</strong> — COM+ server activation</li>
+                <li><strong>Task Scheduler</strong> — COM-based task engine (schedsvc.dll)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">// Graphics &amp; Desktop Subsystems</div>
+          <div class="components-grid">
+            <div class="comp-card">
+              <div class="comp-name">Desktop Window Manager (dwm.exe)</div>
+              <div class="comp-desc">Compositor for the visual desktop. Composites all window surfaces into the final screen output using DirectX. Manages Aero Glass, transparency, animations, and multi-monitor DPI.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>Flip Model</strong> — DXGI flip chain for tearing-free display</li>
+                <li><strong>Thumbnail Service</strong> — Live window thumbnails in taskbar</li>
+                <li><strong>HDR / Color Management</strong> — ICC profile application</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">DirectX / DXGI Stack</div>
+              <div class="comp-desc">Hardware-accelerated graphics API stack bridging user-mode apps to GPU hardware via kernel-mode drivers.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>Direct3D 9/10/11/12</strong> — Graphics rendering APIs</li>
+                <li><strong>DXGI</strong> — Device/adapter enumeration, swap chains</li>
+                <li><strong>DirectCompute</strong> — GPGPU compute shaders</li>
+                <li><strong>Direct2D / DirectWrite</strong> — 2D rendering, font rasterization</li>
+                <li><strong>WDDM</strong> — Windows Display Driver Model (kernel bridge)</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">Audio Engine (audiodg.exe)</div>
+              <div class="comp-desc">Isolated audio processing host. Runs the Windows Audio Service graph outside the kernel for stability and sandbox isolation.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>WASAPI</strong> — Low-latency exclusive/shared mode audio</li>
+                <li><strong>MMDevice API</strong> — Device enumeration and default endpoints</li>
+                <li><strong>Audio Session API</strong> — Per-app volume, ducking</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAYER 3: NTDLL / NATIVE API -->
+    <div class="layer" data-level="ntdll">
+      <div class="layer-header" onclick="toggle(this)">
+        <span class="layer-num">L4</span>
+        <span class="layer-badge">Native API</span>
+        <span class="layer-title">NTDLL.DLL — The User/Kernel Bridge</span>
+        <span class="layer-subtitle">Ring 3 → Ring 0 Transition</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="callout">
+          NTDLL.DLL is the lowest-level user-mode DLL. It contains the native NT API (Nt*/Zw* functions), the loader, and the heap manager. It is the only DLL that can perform the syscall instruction to transition into kernel mode.
+        </div>
+
+        <div class="section">
+          <div class="section-title">// System Call Mechanism</div>
+          <div class="flow">
+            <div class="flow-node">Win32 API Call</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">kernel32 / advapi32</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">ntdll!NtXxx()</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">SYSCALL instruction</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">KiSystemCall64</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Executive Service</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">// Core Components of NTDLL</div>
+          <div class="two-col">
+            <div class="sub-block">
+              <div class="sub-block-title">NT Native API (Nt*/Zw* stubs)</div>
+              <ul class="nested">
+                <li><strong>NtCreateFile / NtReadFile</strong> — Raw file I/O</li>
+                <li><strong>NtCreateProcess / NtCreateThread</strong> — Process/thread primitives</li>
+                <li><strong>NtAllocateVirtualMemory</strong> — Low-level memory allocation</li>
+                <li><strong>NtQuerySystemInformation</strong> — System info enumeration</li>
+                <li><strong>NtOpenKey / NtQueryValueKey</strong> — Registry access</li>
+                <li><strong>LdrLoadDll / LdrGetProcedureAddress</strong> — Module loading</li>
+              </ul>
+            </div>
+            <div class="sub-block">
+              <div class="sub-block-title">PE Loader (Ldr*)</div>
+              <ul class="nested">
+                <li><strong>Image Mapping</strong> — Maps EXE/DLL into virtual address space</li>
+                <li><strong>Import Resolution</strong> — Walks IAT, resolves function addresses</li>
+                <li><strong>Base Relocation</strong> — Fixes up addresses if ASLR shifts base</li>
+                <li><strong>TLS Callbacks</strong> — Thread local storage init before main()</li>
+                <li><strong>DllMain Sequencing</strong> — Calls DllMain(DLL_PROCESS_ATTACH)</li>
+                <li><strong>Manifest Processing</strong> — SxS/ActivationContext for WinSxS</li>
+              </ul>
+            </div>
+          </div>
+          <div class="two-col" style="margin-top:10px">
+            <div class="sub-block">
+              <div class="sub-block-title">NT Heap Manager</div>
+              <ul class="nested">
+                <li><strong>NT Heap (RtlCreateHeap)</strong> — Default allocator, segment heap</li>
+                <li><strong>Segment Heap</strong> — Modern heap since Win10 (reduces fragmentation)</li>
+                <li><strong>LFH (Low Fragmentation Heap)</strong> — Sub-16KB bucket allocator</li>
+                <li><strong>Virtual Alloc Passthrough</strong> — Large allocations &gt;512KB bypass heap</li>
+              </ul>
+            </div>
+            <div class="sub-block">
+              <div class="sub-block-title">Runtime Support (Rtl*)</div>
+              <ul class="nested">
+                <li><strong>Exception Dispatch</strong> — RtlDispatchException, SEH/VEH unwinding</li>
+                <li><strong>Critical Sections</strong> — RtlEnterCriticalSection (user-mode mutex)</li>
+                <li><strong>Fiber Support</strong> — Cooperative user-mode threading primitives</li>
+                <li><strong>String/Unicode</strong> — RtlUnicodeStringToAnsiString, etc.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAYER 4: KERNEL EXECUTIVE -->
+    <div class="layer" data-level="kernel">
+      <div class="layer-header" onclick="toggle(this)">
+        <span class="layer-num">L3</span>
+        <span class="layer-badge">Kernel Mode</span>
+        <span class="layer-title">NT Kernel &amp; Executive Layer (ntoskrnl.exe)</span>
+        <span class="layer-subtitle">Ring 0 · Full Privilege</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="callout">
+          The NT Executive is the upper layer of the kernel (ntoskrnl.exe). It provides system services, object management, and policy. Below it sits the true microkernel — the NT Kernel proper — which handles scheduling, interrupts, and synchronization. Below that is the HAL.
+        </div>
+
+        <div class="section">
+          <div class="section-title">// NT Executive Components</div>
+          <div class="components-grid">
+
+            <div class="comp-card">
+              <div class="comp-name">Process Manager</div>
+              <div class="comp-desc">Creates and destroys processes and threads. Manages the EPROCESS/ETHREAD kernel structures.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>EPROCESS</strong> — Kernel process object (VAD tree, handle table, token)</li>
+                <li><strong>ETHREAD</strong> — Kernel thread object (APC queue, trap frame)</li>
+                <li><strong>Job Objects</strong> — Groups processes; enforces limits (CPU, memory, time)</li>
+                <li><strong>Process Mitigations</strong> — CFG, ACG, CET, ASLR, DEP enforcement</li>
+                <li><strong>Minimal Processes</strong> — Pico processes (WSL1), Trustlets</li>
+              </ul>
+            </div>
+
+            <div class="comp-card">
+              <div class="comp-name">Memory Manager (Mm)</div>
+              <div class="comp-desc">Manages the virtual and physical memory system. Every memory operation eventually flows through here.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>VAD Tree</strong> — Virtual Address Descriptor tree per-process</li>
+                <li><strong>PTE Management</strong> — Page Table Entries, PTEs, PFN database</li>
+                <li><strong>Page Fault Handler</strong> — Demand paging, soft/hard faults</li>
+                <li><strong>Working Set Manager</strong> — Balance set, trim, paging policy</li>
+                <li><strong>Section Objects</strong> — Shared memory, memory-mapped files</li>
+                <li><strong>Paging Files</strong> — pagefile.sys management</li>
+                <li><strong>Large/Huge Pages</strong> — 2MB / 1GB page support</li>
+                <li><strong>Memory Compression</strong> — In-memory compression store (System process)</li>
+              </ul>
+            </div>
+
+            <div class="comp-card">
+              <div class="comp-name">I/O Manager</div>
+              <div class="comp-desc">The central hub for all device I/O in Windows. Builds and routes IRP (I/O Request Packets) through driver stacks.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>IRP (I/O Request Packet)</strong> — Data structure flowing through driver stacks</li>
+                <li><strong>Driver Stack</strong> — Filter → Function → Bus driver layers</li>
+                <li><strong>Completion Ports (IOCP)</strong> — Async I/O notification, threadpool backend</li>
+                <li><strong>File System Drivers</strong> — NTFS, FAT32, exFAT, ReFS, WIM</li>
+                <li><strong>Device Namespaces</strong> — \Device\HarddiskVolume*, \Pipe\, \Mailslot\</li>
+                <li><strong>Symbolic Links</strong> — \DosDevices\C: → \Device\HarddiskVolume3</li>
+                <li><strong>PnP Manager</strong> — Plug-and-Play device enumeration &amp; loading</li>
+              </ul>
+            </div>
+
+            <div class="comp-card">
+              <div class="comp-name">Security Reference Monitor (SRM)</div>
+              <div class="comp-desc">Enforces the Windows security model. Every object access check passes through SRM.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>Access Tokens</strong> — User SID, group SIDs, privileges, integrity level</li>
+                <li><strong>Security Descriptors</strong> — DACL/SACL per object</li>
+                <li><strong>Access Check</strong> — SeAccessCheck — compares token vs DACL</li>
+                <li><strong>Privilege Checks</strong> — SePrivilegeCheck (SeDebugPrivilege, etc.)</li>
+                <li><strong>Audit Log</strong> — Writes SACL-triggered events to Security event log</li>
+                <li><strong>Mandatory Integrity Control</strong> — Low/Medium/High/System IL</li>
+                <li><strong>AppContainer SIDs</strong> — Capability-based sandbox enforcement</li>
+              </ul>
+            </div>
+
+            <div class="comp-card">
+              <div class="comp-name">Object Manager</div>
+              <div class="comp-desc">Manages the NT object namespace — a hierarchical namespace for all kernel objects.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>NT Object Namespace</strong> — \, \Device, \BaseNamedObjects, \Sessions</li>
+                <li><strong>Handle Tables</strong> — Per-process, per-kernel handle → object pointer map</li>
+                <li><strong>Reference Counting</strong> — ObReferenceObject / ObDereferenceObject</li>
+                <li><strong>Object Types</strong> — File, Process, Thread, Event, Mutex, Section, Token, Key</li>
+                <li><strong>Named Objects</strong> — Global/local namespace for IPC</li>
+              </ul>
+            </div>
+
+            <div class="comp-card">
+              <div class="comp-name">Registry (Configuration Manager)</div>
+              <div class="comp-desc">The Windows configuration database, stored as hive files on disk and mapped into kernel memory.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>HKLM\SYSTEM</strong> — Loaded at early boot from SYSTEM hive</li>
+                <li><strong>HKLM\SAM, SECURITY, SOFTWARE</strong> — Loaded by LSASS/winlogon</li>
+                <li><strong>NTUSER.DAT</strong> — Per-user hive, loaded at logon</li>
+                <li><strong>Hive Files</strong> — Cell-based B-tree on disk (regf/nk/vk/sk cells)</li>
+                <li><strong>Registry Callbacks</strong> — CmRegisterCallback for monitoring changes</li>
+                <li><strong>Registry Virtualization</strong> — Redirects per-machine writes for legacy apps</li>
+              </ul>
+            </div>
+
+            <div class="comp-card">
+              <div class="comp-name">Cache Manager</div>
+              <div class="comp-desc">Provides a unified file system cache using mapped views backed by the memory manager.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>System Cache (CcXxx)</strong> — 256TB virtual cache window</li>
+                <li><strong>Lazy Writer</strong> — Background thread flushes dirty pages to disk</li>
+                <li><strong>Read-Ahead</strong> — Sequential read prediction, prefetcher</li>
+                <li><strong>Copy-on-Write</strong> — Shared cache pages for multiple readers</li>
+              </ul>
+            </div>
+
+            <div class="comp-card">
+              <div class="comp-name">Local Procedure Call (ALPC)</div>
+              <div class="comp-desc">Advanced Local Procedure Call — high-speed, synchronous IPC mechanism used internally by Windows.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>Port Objects</strong> — Connection-oriented messaging endpoints</li>
+                <li><strong>Message Passing</strong> — Synchronous + async message modes</li>
+                <li><strong>Section Sharing</strong> — Large message zero-copy via shared section</li>
+                <li><strong>Used by</strong> — RPC, CSRSS, LSASS, WNF, most IPC in Windows</li>
+              </ul>
+            </div>
+
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="section">
+          <div class="section-title">// NT Kernel Proper (Ke / Ki)</div>
+          <div class="two-col">
+            <div class="sub-block">
+              <div class="sub-block-title">Scheduler (KiDispatcherDatabase)</div>
+              <ul class="nested">
+                <li><strong>Priority Levels</strong> — 32 priority levels (0–31); real-time 16–31, dynamic 0–15</li>
+                <li><strong>Ready Queues</strong> — Per-CPU per-priority KPRCB ready queues</li>
+                <li><strong>Quantum</strong> — Time slice (foreground boost, background reduction)</li>
+                <li><strong>NUMA-Aware</strong> — Thread ideal processor, soft/hard affinity masks</li>
+                <li><strong>Heterogeneous Scheduling</strong> — E-core vs P-core awareness (Intel hybrid)</li>
+                <li><strong>DPC (Deferred Procedure Call)</strong> — Queued low-latency kernel callbacks</li>
+                <li><strong>APC (Asynchronous Procedure Call)</strong> — Thread-directed async callbacks</li>
+              </ul>
+            </div>
+            <div class="sub-block">
+              <div class="sub-block-title">Interrupt &amp; Exception Handling</div>
+              <ul class="nested">
+                <li><strong>IDT (Interrupt Descriptor Table)</strong> — 256 vectors; CPU sets up on boot</li>
+                <li><strong>IRQL System</strong> — PASSIVE → APC → DISPATCH → DEVICE → DIRQL → HIGH</li>
+                <li><strong>KiSystemCall64</strong> — Syscall entry; saves registers, switches stacks</li>
+                <li><strong>KiTrap0E</strong> — Page fault handler</li>
+                <li><strong>NMI, MCE</strong> — Non-maskable / machine-check exception handling</li>
+                <li><strong>APIC / IOAPIC</strong> — Hardware interrupt routing to logical CPUs</li>
+              </ul>
+            </div>
+          </div>
+          <div class="two-col" style="margin-top:10px">
+            <div class="sub-block">
+              <div class="sub-block-title">Synchronization Primitives</div>
+              <ul class="nested">
+                <li><strong>KEVENT</strong> — Kernel event (auto/manual reset, notification/synchronization)</li>
+                <li><strong>KMUTEX / KMUTANT</strong> — Kernel mutex with ownership tracking</li>
+                <li><strong>KSEMAPHORE</strong> — Counting semaphore</li>
+                <li><strong>KTIMER</strong> — High-resolution timer objects</li>
+                <li><strong>Spin Locks</strong> — KeAcquireSpinLock (must be at DISPATCH_LEVEL)</li>
+                <li><strong>ERESOURCEs</strong> — Shared/exclusive locks for file system use</li>
+                <li><strong>Push Locks</strong> — Slim reader-writer locks (low overhead)</li>
+              </ul>
+            </div>
+            <div class="sub-block">
+              <div class="sub-block-title">Kernel Pool Allocators</div>
+              <ul class="nested">
+                <li><strong>Paged Pool</strong> — Kernel memory that CAN be paged out</li>
+                <li><strong>Non-Paged Pool</strong> — Must stay in RAM (interrupt context use)</li>
+                <li><strong>NX Non-Paged Pool</strong> — Non-executable non-paged pool (security)</li>
+                <li><strong>Session Pool</strong> — Per-session paged allocations for win32k</li>
+                <li><strong>ExAllocatePoolWithTag</strong> — Tagged allocations for leak tracking</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="section">
+          <div class="section-title">// Device Driver Model</div>
+          <div class="components-grid">
+            <div class="comp-card">
+              <div class="comp-name">WDM / KMDF / UMDF</div>
+              <div class="comp-desc">Windows Driver Model stack. KMDF (Kernel-Mode Driver Framework) and UMDF (User-Mode Driver Framework) abstract WDM complexity.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>WDM</strong> — Low-level IRP-based driver model</li>
+                <li><strong>KMDF</strong> — Object-based framework; handles PnP, power, queuing</li>
+                <li><strong>UMDF v2</strong> — Non-critical drivers in user mode (USB HID, etc.)</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">Filter Drivers &amp; Minifilters</div>
+              <div class="comp-desc">Intercept and modify I/O at various points in the driver stack.</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>File System Minifilters</strong> — FltRegisterFilter; AV, encryption, cloud sync</li>
+                <li><strong>Network Filter Drivers</strong> — NDIS LightWeight Filter (LWF)</li>
+                <li><strong>WFP (Windows Filtering Platform)</strong> — Firewall/packet inspection framework</li>
+                <li><strong>Storage Filters</strong> — BitLocker FVE filter, disk encryption</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">Power Manager</div>
+              <div class="comp-desc">Coordinates system and device power states (S0–S5, D0–D3, ACPI integration).</div>
+              <ul class="nested" style="margin-top:8px">
+                <li><strong>S-States</strong> — S0 (running) → S3 (sleep) → S4 (hibernate) → S5 (off)</li>
+                <li><strong>D-States</strong> — Per-device power states D0–D3</li>
+                <li><strong>Modern Standby</strong> — Always-on S0ix low-power idle</li>
+                <li><strong>Processor Idle</strong> — C-state management, ACPI _CST</li>
+                <li><strong>PPM (Processor Power Management)</strong> — P-state / frequency scaling</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="section">
+          <div class="section-title">// Security Infrastructure</div>
+          <div class="two-col">
+            <div class="sub-block">
+              <div class="sub-block-title">Kernel Security Features</div>
+              <ul class="nested">
+                <li><strong>HVCI (Hypervisor-Protected CI)</strong> — Kernel code integrity enforced by VTL1</li>
+                <li><strong>KPP (PatchGuard)</strong> — Detects/reacts to unauthorized kernel modifications</li>
+                <li><strong>SMEP / SMAP</strong> — CPU prevents kernel executing/reading user pages</li>
+                <li><strong>Control Flow Guard (CFG)</strong> — Validates indirect call targets</li>
+                <li><strong>CET (Control-flow Enforcement)</strong> — Hardware shadow stack vs ROP</li>
+                <li><strong>Secure Boot</strong> — UEFI chain-of-trust to bootloader → kernel</li>
+                <li><strong>KMCI</strong> — Kernel-Mode Code Integrity; only signed drivers load</li>
+              </ul>
+            </div>
+            <div class="sub-block">
+              <div class="sub-block-title">VBS / Virtualization-Based Security</div>
+              <ul class="nested">
+                <li><strong>VTL0 (Normal World)</strong> — Standard OS kernel runs here</li>
+                <li><strong>VTL1 (Secure World)</strong> — Isolated VM running Secure Kernel</li>
+                <li><strong>Secure Kernel (sk.exe)</strong> — Minimalist kernel in VTL1</li>
+                <li><strong>LSA Isolation (LSA PPL)</strong> — LSASS runs as protected process</li>
+                <li><strong>Credential Guard</strong> — NTLM/Kerberos creds stored in VTL1</li>
+                <li><strong>HVCI</strong> — VTL1 validates kernel code pages before execution</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="section">
+          <div class="section-title">// NTFS File System Deep Dive</div>
+          <div class="sub-block">
+            <div class="sub-block-title">NTFS On-Disk Structures (ntfs.sys)</div>
+            <div class="components-grid" style="margin-top:8px">
+              <div>
+                <ul class="nested">
+                  <li><strong>MFT (Master File Table)</strong> — B-tree of file records, first 16 reserved</li>
+                  <li><strong>$MFT, $MFTMirr</strong> — MFT and its backup (first 4 entries)</li>
+                  <li><strong>File Record (1KB)</strong> — Contains attributes inline or as runs</li>
+                  <li><strong>Attributes</strong> — $STANDARD_INFORMATION, $FILE_NAME, $DATA, $INDEX_ROOT</li>
+                  <li><strong>Data Runs</strong> — Extents describing cluster allocations</li>
+                </ul>
+              </div>
+              <div>
+                <ul class="nested">
+                  <li><strong>Journaling ($LogFile)</strong> — Redo/undo log for crash recovery</li>
+                  <li><strong>USN Journal ($UsnJrnl)</strong> — Change log for file system monitoring</li>
+                  <li><strong>Reparse Points</strong> — Symbolic links, junctions, mount points, OneDrive</li>
+                  <li><strong>Alternate Data Streams</strong> — Multiple $DATA attributes per file</li>
+                  <li><strong>TxF (Transactional NTFS)</strong> — KTM-backed atomic file operations</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- LAYER 5: HAL -->
+    <div class="layer" data-level="hal">
+      <div class="layer-header" onclick="toggle(this)">
+        <span class="layer-num">L2</span>
+        <span class="layer-badge">HAL</span>
+        <span class="layer-title">Hardware Abstraction Layer (hal.dll)</span>
+        <span class="layer-subtitle">Ring 0 · Platform Interface</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="callout">
+          The HAL isolates the NT kernel from machine-specific hardware details. It provides a portable interface so that ntoskrnl.exe can run on different CPU architectures and chipsets without modification. On modern x64 systems, the HAL is significantly thinner than on legacy platforms.
+        </div>
+
+        <div class="section">
+          <div class="section-title">// HAL Responsibilities</div>
+          <div class="two-col">
+            <div class="sub-block">
+              <div class="sub-block-title">Interrupt Abstraction</div>
+              <ul class="nested">
+                <li><strong>APIC / xAPIC / x2APIC</strong> — Advanced programmable interrupt controllers</li>
+                <li><strong>IOAPIC</strong> — Routes device IRQs to CPU LAPIC vectors</li>
+                <li><strong>HalRequestSoftwareInterrupt</strong> — Software-triggered interrupts</li>
+                <li><strong>MSI / MSI-X</strong> — Message-Signaled Interrupts for PCIe devices</li>
+                <li><strong>IRQL Mapping</strong> — Maps hardware IRQ levels to NT IRQLs</li>
+              </ul>
+            </div>
+            <div class="sub-block">
+              <div class="sub-block-title">Bus &amp; Timer Abstraction</div>
+              <ul class="nested">
+                <li><strong>ACPI HAL</strong> — Reads ACPI tables (MADT, DSDT, FADT)</li>
+                <li><strong>Timer Sources</strong> — HPET, TSC-Deadline, LAPIC timer selection</li>
+                <li><strong>KeQueryPerformanceCounter</strong> — High-res monotonic clock</li>
+                <li><strong>Bus Config I/O</strong> — PCI config space reads (ECAM/legacy)</li>
+                <li><strong>DMA Abstraction</strong> — HalAllocateCommonBuffer for DMA coherency</li>
+              </ul>
+            </div>
+          </div>
+          <div class="two-col" style="margin-top:10px">
+            <div class="sub-block">
+              <div class="sub-block-title">CPU Topology &amp; MP Support</div>
+              <ul class="nested">
+                <li><strong>Processor Groups</strong> — Supports &gt;64 logical CPUs via NUMA groups</li>
+                <li><strong>IPI (Inter-Processor Interrupts)</strong> — TLB shootdown, cross-CPU DPCs</li>
+                <li><strong>KPRCB</strong> — Per-CPU data block (current thread, DPC queue, stats)</li>
+                <li><strong>Hyper-Threading Awareness</strong> — SMT pairs in scheduling</li>
+              </ul>
+            </div>
+            <div class="sub-block">
+              <div class="sub-block-title">Firmware / UEFI Interface</div>
+              <ul class="nested">
+                <li><strong>UEFI Runtime Services</strong> — EFI variable access after boot</li>
+                <li><strong>Secure Boot Variables</strong> — PK, KEK, db, dbx via EFI vars</li>
+                <li><strong>ACPI AML Interpreter</strong> — ACPICA-based AML bytecode execution</li>
+                <li><strong>Boot Environment</strong> — winload.efi → handoff to HAL + kernel</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAYER 6: HARDWARE -->
+    <div class="layer" data-level="hw">
+      <div class="layer-header" onclick="toggle(this)">
+        <span class="layer-num">L1</span>
+        <span class="layer-badge">Hardware</span>
+        <span class="layer-title">Physical Hardware Platform</span>
+        <span class="layer-subtitle">Physical Layer · Bare Metal</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="section">
+          <div class="section-title">// CPU Architecture</div>
+          <div class="components-grid">
+            <div class="comp-card">
+              <div class="comp-name">x86-64 (AMD64) CPU</div>
+              <ul class="nested" style="margin-top:6px">
+                <li><strong>Privilege Rings</strong> — Ring 0 (kernel) / Ring 3 (user); Rings 1-2 unused</li>
+                <li><strong>Virtual Memory</strong> — 4-level / 5-level paging, 48/57-bit VA</li>
+                <li><strong>MSRs</strong> — Model-Specific Registers (SYSCALL/SYSRET, EFER)</li>
+                <li><strong>VMX Extensions</strong> — Intel VT-x / AMD-V for Hyper-V</li>
+                <li><strong>SMEP/SMAP/CET</strong> — Security extensions enforced by OS</li>
+                <li><strong>TSC</strong> — Time-Stamp Counter; invariant TSC for timekeeping</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">Memory Subsystem</div>
+              <ul class="nested" style="margin-top:6px">
+                <li><strong>DRAM</strong> — DDR4/DDR5, DIMM slots, ECC on server</li>
+                <li><strong>CPU Caches</strong> — L1i/L1d (32KB), L2 (256KB-1MB), L3 (shared)</li>
+                <li><strong>NUMA Nodes</strong> — Multi-socket topology; local vs remote memory latency</li>
+                <li><strong>Memory Controller</strong> — Integrated into CPU die (IMC)</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">Storage</div>
+              <ul class="nested" style="margin-top:6px">
+                <li><strong>NVMe SSD</strong> — PCIe 4.0/5.0, stornvme.sys driver, multiple queues</li>
+                <li><strong>SATA/AHCI</strong> — storahci.sys; legacy SATA SSD/HDD</li>
+                <li><strong>RAID Controllers</strong> — storport.sys miniport model</li>
+                <li><strong>Storage Spaces</strong> — Software-defined storage (spaceport.sys)</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">GPU &amp; Display</div>
+              <ul class="nested" style="margin-top:6px">
+                <li><strong>PCIe GPU</strong> — WDDM kernel/user driver split</li>
+                <li><strong>KMD (Kernel Mode Driver)</strong> — Direct GPU memory access, scheduling</li>
+                <li><strong>UMD (User Mode Driver)</strong> — D3D runtime, shader compilation</li>
+                <li><strong>DXGK</strong> — DirectX Graphics Kernel subsystem</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">Network</div>
+              <ul class="nested" style="margin-top:6px">
+                <li><strong>NIC / WLAN</strong> — NDIS 6.x miniport drivers</li>
+                <li><strong>TCP/IP Stack</strong> — tcpip.sys — full IPv4/IPv6 dual stack</li>
+                <li><strong>Winsock (afd.sys)</strong> — Ancillary Function Driver; kernel socket layer</li>
+                <li><strong>NDIS Filter</strong> — Firewall / VPN filter insertion points</li>
+                <li><strong>RSS / VMQ</strong> — Receive Side Scaling for multi-queue NICs</li>
+              </ul>
+            </div>
+            <div class="comp-card">
+              <div class="comp-name">Firmware / UEFI</div>
+              <ul class="nested" style="margin-top:6px">
+                <li><strong>UEFI Firmware</strong> — Replaces legacy BIOS; GOP display, EFI app loader</li>
+                <li><strong>TPM 2.0</strong> — Trusted Platform Module; BitLocker, Credential Guard, attestation</li>
+                <li><strong>Secure Boot</strong> — Signature chain: PK → KEK → db whitelist</li>
+                <li><strong>ACPI Tables</strong> — DSDT/SSDT describe device topology to OS</li>
+                <li><strong>Boot Manager</strong> — bootmgfw.efi → BCD store → winload.efi</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end arch-stack -->
+
+  <!-- Boot sequence callout -->
+  <div style="background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:24px; animation: fadeUp 0.6s ease 0.7s both;">
+    <div class="section-title" style="margin-bottom:16px;">// Windows NT Boot Sequence</div>
+    <div class="flow" style="flex-direction:column; align-items:flex-start; gap:4px;">
+      <div style="display:flex; align-items:center; gap:10px; width:100%; flex-wrap:wrap;">
+        <div class="flow-node" style="background:rgba(255,208,96,0.1); color:#ffd060; border-color:rgba(255,208,96,0.3);">Power-On</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background:rgba(255,208,96,0.1); color:#ffd060; border-color:rgba(255,208,96,0.3);">UEFI POST &amp; Secure Boot</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">bootmgfw.efi (BCD)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">winload.efi</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="color:var(--accent3)">ntoskrnl.exe + hal.dll</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="color:var(--accent3)">Phase 0 Init (Ki)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="color:var(--accent3)">Phase 1 Init (Executive)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="color:var(--accent4)">smss.exe</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="color:var(--accent4)">csrss.exe + wininit.exe</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="color:var(--accent1)">services.exe + lsass.exe</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="color:var(--accent5)">winlogon.exe → LogonUI</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="color:var(--accent5)">Explorer.exe (Desktop)</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function toggle(header) {
+    const layer = header.closest('.layer');
+    layer.classList.toggle('open');
+  }
+
+  function toggleAll(open) {
+    document.querySelectorAll('.layer').forEach(l => {
+      if (open) l.classList.add('open');
+      else l.classList.remove('open');
+    });
+  }
+
+  // Open kernel and subsystem layers by default
+  document.querySelectorAll('.layer[data-level="kernel"], .layer[data-level="subsystem"]').forEach(l => l.classList.add('open'));
+</script>
+</body>
+</html>
