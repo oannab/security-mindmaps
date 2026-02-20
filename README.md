@@ -90,11 +90,11 @@ These maps cover all 5 domains of the Security+ exam. Each map uses a consistent
 
 | File | Domain | Status |
 |------|--------|--------|
-| `D1-Threats-Attacks.md` | 1.0 — Threats, Attacks & Vulnerabilities | 🔜 Coming |
-| `D2-Cryptography-PKI.md` | 2.0 — Cryptography & PKI | 🔜 Coming |
+| `D1-Threats-Attacks.md` | 1.0 — Threats, Attacks & Vulnerabilities | 🔜 Pending |
+| `D2-Cryptography-PKI.md` | 2.0 — Cryptography & PKI | 🔜 Pending |
 | `D3-Security-Architecture.md` | 3.0 — Security Architecture | ✅ Available |
 | `D4-Security-Operations.md` | 4.0 — Security Operations | ✅ Available |
-| `D5-Governance-Risk.md` | 5.0 — Governance, Risk & Compliance | 🔜 Coming |
+| `D5-Governance-Risk.md` | 5.0 — Governance, Risk & Compliance | 🔜 Pending |
 
 > These maps are **consolidation tools** — they work best alongside your primary study material, not as a replacement. They're designed to help you see the full picture and retain connections between concepts.
 
