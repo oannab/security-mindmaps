@@ -12,9 +12,5 @@ These are a work in progress.
 
 ## How to Render
 
-# .md
-Paste any file into **[markmap.js.org/repl](https://markmap.js.org/repl)** or use the **Markmap VS Code extension** (`gera2ld.markmap-vscode`).  
-Full instructions in [HOW-TO-USE.md](../HOW-TO-USE.md).
-
-# .html
-Open in browser.
+### No-install option
+Just open the HTML file directly in your browser — no setup, no terminal.

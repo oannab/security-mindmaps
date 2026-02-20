@@ -1,49 +1,42 @@
-# React + Vite
+# 🖧 Network Topology — Interactive Diagram
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive React diagram visualising common network topology.
 
-Currently, two official plugins are available:
+Built with React + Vite. Runs entirely in the browser, no backend needed.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## Prerequisites
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Tool | Version | Check |
+|------|---------|-------|
+| Node.js | v18+ | `node -v` |
+| npm | comes with Node | `npm -v` |
 
-## Expanding the ESLint configuration
+Download Node from [nodejs.org](https://nodejs.org) if you don't have it.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
 
-
-
-# What you need installed first
-
-- Node.js (v18+) — download from nodejs.org
-- npm (comes with Node)
-
-Check you have them: ```node -v``` and ```npm -v``` in your terminal.
-
-# Steps
+## Quick Start
 
 ### 1. Create a new Vite + React project
 
-```
+```bash
 npm create vite@latest my-topology -- --template react
 cd my-topology
 ```
 
 ### 2. Install dependencies
 
-```
+```bash
 npm install
 ```
 
-### 3. Replace default code
+### 3. Add the component
 
-Copy network_topology.jsx into the src/ folder, then open src/App.jsx and replace everything in it with:
+Copy `network_topology.jsx` into the `src/` folder, then open `src/App.jsx` and replace everything with:
 
-```
+```jsx
 import NetworkTopology from './network_topology.jsx'
 
 export default function App() {
@@ -53,8 +46,31 @@ export default function App() {
 
 ### 4. Run it
 
-Copy network_topology.jsx into the src/ folder, then open src/App.jsx and replace everything in it with:
-
-```
+```bash
 npm run dev
 ```
+
+Open your browser at `http://localhost:5173`.
+
+---
+
+## Project Structure
+
+```
+network-topology/
+├── src/
+│   ├── App.jsx               ← entry point (edit this)
+│   ├── network_topology.jsx  ← main interactive component
+│   ├── main.jsx
+│   └── index.css
+├── index.html
+├── vite.config.js
+└── package.json
+```
+
+---
+
+## Part of
+
+This tool lives inside [`networking/`](../) in the [security-mindmaps](../../) repo.  
+See also: [`packet-encapsulation/`](../packet-encapsulation/) for the OSI encapsulation walkthrough.

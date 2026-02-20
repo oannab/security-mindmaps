@@ -18,7 +18,10 @@ All maps in this folder follow the official **SY0-701 exam objectives**.
 Paste any file into **[markmap.js.org/repl](https://markmap.js.org/repl)** or use the **Markmap VS Code extension** (`gera2ld.markmap-vscode`).  
 Full instructions in [HOW-TO-USE.md](../HOW-TO-USE.md).
 
-Alternatively, an .html file is also available, just open in browser. 
+
+### No-install option
+Just open the HTML file directly in your browser — no setup, no terminal.
+
 
 ## Scope Note
 

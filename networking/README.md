@@ -1,37 +1,35 @@
-# 🌐 Networking Maps
+# 🌐 Networking
 
-Networking fundamentals and architecture maps. These cover the concepts that underpin everything in security — if you're fuzzy on how packets move, how DNS works, or what a VLAN actually does, start here.
+Interactive visual tools and reference maps covering core networking concepts — OSI model, network topology, packet encapsulation, and protocols. Built for learners coming from non-CS backgrounds who need to *see* how things connect, not just read definitions.
 
-## Maps
+All tools run in the browser. Most have a zero-install static HTML version alongside the interactive React build.
 
-| File | Description | Status |
-|------|-------------|--------|
-| *(coming soon)* | Networking fundamentals | 🔜 |
+---
 
-## How to Render
+## What's in here
 
-# .md
-Paste any file into **[markmap.js.org/repl](https://markmap.js.org/repl)** or use the **Markmap VS Code extension** (`gera2ld.markmap-vscode`).  
-Full instructions in [HOW-TO-USE.md](../HOW-TO-USE.md).
+### [`network-topology/`](./network-topology/)
+Interactive React diagram of common network topology. Shows device relationships, traffic flow, and failure impact per topology type.
 
-# .html
-Open in browser.
+→ [OSI Protocols reference](./protocols_osi.html) — standalone static file, open directly in browser.
 
+### [`packet-encapsulation/`](./packet-encapsulation/)
+Interactive React diagram walking through how data gets wrapped and unwrapped as it travels down and up the OSI stack — from application payload to physical bits and back. Includes a static `.html` version.
 
-# React + Vite
+---
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## No-install option
 
-Currently, two official plugins are available:
+Every tool in this section ships with a pre-built `.html` file. If you don't want to deal with Node or npm, just open the HTML file directly in your browser — no setup, no terminal.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| File | What it shows |
+|------|--------------|
+| `network-topology/osi-encapsulation.html` | Network topology interactive view |
+| `networking/protocols_osi.html` | OSI layer protocols reference |
+| `packet-encapsulation/osi-encapsulation.html` | Packet encapsulation walkthrough |
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Part of
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-
+This section is part of the [security-mindmaps](../) repo — free, open study materials for anyone breaking into cybersecurity, networking, or IT from a non-traditional background.

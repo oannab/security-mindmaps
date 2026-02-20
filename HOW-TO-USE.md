@@ -56,7 +56,7 @@ Open any `.md` file in this repo → click the **Raw** button (top right of the 
 
 ## Colour System (Quick Reference)
 
-Every node is colour-coded by category. Once you internalise this, you can scan a branch and immediately know what *type* of thing each node is — hardware, software, protocol, governance, etc.
+Every node is colour-coded by category. Once you internalise this, you can scan a branch and immediately know what *type* each node is — hardware, software, protocol, governance, etc.
 
 | Colour | Category |
 |--------|----------|
