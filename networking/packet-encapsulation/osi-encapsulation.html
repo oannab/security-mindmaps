@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSI Packet Encapsulation — HTTP Request</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --bg2: #0f1117;
+    --border: #1e2330;
+    --l7: #ff6b6b;
+    --l6: #ff9f43;
+    --l5: #ffd93d;
+    --l4: #6bcb77;
+    --l3: #4d96ff;
+    --l2: #c77dff;
+    --l1: #ff6b9d;
+    --text: #e8eaf0;
+    --muted: #5a6380;
+    --dim: #2a3045;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* subtle grid bg */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(77,150,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(77,150,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .header {
+    text-align: center;
+    padding: 40px 20px 20px;
+    position: relative;
+  }
+  .header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+  .header h1 span { color: var(--l3); }
+  .header p {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+  }
+
+  /* ── LEFT: Layer legend ── */
+  .legend {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: sticky;
+    top: 20px;
+    align-self: start;
+  }
+
+  .layer-btn {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+  .layer-btn::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--color);
+    transition: width 0.2s ease;
+  }
+  .layer-btn:hover::before,
+  .layer-btn.active::before { width: 5px; }
+  .layer-btn:hover, .layer-btn.active {
+    border-color: var(--color);
+    background: color-mix(in srgb, var(--color) 8%, var(--bg2));
+    transform: translateX(2px);
+  }
+  .layer-btn .ln {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .layer-btn .lname {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color);
+    margin: 1px 0;
+  }
+  .layer-btn .lpdu {
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  /* ── RIGHT: Onion diagram + detail ── */
+  .right {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Onion visualization */
+  .onion-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 30px 20px;
+    overflow-x: auto;
+  }
+
+  .onion-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .onion-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 600px;
+  }
+
+  .onion-layer {
+    position: relative;
+    border-radius: 8px;
+    border: 1.5px solid var(--color);
+    background: color-mix(in srgb, var(--color) 6%, transparent);
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    overflow: hidden;
+  }
+  .onion-layer:hover {
+    background: color-mix(in srgb, var(--color) 14%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--color) 20%, transparent);
+  }
+  .onion-layer.highlighted {
+    background: color-mix(in srgb, var(--color) 18%, transparent);
+    box-shadow: 0 0 28px color-mix(in srgb, var(--color) 30%, transparent);
+    border-width: 2px;
+  }
+
+  .layer-inner {
+    display: flex;
+    align-items: stretch;
+    min-height: 44px;
+  }
+
+  .layer-label {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6px 12px;
+    min-width: 110px;
+    border-right: 1px dashed color-mix(in srgb, var(--color) 40%, transparent);
+    flex-shrink: 0;
+  }
+  .layer-label .num {
+    font-size: 0.55rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+  .layer-label .name {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--color);
+    letter-spacing: 0.05em;
+  }
+  .layer-label .pdu {
+    font-size: 0.58rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .layer-fields {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+    flex: 1;
+    padding: 4px;
+    min-width: 0;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 4px 8px;
+    border-right: 1px dashed color-mix(in srgb, var(--color) 25%, transparent);
+    font-size: 0.6rem;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .field:last-child { border-right: none; }
+  .field .fname {
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    font-size: 0.54rem;
+    text-transform: uppercase;
+  }
+  .field .fval {
+    color: var(--text);
+    font-weight: 600;
+    font-size: 0.65rem;
+  }
+  .field.header-field .fval { color: var(--color); }
+
+  /* nested payload indicator */
+  .nested-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    font-size: 0.58rem;
+    color: var(--muted);
+    font-style: italic;
+    border: 1px dashed var(--dim);
+    border-radius: 4px;
+    margin: 2px 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .nested-indicator:hover { color: var(--text); border-color: var(--muted); }
+  .nested-indicator::before { content: '▸'; }
+
+  /* Physical bits */
+  .bits-row {
+    font-size: 0.55rem;
+    color: var(--l1);
+    padding: 6px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    word-break: break-all;
+    line-height: 1.6;
+    opacity: 0.8;
+  }
+
+  /* ── Detail panel ── */
+  .detail-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 24px;
+    min-height: 160px;
+    transition: border-color 0.2s;
+  }
+  .detail-panel.active { border-color: var(--active-color, var(--border)); }
+
+  .detail-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .detail-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--active-color, var(--muted));
+    box-shadow: 0 0 8px var(--active-color, transparent);
+    flex-shrink: 0;
+  }
+  .detail-header h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--active-color, var(--text));
+  }
+  .detail-header .detail-pdu {
+    margin-left: auto;
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .detail-field {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+  }
+  .detail-field .df-name {
+    font-size: 0.58rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 3px;
+  }
+  .detail-field .df-val {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .detail-field .df-val.accent { color: var(--active-color, var(--text)); }
+  .detail-field .df-bits {
+    font-size: 0.58rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .detail-desc {
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.7;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+  }
+  .detail-desc strong { color: var(--active-color, var(--text)); }
+
+  /* flow arrow */
+  .flow-arrows {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 0;
+  }
+  .arrow-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+  .arrow-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--l7), var(--l6), var(--l5), var(--l4), var(--l3), var(--l2), var(--l1));
+    opacity: 0.4;
+  }
+
+  /* ── Encapsulation flow diagram ── */
+  .flow-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 24px;
+  }
+  .flow-section h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 18px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+  }
+
+  .flow-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+  .flow-steps::before {
+    content: '';
+    position: absolute;
+    left: 24px; top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 12px 0;
+    position: relative;
+  }
+  .flow-num {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    border: 2px solid var(--color);
+    background: color-mix(in srgb, var(--color) 12%, var(--bg));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 0.7rem;
+    color: var(--color);
+    position: relative;
+    z-index: 1;
+  }
+  .flow-content { flex: 1; padding-top: 4px; }
+  .flow-content .fc-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color);
+    margin-bottom: 2px;
+  }
+  .flow-content .fc-action {
+    font-size: 0.65rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .flow-content .fc-adds {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .badge {
+    font-size: 0.58rem;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--color) 15%, transparent);
+    color: var(--color);
+    border: 1px solid color-mix(in srgb, var(--color) 30%, transparent);
+    font-weight: 600;
+  }
+
+  .placeholder-text {
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-align: center;
+    padding: 30px;
+    font-style: italic;
+  }
+
+  /* responsive */
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .legend { position: static; display: grid; grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>OSI Packet Encapsulation <span>// HTTP Request</span></h1>
+  <p>Click any layer to inspect its fields & headers</p>
+</div>
+
+<div class="main">
+  <!-- LEFT: Layer selector -->
+  <div class="legend" id="legend"></div>
+
+  <!-- RIGHT -->
+  <div class="right">
+
+    <!-- Onion diagram -->
+    <div class="onion-wrap">
+      <div class="onion-title">▸ Packet structure at each encapsulation step — outermost layer first</div>
+      <div class="onion-container" id="onion"></div>
+    </div>
+
+    <!-- Detail panel -->
+    <div class="detail-panel" id="detail">
+      <div class="placeholder-text">← Select a layer to see detailed field breakdown</div>
+    </div>
+
+    <!-- Flow steps -->
+    <div class="flow-section">
+      <h2>⟶ Encapsulation sequence (Sender side: Layer 7 → 1)</h2>
+      <div class="flow-steps" id="flowSteps"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const LAYERS = [
+  {
+    num: 7,
+    name: "Application",
+    color: "var(--l7)",
+    pdu: "Data / Message",
+    short: "L7",
+    fields: [
+      { name: "Method",   val: "GET",              bits: "8 bytes" },
+      { name: "URI",      val: "/index.html",      bits: "variable" },
+      { name: "Version",  val: "HTTP/1.1",         bits: "8 bytes" },
+      { name: "Host",     val: "example.com",      bits: "variable" },
+      { name: "Accept",   val: "text/html",        bits: "variable" },
+      { name: "Connection", val: "keep-alive",     bits: "variable" },
+      { name: "User-Agent", val: "Mozilla/5.0...", bits: "variable" },
+    ],
+    desc: `The <strong>Application Layer</strong> is where HTTP lives. The browser constructs a raw HTTP request message. This is plain text (or encrypted with TLS) containing the method, resource path, HTTP version, and request headers. No framing, no addressing — just the application payload.`,
+    action: "Browser constructs HTTP request",
+    adds: ["HTTP Method", "URI", "Headers", "Body"]
+  },
+  {
+    num: 6,
+    name: "Presentation",
+    color: "var(--l6)",
+    pdu: "Data",
+    short: "L6",
+    fields: [
+      { name: "TLS Record Type", val: "0x17 (App Data)", bits: "1 byte", header: true },
+      { name: "TLS Version",     val: "TLS 1.3 (0x0303)", bits: "2 bytes", header: true },
+      { name: "Length",          val: "0x01F4 (500B)",  bits: "2 bytes", header: true },
+      { name: "Encrypted Payload", val: "[ HTTP Data ]", bits: "n bytes" },
+      { name: "Auth Tag",        val: "AEAD tag",       bits: "16 bytes", header: true },
+    ],
+    desc: `The <strong>Presentation Layer</strong> handles data formatting, encryption, and encoding. In HTTPS, TLS operates here — the HTTP message is encrypted (AES-GCM) and wrapped in a TLS record. The record header includes content type, protocol version, and length. Everything below this layer sees only ciphertext.`,
+    action: "TLS encrypts and encodes HTTP data",
+    adds: ["TLS Record Header", "Encrypted Payload", "Auth Tag (AEAD)"]
+  },
+  {
+    num: 5,
+    name: "Session",
+    color: "var(--l5)",
+    pdu: "Data",
+    short: "L5",
+    fields: [
+      { name: "Session ID",   val: "0xA3F2...CC01",  bits: "32 bytes", header: true },
+      { name: "Session State", val: "ESTABLISHED",   bits: "flags" , header: true },
+      { name: "Dialog Ctrl",  val: "Half-duplex",    bits: "2 bits", header: true },
+      { name: "TLS Data",     val: "[ TLS Record ]", bits: "n bytes" },
+    ],
+    desc: `The <strong>Session Layer</strong> manages sessions — the establishment, maintenance, and termination of communication sessions. In practice for HTTP/HTTPS, TLS 1.3 handles session management (session IDs, resumption tickets). This layer ensures the dialog between client and server is coordinated and recoverable.`,
+    action: "Session management & synchronisation",
+    adds: ["Session ID", "Session State", "Sync Points"]
+  },
+  {
+    num: 4,
+    name: "Transport",
+    color: "var(--l4)",
+    pdu: "Segment",
+    short: "L4",
+    fields: [
+      { name: "Src Port",   val: "54321",         bits: "16 bits", header: true },
+      { name: "Dst Port",   val: "443 (HTTPS)",   bits: "16 bits", header: true },
+      { name: "Seq Num",    val: "0x1A2B3C4D",    bits: "32 bits", header: true },
+      { name: "Ack Num",    val: "0x00000001",    bits: "32 bits", header: true },
+      { name: "Flags",      val: "PSH | ACK",     bits: "9 bits",  header: true },
+      { name: "Win Size",   val: "65535",         bits: "16 bits", header: true },
+      { name: "Checksum",   val: "0xF3A1",        bits: "16 bits", header: true },
+      { name: "Data",       val: "[ Session/TLS ]", bits: "n bytes" },
+    ],
+    desc: `The <strong>Transport Layer</strong> (TCP) adds reliable, ordered delivery. The HTTP data is split into <strong>segments</strong>. Each segment gets a TCP header with source/destination ports, sequence numbers (for ordering & reassembly), acknowledgment numbers, control flags (SYN, ACK, PSH, FIN), window size for flow control, and a checksum.`,
+    action: "TCP segments data, adds port numbers & reliability",
+    adds: ["Src/Dst Ports", "Seq / Ack Numbers", "TCP Flags", "Window Size", "Checksum"]
+  },
+  {
+    num: 3,
+    name: "Network",
+    color: "var(--l3)",
+    pdu: "Packet",
+    short: "L3",
+    fields: [
+      { name: "Version",    val: "4 (IPv4)",        bits: "4 bits",  header: true },
+      { name: "IHL",        val: "5 (20 bytes)",    bits: "4 bits",  header: true },
+      { name: "DSCP/ECN",   val: "0x00",            bits: "8 bits",  header: true },
+      { name: "Total Len",  val: "576 bytes",       bits: "16 bits", header: true },
+      { name: "ID",         val: "0x4E7A",          bits: "16 bits", header: true },
+      { name: "Flags/Frag", val: "DF | 0",          bits: "16 bits", header: true },
+      { name: "TTL",        val: "64",              bits: "8 bits",  header: true },
+      { name: "Protocol",   val: "6 (TCP)",         bits: "8 bits",  header: true },
+      { name: "Hdr Checksum", val: "0x3B2F",        bits: "16 bits", header: true },
+      { name: "Src IP",     val: "192.168.1.10",    bits: "32 bits", header: true },
+      { name: "Dst IP",     val: "93.184.216.34",   bits: "32 bits", header: true },
+      { name: "Payload",    val: "[ TCP Segment ]", bits: "n bytes" },
+    ],
+    desc: `The <strong>Network Layer</strong> (IP) wraps the TCP segment into an <strong>IP packet</strong>. It adds logical addressing — source and destination IP addresses — enabling routing across different networks. The router uses only this layer to forward packets hop-by-hop. TTL prevents infinite routing loops. The IP header also specifies the transport protocol (TCP = 6).`,
+    action: "IP adds logical addressing for routing",
+    adds: ["Src/Dst IP Addresses", "TTL", "Protocol ID", "Fragmentation Info"]
+  },
+  {
+    num: 2,
+    name: "Data Link",
+    color: "var(--l2)",
+    pdu: "Frame",
+    short: "L2",
+    fields: [
+      { name: "Dst MAC",    val: "AA:BB:CC:DD:EE:FF", bits: "48 bits", header: true },
+      { name: "Src MAC",    val: "11:22:33:44:55:66", bits: "48 bits", header: true },
+      { name: "EtherType", val: "0x0800 (IPv4)",      bits: "16 bits", header: true },
+      { name: "Payload",   val: "[ IP Packet ]",      bits: "46-1500B" },
+      { name: "FCS/CRC",   val: "0x1A2B3C4D",         bits: "32 bits", header: true },
+    ],
+    desc: `The <strong>Data Link Layer</strong> (Ethernet) wraps the IP packet in a <strong>frame</strong>. It adds physical MAC addresses for node-to-node delivery on the local network segment. The EtherType field tells the receiver which network protocol (IPv4 = 0x0800) is inside. The FCS (Frame Check Sequence) is a CRC-32 checksum that detects bit errors on the wire.`,
+    action: "Ethernet frames the packet for local delivery",
+    adds: ["Src/Dst MAC Addresses", "EtherType", "FCS/CRC-32 Trailer"]
+  },
+  {
+    num: 1,
+    name: "Physical",
+    color: "var(--l1)",
+    pdu: "Bits / Signal",
+    short: "L1",
+    fields: [
+      { name: "Preamble",    val: "10101010... ×7",  bits: "7 bytes",  header: true },
+      { name: "SFD",         val: "10101011",        bits: "1 byte",   header: true },
+      { name: "Encoded Frame", val: "[ Ethernet Frame ]", bits: "n bits" },
+      { name: "Encoding",    val: "4B/5B or NRZ",   bits: "physical" },
+      { name: "Medium",      val: "Electrical / Optical / RF", bits: "—" },
+    ],
+    desc: `The <strong>Physical Layer</strong> converts the bit stream into physical signals — electrical voltages on copper, light pulses in fibre, or radio waves over WiFi. The preamble (alternating 1010...) lets the receiver synchronise its clock. The SFD (Start Frame Delimiter) signals where the actual frame data begins. Everything above this layer is meaningless without synchronisation.`,
+    action: "Bits transmitted as physical signals",
+    adds: ["Preamble", "SFD", "Line Encoding", "Physical Signals"]
+  }
+];
+
+let activeLayer = null;
+
+function renderLegend() {
+  const el = document.getElementById('legend');
+  LAYERS.forEach(l => {
+    const btn = document.createElement('div');
+    btn.className = 'layer-btn';
+    btn.style.setProperty('--color', l.color);
+    btn.dataset.num = l.num;
+    btn.innerHTML = `
+      <div class="ln">Layer ${l.num}</div>
+      <div class="lname">${l.name}</div>
+      <div class="lpdu">${l.pdu}</div>
+    `;
+    btn.addEventListener('click', () => selectLayer(l.num));
+    el.appendChild(btn);
+  });
+}
+
+function renderOnion() {
+  const container = document.getElementById('onion');
+  
+  LAYERS.forEach((layer, i) => {
+    const div = document.createElement('div');
+    div.className = 'onion-layer';
+    div.style.setProperty('--color', layer.color);
+    div.dataset.num = layer.num;
+
+    // Build fields shown in the onion row
+    // Show: header fields + a nested indicator for inner content
+    let fieldsHTML = '';
+    
+    // Header fields (specific to this layer)
+    const headerFields = layer.fields.filter(f => f.header);
+    const payloadField = layer.fields.find(f => !f.header);
+
+    headerFields.forEach(f => {
+      fieldsHTML += `
+        <div class="field header-field">
+          <span class="fname">${f.name}</span>
+          <span class="fval">${f.val}</span>
+        </div>`;
+    });
+
+    // Nested payload
+    if (i < LAYERS.length - 1) {
+      const inner = LAYERS[i + 1];
+      fieldsHTML += `<div class="nested-indicator" onclick="event.stopPropagation();selectLayer(${inner.num})">
+        L${inner.num} ${inner.name} ${inner.pdu}
+        ${i + 2 < LAYERS.length ? ' ⊃ ...' : ''}
+      </div>`;
+    } else {
+      // Physical: show bits
+      fieldsHTML += `<div class="bits-row">01001000 01000101 01000001 01000100 01000101 01010010 ···</div>`;
+    }
+
+    // Trailer (FCS for L2)
+    if (layer.num === 2) {
+      fieldsHTML += `<div class="field header-field"><span class="fname">FCS</span><span class="fval">0x1A2B3C4D</span></div>`;
+    }
+
+    div.innerHTML = `
+      <div class="layer-inner">
+        <div class="layer-label">
+          <span class="num">LAYER ${layer.num}</span>
+          <span class="name">${layer.name.toUpperCase()}</span>
+          <span class="pdu">${layer.pdu}</span>
+        </div>
+        <div class="layer-fields">${fieldsHTML}</div>
+      </div>
+    `;
+
+    div.addEventListener('click', () => selectLayer(layer.num));
+    container.appendChild(div);
+  });
+}
+
+function renderDetail(layerNum) {
+  const layer = LAYERS.find(l => l.num === layerNum);
+  const panel = document.getElementById('detail');
+  panel.style.setProperty('--active-color', layer.color);
+  panel.classList.add('active');
+
+  const fieldsHTML = layer.fields.map(f => `
+    <div class="detail-field">
+      <div class="df-name">${f.name}</div>
+      <div class="df-val ${f.header ? 'accent' : ''}">${f.val}</div>
+      <div class="df-bits">${f.bits}</div>
+    </div>
+  `).join('');
+
+  panel.innerHTML = `
+    <div class="detail-header">
+      <div class="detail-dot"></div>
+      <h3>Layer ${layer.num}: ${layer.name} Layer</h3>
+      <span class="detail-pdu">PDU: ${layer.pdu}</span>
+    </div>
+    <div class="detail-grid">${fieldsHTML}</div>
+    <div class="detail-desc">${layer.desc}</div>
+  `;
+}
+
+function renderFlow() {
+  const container = document.getElementById('flowSteps');
+  [...LAYERS].forEach((layer, i) => {
+    const div = document.createElement('div');
+    div.className = 'flow-step';
+    div.style.setProperty('--color', layer.color);
+    div.innerHTML = `
+      <div class="flow-num">L${layer.num}</div>
+      <div class="flow-content">
+        <div class="fc-title">${layer.name} Layer</div>
+        <div class="fc-action">${layer.action}</div>
+        <div class="fc-adds">${layer.adds.map(a => `<span class="badge">${a}</span>`).join('')}</div>
+      </div>
+    `;
+    div.style.cursor = 'pointer';
+    div.addEventListener('click', () => selectLayer(layer.num));
+    container.appendChild(div);
+  });
+}
+
+function selectLayer(num) {
+  activeLayer = num;
+
+  // Update legend buttons
+  document.querySelectorAll('.layer-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.num) === num);
+  });
+
+  // Update onion layers
+  document.querySelectorAll('.onion-layer').forEach(el => {
+    el.classList.toggle('highlighted', parseInt(el.dataset.num) === num);
+  });
+
+  renderDetail(num);
+}
+
+// Init
+renderLegend();
+renderOnion();
+renderFlow();
+
+// Select Layer 7 by default
+setTimeout(() => selectLayer(7), 100);
+</script>
+</body>
+</html>

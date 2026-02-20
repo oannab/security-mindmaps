@@ -1,0 +1,58 @@
+name: Deploy Security Mindmaps to GitHub Pages
+
+on:
+  push:
+    branches: ["main"] # Or "master", depending on your default branch
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Build the Network Topology Vite Project
+      - name: Build Network Topology App
+        working-directory: ./networking/network-topology
+        run: |
+          npm install
+          # We pass the base path so Vite knows it's hosted in a subdirectory
+          npx vite build --base=/security-mindmaps/networking/network-topology/dist/
+
+      # Build the Packet Encapsulation Vite Project
+      - name: Build Packet Encapsulation App
+        working-directory: ./networking/packet-encapsulation
+        run: |
+          npm install
+          npx vite build --base=/security-mindmaps/networking/packet-encapsulation/dist/
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v4
+
+      # Upload the entire repository (which now includes the built Vite 'dist' folders)
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

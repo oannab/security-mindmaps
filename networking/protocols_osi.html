@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSI Protocol Stack Interactive Map</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0e17;
+  --bg-panel: #111827;
+  --border: #1e3a5f;
+  --accent-7: #00ff9f;
+  --accent-6: #00d4ff;
+  --accent-5: #7c3aed;
+  --accent-4: #f59e0b;
+  --accent-3: #10b981;
+  --accent-2: #ef4444;
+  --accent-1: #facc15;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-dim: #475569;
+}
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* Animated background */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(0, 255, 159, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 159, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: gridScroll 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes gridScroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(50px); }
+}
+
+/* Header */
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 30px;
+  gap: 30px;
+  z-index: 100;
+}
+
+h1 {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.4rem;
+  letter-spacing: 4px;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--accent-7), var(--accent-6));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 30px rgba(0, 255, 159, 0.3);
+}
+
+.search-box {
+  flex: 1;
+  max-width: 400px;
+  position: relative;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 20px 12px 45px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  transition: all 0.3s;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--accent-7);
+  box-shadow: 0 0 20px rgba(0, 255, 159, 0.2);
+}
+
+.search-box::before {
+  content: "🔍";
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+}
+
+.layer-filter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.layer-btn {
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 1px;
+}
+
+.layer-btn:hover {
+  border-color: var(--accent-7);
+  color: var(--accent-7);
+}
+
+.layer-btn.active {
+  border-color: var(--accent-7);
+  background: rgba(0, 255, 159, 0.1);
+  color: var(--accent-7);
+}
+
+/* Main layout */
+.container {
+  position: fixed;
+  top: 70px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+}
+
+/* Map area */
+.map-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  padding: 40px 60px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-7) var(--bg-panel);
+}
+
+.map-area::-webkit-scrollbar {
+  width: 8px;
+}
+
+.map-area::-webkit-scrollbar-track {
+  background: var(--bg-panel);
+}
+
+.map-area::-webkit-scrollbar-thumb {
+  background: var(--accent-7);
+  border-radius: 4px;
+}
+
+/* OSI Layer */
+.osi-layer {
+  margin-bottom: 60px;
+  opacity: 0;
+  animation: layerFadeIn 0.8s forwards;
+}
+
+.osi-layer:nth-child(1) { animation-delay: 0.1s; }
+.osi-layer:nth-child(2) { animation-delay: 0.2s; }
+.osi-layer:nth-child(3) { animation-delay: 0.3s; }
+.osi-layer:nth-child(4) { animation-delay: 0.4s; }
+.osi-layer:nth-child(5) { animation-delay: 0.5s; }
+.osi-layer:nth-child(6) { animation-delay: 0.6s; }
+.osi-layer:nth-child(7) { animation-delay: 0.7s; }
+
+@keyframes layerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.layer-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid;
+  position: relative;
+}
+
+.layer-number {
+  font-family: 'Orbitron', monospace;
+  font-size: 2.5rem;
+  font-weight: 900;
+  opacity: 0.15;
+  line-height: 1;
+}
+
+.layer-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+
+.layer-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-left: auto;
+  letter-spacing: 1px;
+}
+
+/* Protocol grid */
+.protocol-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+/* Protocol card */
+.protocol-card {
+  background: rgba(17, 24, 39, 0.6);
+  border: 1px solid;
+  border-radius: 12px;
+  padding: 18px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.protocol-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: currentColor;
+  transform: scaleX(0);
+  transition: transform 0.3s;
+}
+
+.protocol-card:hover::before {
+  transform: scaleX(1);
+}
+
+.protocol-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.protocol-card.active {
+  border-width: 2px;
+  box-shadow: 0 0 30px currentColor;
+}
+
+.protocol-name {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.protocol-port {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+.protocol-desc {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Side panel */
+.side-panel {
+  width: 450px;
+  background: var(--bg-panel);
+  border-left: 2px solid var(--border);
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-7) var(--bg-panel);
+}
+
+.side-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.side-panel::-webkit-scrollbar-track {
+  background: var(--bg-panel);
+}
+
+.side-panel::-webkit-scrollbar-thumb {
+  background: var(--accent-7);
+  border-radius: 4px;
+}
+
+.side-panel.open {
+  transform: translateX(0);
+}
+
+.panel-content {
+  padding: 30px;
+}
+
+.close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.panel-header {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--border);
+}
+
+.panel-protocol-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.8rem;
+  font-weight: 900;
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+}
+
+.panel-layer {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+.panel-section {
+  margin-bottom: 30px;
+}
+
+.section-title {
+  font-size: 0.75rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.section-content {
+  font-size: 0.85rem;
+  line-height: 1.8;
+  color: var(--text-primary);
+}
+
+.vulnerability-item, .ioc-item {
+  background: rgba(239, 68, 68, 0.05);
+  border-left: 3px solid #ef4444;
+  padding: 12px 15px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.ioc-item {
+  background: rgba(251, 191, 36, 0.05);
+  border-left-color: #fbbf24;
+}
+
+.port-badge {
+  display: inline-block;
+  background: rgba(0, 255, 159, 0.1);
+  border: 1px solid var(--accent-7);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-right: 8px;
+}
+
+/* Layer colors */
+.layer-7 { color: var(--accent-7); border-color: var(--accent-7); }
+.layer-6 { color: var(--accent-6); border-color: var(--accent-6); }
+.layer-5 { color: var(--accent-5); border-color: var(--accent-5); }
+.layer-4 { color: var(--accent-4); border-color: var(--accent-4); }
+.layer-3 { color: var(--accent-3); border-color: var(--accent-3); }
+.layer-2 { color: var(--accent-2); border-color: var(--accent-2); }
+.layer-1 { color: var(--accent-1); border-color: var(--accent-1); }
+
+.hidden {
+  display: none !important;
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<header>
+  <h1>OSI PROTOCOL STACK</h1>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search protocols...">
+  </div>
+  <div class="layer-filter">
+    <button class="layer-btn active" data-layer="all">ALL</button>
+    <button class="layer-btn" data-layer="7">L7</button>
+    <button class="layer-btn" data-layer="6">L6</button>
+    <button class="layer-btn" data-layer="5">L5</button>
+    <button class="layer-btn" data-layer="4">L4</button>
+    <button class="layer-btn" data-layer="3">L3</button>
+    <button class="layer-btn" data-layer="2">L2</button>
+    <button class="layer-btn" data-layer="1">L1</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="map-area" id="mapArea">
+    <!-- Layers will be inserted here -->
+  </div>
+  
+  <div class="side-panel" id="sidePanel">
+    <button class="close-btn" onclick="closePanel()">×</button>
+    <div class="panel-content" id="panelContent">
+      <!-- Protocol details will be inserted here -->
+    </div>
+  </div>
+</div>
+
+<script>
+const protocols = [
+  // Layer 7
+  { layer: 7, name: 'HTTP', port: '80', use: 'Hypertext Transfer Protocol for web browsing', scenario: 'Web traffic, API calls, web applications', devices: 'Web browsers, web servers, REST APIs, mobile apps', security: 'Unencrypted transmission, man-in-the-middle attacks, session hijacking, cross-site scripting (XSS), SQL injection', ioc: 'Unusual HTTP methods (PUT, DELETE on unexpected endpoints), large POST requests, abnormal user-agent strings, excessive 404 errors, SQL commands in URLs' },
+  { layer: 7, name: 'HTTPS', port: '443', use: 'Secure HTTP using TLS/SSL encryption', scenario: 'Secure web browsing, e-commerce, banking, secure API communication', devices: 'Web browsers, web servers, payment gateways, mobile banking apps', security: 'Certificate validation bypass, weak cipher suites, SSL stripping attacks, expired certificates, heartbleed vulnerability', ioc: 'Certificate mismatches, connections to suspicious domains, unusual certificate chains, high volume of HTTPS traffic to unknown IPs, beaconing patterns' },
+  { layer: 7, name: 'FTP', port: '20, 21', use: 'File Transfer Protocol for uploading/downloading files', scenario: 'File sharing, website updates, bulk data transfer', devices: 'FTP clients (FileZilla, WinSCP), web hosting, backup systems', security: 'Cleartext credentials, bounce attacks, anonymous access abuse, directory traversal, brute force attacks', ioc: 'Anonymous logins, failed login attempts, transfers to/from suspicious IPs, unusual file types (.exe, .bat), access to system directories' },
+  { layer: 7, name: 'SFTP/FTPS', port: '22 (SFTP), 989-990 (FTPS)', use: 'Secure file transfer using SSH or SSL/TLS', scenario: 'Secure file transfers, automated backups, secure data exchange', devices: 'Secure FTP clients, enterprise file transfer systems, backup software', security: 'SSH key compromise, weak encryption, man-in-the-middle if not properly configured, unauthorized key access', ioc: 'Unexpected key exchanges, failed authentication attempts, transfers during odd hours, large data exfiltration, connections from unusual geolocations' },
+  { layer: 7, name: 'SSH', port: '22', use: 'Secure Shell for encrypted remote access', scenario: 'Remote server administration, secure tunneling, automated scripts', devices: 'SSH clients (PuTTY, OpenSSH), Linux/Unix servers, network devices', security: 'Weak passwords, brute force attacks, SSH key theft, outdated SSH versions with vulnerabilities, unauthorized port forwarding', ioc: 'Multiple failed login attempts, login from unusual locations, new SSH keys added, unexpected port forwards, connections during off-hours, high frequency of connections' },
+  { layer: 7, name: 'Telnet', port: '23', use: 'Unencrypted remote terminal access', scenario: 'Legacy device management (now deprecated)', devices: 'Old routers, switches, industrial control systems, legacy Unix systems', security: 'Cleartext transmission of credentials and data, no encryption, easily sniffed, credential theft', ioc: 'Any Telnet usage (deprecated protocol), cleartext passwords in network traffic, connections to critical systems, access from external IPs' },
+  { layer: 7, name: 'SMTP', port: '25, 587, 465', use: 'Simple Mail Transfer Protocol for sending email', scenario: 'Email transmission between servers, sending outbound mail', devices: 'Mail servers (Exchange, Postfix), email clients, automated notification systems', security: 'Email spoofing, spam relay, phishing campaigns, open relay exploitation, cleartext auth on port 25', ioc: 'Unusual mail volumes, connections to known spam sources, suspicious sender domains, phishing keywords in traffic, relay attempts from unauthorized IPs, backscatter' },
+  { layer: 7, name: 'DNS', port: '53', use: 'Domain Name System for name resolution', scenario: 'Translating domain names to IP addresses', devices: 'DNS servers, all networked devices, applications, operating systems', security: 'DNS spoofing/poisoning, DDoS amplification, DNS tunneling for data exfiltration, domain hijacking, cache poisoning', ioc: 'Queries to suspicious domains, high query volumes, unusual TXT record queries, DNS traffic to non-standard ports, beaconing to command-and-control domains, queries for DGA domains' },
+  { layer: 7, name: 'DHCP', port: '67, 68', use: 'Dynamic Host Configuration Protocol for IP assignment', scenario: 'Automatic IP address allocation in networks', devices: 'DHCP servers, routers, clients (all network devices)', security: 'Rogue DHCP servers, DHCP starvation attacks, malicious DHCP options, man-in-the-middle via DHCP spoofing', ioc: 'Multiple DHCP servers detected, DHCP exhaustion, unexpected IP assignments, suspicious gateway assignments, unusual DNS server assignments' },
+  { layer: 7, name: 'TFTP', port: '69', use: 'Trivial File Transfer Protocol', scenario: 'Network device firmware updates, PXE boot, simple file transfers', devices: 'Network devices (routers, switches), PXE boot servers, embedded systems', security: 'No authentication, no encryption, easily intercepted, unauthorized file access', ioc: 'TFTP traffic from unexpected sources, large file transfers, access to system files, connections from public IPs' },
+  { layer: 7, name: 'POP3/POP3S', port: '110, 995', use: 'Post Office Protocol for retrieving email', scenario: 'Downloading email from server to client', devices: 'Email clients (Outlook, Thunderbird), mobile email apps', security: 'Cleartext authentication (POP3), brute force attacks, credential theft, email harvesting', ioc: 'Multiple failed logins, connections from unusual geolocations, rapid email downloads, access during unusual hours' },
+  { layer: 7, name: 'IMAP/IMAPS', port: '143, 993', use: 'Internet Message Access Protocol for email access', scenario: 'Accessing and managing email on server', devices: 'Email clients, webmail interfaces, mobile devices', security: 'Cleartext auth (IMAP), account compromise, email forwarding rules, unauthorized access', ioc: 'Unusual login locations, created forwarding rules, mass email deletions, login attempts from multiple IPs, after-hours access' },
+  { layer: 7, name: 'SNMP', port: '161, 162', use: 'Simple Network Management Protocol', scenario: 'Network device monitoring and management', devices: 'Network monitoring tools (Nagios, PRTG), routers, switches, servers', security: 'Default community strings (public/private), SNMP reflection attacks, information disclosure, weak SNMPv1/v2', ioc: 'SNMP queries from unauthorized sources, community string enumeration attempts, bulk data queries, queries to sensitive OIDs, traffic during odd hours' },
+  { layer: 7, name: 'LDAP/LDAPS', port: '389, 636', use: 'Lightweight Directory Access Protocol', scenario: 'Directory services, user authentication, address books', devices: 'Active Directory, authentication systems, email systems, SSO solutions', security: 'LDAP injection, cleartext credentials (LDAP), enumeration attacks, password spray attacks', ioc: 'Anonymous bind attempts, unusual query patterns, bulk data extraction, failed authentication spikes, queries for sensitive attributes, connections from unauthorized systems' },
+  { layer: 7, name: 'RDP', port: '3389', use: 'Remote Desktop Protocol', scenario: 'Remote Windows desktop access', devices: 'Windows Remote Desktop, Terminal Services, remote admin tools', security: 'Brute force attacks, credential theft, BlueKeep vulnerability, man-in-the-middle, ransomware delivery', ioc: 'Multiple failed logins, connections from unexpected countries, RDP from internet-facing systems, unusual session durations, connections during off-hours, credential stuffing patterns' },
+  { layer: 7, name: 'SMB/CIFS', port: '445, 139', use: 'Server Message Block for file/printer sharing', scenario: 'Windows file sharing, network printing, IPC', devices: 'Windows file servers, NAS devices, Samba servers, printers', security: 'EternalBlue exploit, pass-the-hash attacks, credential relay, ransomware propagation, null session enumeration', ioc: 'SMB1 usage, connections to IPC$ shares, lateral movement patterns, unusual file access, NTLM relay attempts, scanning for open SMB ports' },
+  { layer: 7, name: 'NFS', port: '2049', use: 'Network File System', scenario: 'Unix/Linux file sharing', devices: 'Linux/Unix file servers, NAS devices, storage systems', security: 'No authentication in NFSv2/v3, unauthorized file access, NFS export misconfiguration, tampering', ioc: 'Access from unauthorized IPs, connections to sensitive exports, unusual mount attempts, bulk data transfers' },
+  { layer: 7, name: 'SIP', port: '5060, 5061', use: 'Session Initiation Protocol for VoIP', scenario: 'VoIP call setup and management', devices: 'VoIP phones, PBX systems, video conferencing, softphones', security: 'VoIP toll fraud, eavesdropping (unencrypted SIP), caller ID spoofing, denial of service, registration hijacking', ioc: 'Registration attempts from unauthorized IPs, unusual call patterns, international call spikes, INVITE floods, failed authentication attempts, scanning for SIP services' },
+  { layer: 7, name: 'RTP/RTCP', port: 'Dynamic', use: 'Real-time Transport Protocol for media streaming', scenario: 'Voice/video streaming in real-time communications', devices: 'VoIP systems, video conferencing, streaming applications', security: 'Eavesdropping, call interception, quality degradation attacks, packet injection', ioc: 'Unencrypted RTP streams, unusual port ranges, stream interception attempts, quality issues indicating tampering' },
+  
+  // Layer 6
+  { layer: 6, name: 'SSL/TLS', port: 'N/A', use: 'Secure Sockets Layer/Transport Layer Security', scenario: 'Encryption layer for securing communications', devices: 'Web servers, email servers, VPN clients, any encrypted communication', security: 'Weak cipher suites, protocol downgrade attacks, POODLE, BEAST, certificate validation issues, outdated versions (SSLv2/v3)', ioc: 'Use of deprecated SSL versions, weak ciphers negotiated, certificate errors, SSL renegotiation attacks, connections using export-grade encryption' },
+  { layer: 6, name: 'MIME', port: 'N/A', use: 'Multipurpose Internet Mail Extensions', scenario: 'Email content encoding and formatting', devices: 'Email systems, web browsers, file transfer systems', security: 'Malicious attachments, content type confusion, file type spoofing', ioc: 'Suspicious attachment types, MIME header anomalies, obfuscated content types, nested MIME structures' },
+  
+  // Layer 5
+  { layer: 5, name: 'NetBIOS', port: '137-139', use: 'Network Basic Input/Output System', scenario: 'Session management in Windows networks', devices: 'Windows file sharing, name resolution, legacy Windows networking', security: 'Name service spoofing, session hijacking, SMB relay attacks, information disclosure', ioc: 'NetBIOS enumeration scans, unusual name queries, session establishment from unknown hosts, broadcast storms' },
+  { layer: 5, name: 'PPTP', port: '1723', use: 'Point-to-Point Tunneling Protocol', scenario: 'VPN tunneling (legacy)', devices: 'Legacy VPN implementations, older remote access', security: 'Weak encryption, MS-CHAPv2 vulnerabilities, easy to decrypt, authentication weaknesses', ioc: 'PPTP usage (deprecated protocol), connections from untrusted networks, failed authentication attempts' },
+  { layer: 5, name: 'L2TP', port: '1701', use: 'Layer 2 Tunneling Protocol', scenario: 'VPN tunneling (often with IPSec)', devices: 'VPN concentrators, remote access VPNs, ISP services', security: 'Requires IPSec for security, vulnerable if used alone, DoS attacks, weak pre-shared keys', ioc: 'L2TP without IPSec, connections from suspicious IPs, tunnel establishment anomalies, unusual traffic patterns in tunnels' },
+  { layer: 5, name: 'SOCKS', port: '1080', use: 'Socket Secure proxy protocol', scenario: 'Proxy connections, anonymization, traffic routing', devices: 'Proxy servers, Tor network, applications needing proxying', security: 'Open proxy abuse, traffic tunneling for malicious purposes, anonymized C2 communications', ioc: 'SOCKS proxy usage to suspicious destinations, high volumes of proxied traffic, connections to known malicious IPs, data exfiltration patterns' },
+  
+  // Layer 4
+  { layer: 4, name: 'TCP', port: 'N/A', use: 'Transmission Control Protocol', scenario: 'Reliable, connection-oriented data transmission', devices: 'All networked applications requiring reliable delivery', security: 'SYN flood attacks, session hijacking, TCP sequence prediction, connection exhaustion', ioc: 'Half-open connections, SYN floods, unusual connection patterns, port scanning (SYN scans), abnormal reset rates, connection table exhaustion' },
+  { layer: 4, name: 'UDP', port: 'N/A', use: 'User Datagram Protocol', scenario: 'Fast, connectionless data transmission', devices: 'DNS, DHCP, streaming media, gaming, VoIP', security: 'UDP flood attacks, spoofing (no connection state), amplification attacks, no delivery guarantee', ioc: 'UDP floods, reflection attacks, unusual UDP ports, high volumes of small UDP packets, fragmented UDP traffic' },
+  { layer: 4, name: 'SCTP', port: 'N/A', use: 'Stream Control Transmission Protocol', scenario: 'Multi-streaming reliable transport', devices: 'Telecom signaling (SS7), VoIP, WebRTC', security: 'Association hijacking, DoS attacks, vulnerabilities in multi-homing', ioc: 'Unusual SCTP associations, connections from unexpected sources, signaling anomalies' },
+  
+  // Layer 3
+  { layer: 3, name: 'IP (IPv4/IPv6)', port: 'N/A', use: 'Internet Protocol', scenario: 'Packet addressing and routing', devices: 'All network devices, routers, hosts, applications', security: 'IP spoofing, fragmentation attacks, routing attacks, ping of death, smurf attacks', ioc: 'Spoofed source addresses, fragmented packet attacks, unusual TTL values, IP options abuse, routing loops, martian packets' },
+  { layer: 3, name: 'ICMP', port: 'N/A', use: 'Internet Control Message Protocol', scenario: 'Error reporting and diagnostics (ping, traceroute)', devices: 'Network diagnostics, routers, ping/traceroute tools', security: 'ICMP flood, ping of death, ICMP tunneling for data exfiltration, reconnaissance', ioc: 'Large ICMP packets, ICMP tunneling patterns, ICMP floods, unusual ICMP types, covert channel indicators, excessive ping requests' },
+  { layer: 3, name: 'IPSec', port: 'N/A', use: 'Internet Protocol Security', scenario: 'Network layer encryption and authentication', devices: 'VPNs, site-to-site connections, secure communications', security: 'Weak encryption algorithms, IKE vulnerabilities, pre-shared key compromise, ESP/AH spoofing', ioc: 'Failed IKE negotiations, unusual IPSec tunnels, connections from unauthorized gateways, policy mismatches' },
+  { layer: 3, name: 'IGMP', port: 'N/A', use: 'Internet Group Management Protocol', scenario: 'Multicast group management', devices: 'Multicast routing, IPTV, video conferencing', security: 'IGMP flooding, unauthorized multicast joins, DoS via multicast', ioc: 'Excessive IGMP joins, unauthorized multicast group membership, IGMP query attacks' },
+  { layer: 3, name: 'GRE', port: 'N/A', use: 'Generic Routing Encapsulation', scenario: 'Tunneling protocol for encapsulating packets', devices: 'VPNs, tunnel endpoints, WAN optimization', security: 'Tunneling for data exfiltration, encapsulated malicious traffic, bypass firewall rules', ioc: 'Unusual GRE tunnels, GRE traffic to suspicious IPs, encapsulated attack traffic, unexpected tunnel endpoints' },
+  { layer: 3, name: 'ARP', port: 'N/A', use: 'Address Resolution Protocol', scenario: 'Maps IP to MAC addresses', devices: 'All Ethernet networks, switches, hosts', security: 'ARP spoofing/poisoning, man-in-the-middle attacks, ARP cache poisoning, DoS via ARP floods', ioc: 'Duplicate IP addresses, MAC address changes, gratuitous ARP anomalies, ARP storms, multiple MACs claiming same IP' },
+  
+  // Layer 2
+  { layer: 2, name: 'Ethernet', port: 'N/A', use: 'Standard for wired LAN communications', scenario: 'Local area network data transmission', devices: 'Network switches, NICs, Ethernet cables, all wired LAN devices', security: 'MAC flooding, VLAN hopping, MAC spoofing, spanning tree attacks', ioc: 'MAC address spoofing, excessive broadcast traffic, VLAN tagging anomalies, CAM table overflow, spanning tree topology changes' },
+  { layer: 2, name: 'Wi-Fi (802.11)', port: 'N/A', use: 'Wireless LAN standard', scenario: 'Wireless network access', devices: 'Wireless access points, wireless NICs, mobile devices, IoT devices', security: 'WEP/WPA/WPA2 cracking, evil twin attacks, deauthentication attacks, rogue access points, KRACK attack', ioc: 'Deauth frames, rogue APs, weak encryption (WEP), unusual SSIDs, probe request anomalies, evil twin APs, excessive retransmissions' },
+  { layer: 2, name: 'PPP', port: 'N/A', use: 'Point-to-Point Protocol', scenario: 'Serial link encapsulation, dial-up connections', devices: 'Dial-up modems, DSL, serial connections, legacy remote access', security: 'Authentication vulnerabilities, session hijacking, CHAP weaknesses', ioc: 'Failed PPP negotiations, unusual authentication attempts, session anomalies' },
+  { layer: 2, name: 'PPPoE', port: 'N/A', use: 'PPP over Ethernet', scenario: 'Broadband connection authentication', devices: 'DSL modems, broadband routers, ISP infrastructure', security: 'Session hijacking, credential theft, unauthorized PPPoE sessions', ioc: 'Multiple PPPoE sessions, authentication failures, session ID conflicts, unauthorized session establishment' },
+  { layer: 2, name: 'Frame Relay', port: 'N/A', use: 'Packet-switching for WAN', scenario: 'Legacy WAN connections', devices: 'WAN routers, legacy enterprise networks, telecom infrastructure', security: 'PVC misconfiguration, eavesdropping, service disruption', ioc: 'Unusual PVC activity, connection anomalies, unexpected traffic patterns' },
+  { layer: 2, name: 'VLAN (802.1Q)', port: 'N/A', use: 'Virtual LAN tagging', scenario: 'Network segmentation and isolation', devices: 'Managed switches, enterprise routers, network infrastructure', security: 'VLAN hopping, double tagging attacks, unauthorized VLAN access, trunk port exploitation', ioc: 'VLAN hopping attempts, double-tagged frames, unauthorized VLAN membership, trunk port misuse, native VLAN attacks' },
+  
+  // Layer 1
+  { layer: 1, name: 'Ethernet Physical', port: 'N/A', use: 'Physical layer of Ethernet (cables, signals)', scenario: 'Physical transmission medium', devices: 'Network cables (Cat5e, Cat6, fiber), connectors, transceivers', security: 'Physical tapping, cable cutting, electromagnetic interference, unauthorized physical access', ioc: 'Link status changes, cable disconnections, signal quality degradation, unauthorized cable connections, physical port access' },
+  { layer: 1, name: 'USB', port: 'N/A', use: 'Universal Serial Bus', scenario: 'Device connectivity and data transfer', devices: 'USB devices, computers, peripherals, charging devices', security: 'BadUSB attacks, USB drop attacks, malware propagation, unauthorized data exfiltration, juice jacking', ioc: 'Unknown USB devices, USB mass storage from unknown sources, HID spoofing, unauthorized device connections, USB activity during off-hours' },
+  { layer: 1, name: 'RS-232', port: 'N/A', use: 'Serial communication standard', scenario: 'Serial device communication', devices: 'Serial consoles, industrial control systems, legacy equipment, modems', security: 'Physical access exploits, console access, unsecured serial ports', ioc: 'Unauthorized serial console access, configuration changes via serial, unexpected serial traffic' },
+  { layer: 1, name: 'Bluetooth', port: 'N/A', use: 'Short-range wireless communication', scenario: 'Device pairing and data transfer', devices: 'Smartphones, headsets, keyboards, mice, IoT devices, wearables', security: 'Bluejacking, bluesnarfing, BlueBorne vulnerabilities, unauthorized pairing, eavesdropping', ioc: 'Unexpected Bluetooth pairings, scanning for discoverable devices, unusual Bluetooth traffic, unauthorized device connections, pairing attempts' },
+  { layer: 1, name: 'Fiber Optic', port: 'N/A', use: 'Light-based data transmission', scenario: 'High-speed, long-distance communication', devices: 'Fiber cables, SFP modules, network backbones, data centers', security: 'Fiber tapping, physical damage, unauthorized splice points', ioc: 'Signal loss, unauthorized access to fiber infrastructure, splice detection anomalies, optical power fluctuations' },
+  { layer: 1, name: 'DSL/Cable', port: 'N/A', use: 'Broadband access technologies', scenario: 'Internet service delivery to consumers/businesses', devices: 'DSL modems, cable modems, ISP infrastructure', security: 'Signal injection, service theft, physical line access', ioc: 'Unusual signal characteristics, unauthorized modem activations, line quality issues, tampered connections' }
+];
+
+const layerNames = {
+  7: 'Application',
+  6: 'Presentation',
+  5: 'Session',
+  4: 'Transport',
+  3: 'Network',
+  2: 'Data Link',
+  1: 'Physical'
+};
+
+let currentFilter = 'all';
+let searchTerm = '';
+
+function renderLayers() {
+  const mapArea = document.getElementById('mapArea');
+  mapArea.innerHTML = '';
+  
+  for (let i = 7; i >= 1; i--) {
+    const layerProtocols = protocols.filter(p => p.layer === i);
+    const visibleProtocols = filterProtocols(layerProtocols);
+    
+    if (visibleProtocols.length === 0 && currentFilter !== 'all') continue;
+    
+    const layerDiv = document.createElement('div');
+    layerDiv.className = `osi-layer layer-${i}`;
+    layerDiv.dataset.layer = i;
+    
+    layerDiv.innerHTML = `
+      <div class="layer-header layer-${i}">
+        <div class="layer-number">L${i}</div>
+        <div class="layer-title">${layerNames[i].toUpperCase()}</div>
+        <div class="layer-subtitle">${visibleProtocols.length} protocol${visibleProtocols.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="protocol-grid" id="layer-${i}-grid"></div>
+    `;
+    
+    mapArea.appendChild(layerDiv);
+    
+    const grid = document.getElementById(`layer-${i}-grid`);
+    visibleProtocols.forEach(protocol => {
+      const card = createProtocolCard(protocol);
+      grid.appendChild(card);
+    });
+  }
+}
+
+function createProtocolCard(protocol) {
+  const card = document.createElement('div');
+  card.className = `protocol-card layer-${protocol.layer}`;
+  card.dataset.protocol = JSON.stringify(protocol);
+  
+  card.innerHTML = `
+    <div class="protocol-name">${protocol.name}</div>
+    <div class="protocol-port">Port: ${protocol.port}</div>
+    <div class="protocol-desc">${protocol.use}</div>
+  `;
+  
+  card.onclick = () => openPanel(protocol);
+  
+  return card;
+}
+
+function filterProtocols(protocols) {
+  return protocols.filter(p => {
+    const matchesLayer = currentFilter === 'all' || p.layer == currentFilter;
+    const matchesSearch = searchTerm === '' || 
+      p.name.toLowerCase().includes(searchTerm) ||
+      p.use.toLowerCase().includes(searchTerm) ||
+      p.port.toLowerCase().includes(searchTerm);
+    return matchesLayer && matchesSearch;
+  });
+}
+
+function openPanel(protocol) {
+  const panel = document.getElementById('sidePanel');
+  const content = document.getElementById('panelContent');
+  
+  // Remove active class from all cards
+  document.querySelectorAll('.protocol-card').forEach(c => c.classList.remove('active'));
+  
+  // Add active class to clicked card
+  event.currentTarget.classList.add('active');
+  
+  const securityItems = protocol.security.split(/,(?![^()]*\))/).map(s => s.trim());
+  const iocItems = protocol.ioc.split(/,(?![^()]*\))/).map(s => s.trim());
+  
+  content.innerHTML = `
+    <div class="panel-header">
+      <div class="panel-protocol-name layer-${protocol.layer}">${protocol.name}</div>
+      <div class="panel-layer">Layer ${protocol.layer} — ${layerNames[protocol.layer]}</div>
+    </div>
+    
+    <div class="panel-section">
+      <div class="section-title layer-${protocol.layer}">Port Information</div>
+      <div class="section-content">
+        <span class="port-badge">${protocol.port}</span>
+      </div>
+    </div>
+    
+    <div class="panel-section">
+      <div class="section-title layer-${protocol.layer}">Primary Use</div>
+      <div class="section-content">${protocol.use}</div>
+    </div>
+    
+    <div class="panel-section">
+      <div class="section-title layer-${protocol.layer}">Scenario / Scope</div>
+      <div class="section-content">${protocol.scenario}</div>
+    </div>
+    
+    <div class="panel-section">
+      <div class="section-title layer-${protocol.layer}">Devices / Applications</div>
+      <div class="section-content">${protocol.devices}</div>
+    </div>
+    
+    <div class="panel-section">
+      <div class="section-title">⚠️ Security Concerns / Vulnerabilities</div>
+      <div class="section-content">
+        ${securityItems.map(item => `<div class="vulnerability-item">${item}</div>`).join('')}
+      </div>
+    </div>
+    
+    <div class="panel-section">
+      <div class="section-title">🔍 Indicators of Compromise</div>
+      <div class="section-content">
+        ${iocItems.map(item => `<div class="ioc-item">${item}</div>`).join('')}
+      </div>
+    </div>
+  `;
+  
+  panel.classList.add('open');
+}
+
+function closePanel() {
+  const panel = document.getElementById('sidePanel');
+  panel.classList.remove('open');
+  document.querySelectorAll('.protocol-card').forEach(c => c.classList.remove('active'));
+}
+
+// Event listeners
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  searchTerm = e.target.value.toLowerCase();
+  renderLayers();
+});
+
+document.querySelectorAll('.layer-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.layer;
+    closePanel();
+    renderLayers();
+  });
+});
+
+// Initial render
+renderLayers();
+</script>
+</body>
+</html>

