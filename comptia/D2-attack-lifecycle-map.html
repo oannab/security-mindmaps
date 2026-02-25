@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attack Lifecycle Mindmap — SY0-701 Domain 2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=IBM+Plex+Mono:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+
+:root {
+  --bg:       #050810;
+  --bg2:      #090d18;
+  --bg3:      #0d1220;
+  --border:   #1a2540;
+  --text:     #c8d8f0;
+  --dim:      #4a6080;
+  --c-mal:    #ff4455;
+  --c-net:    #00bfff;
+  --c-web:    #ffaa00;
+  --c-phy:    #00e698;
+  --c-cry:    #bf7fff;
+  --c-sup:    #ff7722;
+  --c-crd:    #ff88cc;
+  --c-virt:   #44ddff;
+  --c-zday:   #ffffff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── TOP BAR ──────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 20px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 100;
+}
+.logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #fff;
+  white-space: nowrap;
+}
+.logo span { color: var(--c-mal); }
+.subtitle {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 2px;
+}
+.cat-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.cat-tab {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+.cat-tab:hover { color: #fff; border-color: #fff; }
+.cat-tab.active { color: #000; font-weight: 600; }
+
+/* ── LAYOUT ───────────────────────────────────────── */
+.layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ──────────────────────────────────────── */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); }
+
+.sidebar-group { margin-bottom: 4px; }
+.group-header {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--dim);
+  padding: 10px 14px 4px;
+  text-transform: uppercase;
+}
+.attack-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+  border-left: 2px solid transparent;
+}
+.attack-btn:hover { background: rgba(255,255,255,0.04); }
+.attack-btn.active { background: rgba(255,255,255,0.07); border-left-width: 3px; }
+.attack-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.attack-label {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.attack-btn.active .attack-label { color: #fff; font-weight: 600; }
+
+/* ── MAIN CANVAS ──────────────────────────────────── */
+.main {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 20% 20%, rgba(0,100,200,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(100,0,200,0.03) 0%, transparent 60%);
+}
+
+/* ── SVG MINDMAP ──────────────────────────────────── */
+#mindmap-svg {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+#mindmap-svg:active { cursor: grabbing; }
+
+/* ── DETAIL POPUP ─────────────────────────────────── */
+.detail-panel {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 320px;
+  max-height: 60vh;
+  background: rgba(9,13,24,0.97);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+}
+.detail-panel.visible { display: flex; }
+.detail-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.detail-header .d-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.detail-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  flex: 1;
+}
+.detail-close {
+  background: none;
+  border: none;
+  color: var(--dim);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+.detail-close:hover { color: #fff; }
+.detail-body {
+  padding: 12px 14px;
+  overflow-y: auto;
+  flex: 1;
+}
+.detail-body::-webkit-scrollbar { width: 3px; }
+.detail-body::-webkit-scrollbar-thumb { background: var(--border); }
+.detail-phase {
+  margin-bottom: 10px;
+}
+.d-phase-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.d-items {
+  padding-left: 12px;
+  border-left: 2px solid rgba(255,255,255,0.08);
+}
+.d-item {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.5;
+  padding: 1px 0;
+  opacity: 0.85;
+}
+.d-item::before { content: "→  "; color: var(--dim); font-size: 10px; }
+
+/* ── TOOLTIP ──────────────────────────────────────── */
+.tooltip {
+  position: absolute;
+  background: rgba(9,13,24,0.95);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text);
+  pointer-events: none;
+  display: none;
+  white-space: nowrap;
+  z-index: 200;
+  max-width: 280px;
+  white-space: normal;
+}
+
+/* ── LEGEND ───────────────────────────────────────── */
+.legend {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 1px;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── PHASE RING LEGEND ────────────────────────────── */
+.ring-legend {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(9,13,24,0.85);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 1px;
+}
+.ring-legend-title {
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  letter-spacing: 2px;
+}
+.ring-item { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+.ring-swatch { width: 20px; height: 3px; border-radius: 2px; }
+
+/* ── HELP ─────────────────────────────────────────── */
+.help-bar {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 1px;
+  text-align: center;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div>
+    <div class="logo">ATTACK<span>MAP</span></div>
+    <div class="subtitle">SY0-701 DOMAIN 2 // LIFECYCLE INTELLIGENCE</div>
+  </div>
+  <div class="cat-tabs" id="catTabs"></div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar"></div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <svg id="mindmap-svg" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow-r" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-soft" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="bg-grad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#0d1828" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#050810" stop-opacity="1"/>
+        </radialGradient>
+      </defs>
+      <g id="zoom-group"></g>
+    </svg>
+
+    <div class="ring-legend">
+      <div class="ring-legend-title">LIFECYCLE PHASES</div>
+      <div class="ring-item"><div class="ring-swatch" style="background:#888"></div>RECON</div>
+      <div class="ring-item"><div class="ring-swatch" style="background:#ff6633"></div>INITIAL ACCESS</div>
+      <div class="ring-item"><div class="ring-swatch" style="background:#ffcc00"></div>EXECUTION</div>
+      <div class="ring-item"><div class="ring-swatch" style="background:#33ff99"></div>PERSISTENCE</div>
+      <div class="ring-item"><div class="ring-swatch" style="background:#ff44aa"></div>PRIV. ESCALATION</div>
+      <div class="ring-item"><div class="ring-swatch" style="background:#4488ff"></div>DEFENSE EVASION</div>
+      <div class="ring-item"><div class="ring-swatch" style="background:#aa44ff"></div>LATERAL MOVEMENT</div>
+      <div class="ring-item"><div class="ring-swatch" style="background:#ff3333"></div>IMPACT</div>
+    </div>
+
+    <div class="help-bar">SCROLL to zoom  ·  DRAG to pan  ·  CLICK node for details</div>
+
+    <div class="detail-panel" id="detailPanel">
+      <div class="detail-header">
+        <div class="d-dot" id="dDot"></div>
+        <div class="detail-title" id="dTitle"></div>
+        <button class="detail-close" onclick="closeDetail()">×</button>
+      </div>
+      <div class="detail-body" id="dBody"></div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// DATA — Attack categories and their full lifecycle
+// ══════════════════════════════════════════════════════════════════════════════
+const PHASE_COLORS = {
+  'RECON':            '#888888',
+  'INITIAL ACCESS':   '#ff6633',
+  'EXECUTION':        '#ffcc00',
+  'PERSISTENCE':      '#33ff99',
+  'PRIV ESCALATION':  '#ff44aa',
+  'DEFENSE EVASION':  '#4488ff',
+  'LATERAL MOVEMENT': '#aa44ff',
+  'IMPACT':           '#ff3333',
+};
+
+const CATEGORIES = [
+  { id:'mal',  label:'Malware',      color:'#ff4455' },
+  { id:'net',  label:'Network',      color:'#00bfff' },
+  { id:'web',  label:'Web App',      color:'#ffaa00' },
+  { id:'phy',  label:'Physical',     color:'#00e698' },
+  { id:'cry',  label:'Cryptographic',color:'#bf7fff' },
+  { id:'sup',  label:'Supply Chain', color:'#ff7722' },
+  { id:'crd',  label:'Credential',   color:'#ff88cc' },
+  { id:'virt', label:'Virtualization',color:'#44ddff'},
+  { id:'zday', label:'Zero-Day',     color:'#ffffff' },
+];
+
+const ATTACKS = [
+  // ── MALWARE ──────────────────────────────────────────────────────────────
+  {
+    id:'ransomware', cat:'mal', label:'Ransomware', color:'#ff4455',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Target org research (employee count, sector, public financials)',
+        'Scan for exposed RDP, VPN CVEs, unpatched public services',
+        'Identify EDR/AV in use via job postings & LinkedIn',
+        'Map backup strategy to maximise ransom leverage',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Phishing email with malicious Office macro / ISO attachment',
+        'Exploit vulnerable internet-facing service (Exchange, Fortinet, MOVEit)',
+        'Purchase valid credentials from initial access broker (IAB)',
+        'Brute-force / spray exposed RDP port',
+        'Trojanized software or supply chain compromise',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Dropper decodes and loads payload from encrypted blob',
+        'PowerShell / LOLBins (living-off-the-land) execute stager',
+        'Shellcode injected into legitimate process (explorer.exe)',
+        'Payload contacts C2 for next-stage instructions',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Registry Run keys / RunOnce',
+        'Scheduled task with SYSTEM privileges',
+        'WMI event subscription',
+        'Boot sector infection (rare, wiper+ransom combos)',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'UAC bypass (fodhelper, eventvwr abuse)',
+        'Exploit unpatched local privilege escalation CVE',
+        'Token impersonation (incognito / potato attacks)',
+        'DCSync via compromised domain account',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Delete Volume Shadow Copies (vssadmin delete shadows)',
+        'Disable Windows Defender via registry / PowerShell',
+        'Process injection to run as trusted process',
+        'Timestomping to alter file modification dates',
+        'Clear Windows Event Logs',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Harvest credentials from LSASS (Mimikatz)',
+        'Pass-the-Hash / Pass-the-Ticket for SMB/WinRM',
+        'PSExec / WMIexec for remote execution on LAN hosts',
+        'RDP using stolen credentials',
+        'Exploit trust relationships between servers',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Encrypt files with strong asymmetric key (RSA-2048 wraps AES)',
+        'Rename files with custom extension (.locked, .RYUK, etc.)',
+        'Drop ransom note in each directory',
+        'Exfiltrate data before encryption (double extortion)',
+        'Publish stolen data on leak site if ransom unpaid',
+      ]},
+    ]
+  },
+  {
+    id:'rootkit', cat:'mal', label:'Rootkit / Trojan', color:'#ff4455',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Identify target software versions and OS kernel build',
+        'Research available rootkit frameworks (e.g., Necurs, ZeroAccess)',
+        'Identify security tools (AV, EDR) in environment',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Trojan embedded in pirated software or cracked tool',
+        'Drive-by download via malicious/compromised website',
+        'Email attachment with macro dropper',
+        'Physical USB drop attack',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Trojan executes with user context on open/run',
+        'Dropper downloads and installs rootkit component',
+        'Kernel-mode rootkit loaded via signed driver exploit',
+        'Bootkit modifies MBR/VBR before OS loads',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Kernel module loads at every boot',
+        'Bootkit embedded in Master Boot Record',
+        'Firmware implant survives OS reinstall',
+        'UEFI firmware modification for pre-boot persistence',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Rootkit operates at ring-0 (kernel) — already highest privilege',
+        'User-mode rootkit exploits SUID/sudo misconfiguration',
+        'Hook system calls to intercept privilege checks',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Hide processes from Task Manager / ps / top by hooking SSDT',
+        'Hide registry keys, files, and network connections',
+        'Intercept AV scanning calls and return clean results',
+        'Remove artifacts from event logs at kernel level',
+        'Load only in memory (fileless variant)',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Act as persistent backdoor for operator remote access',
+        'Keylog credentials for lateral movement',
+        'Proxy C2 traffic through compromised host',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Long-term espionage — data exfiltration over months',
+        'Credential harvesting at scale',
+        'Platform for deploying additional payloads',
+        'Destruction on demand (wiper capability)',
+      ]},
+    ]
+  },
+  {
+    id:'worm', cat:'mal', label:'Worm / Virus', color:'#ff4455',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Scan local subnet for vulnerable services (SMB, RPC, SSH)',
+        'Fingerprint OS versions and installed software',
+        'Enumerate open shares and network resources',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Exploit vulnerable network service without user interaction',
+        'Auto-run from infected removable media (USB)',
+        'Virus piggybacked on file opened by user',
+        'Exploit email client vulnerability on file preview',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Shellcode exploits buffer overflow in target service',
+        'Self-replication code copies worm to new host',
+        'Virus injects code into host executable',
+        'Payload executes additional modules from C2',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Modify executable files to carry virus code',
+        'Infect startup scripts and boot sectors',
+        'Copy self to startup directories and scheduled tasks',
+        'Infect shared network drives for further spread',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Exploit local CVE on newly infected host',
+        'Use compromised service account credentials',
+        'Abuse weak SUID/sticky bit configurations',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Polymorphic engine mutates code to avoid signature detection',
+        'Metamorphic rewrite obfuscates full code structure',
+        'Propagation throttled to avoid bandwidth alerts',
+        'Encrypted payload decrypted only at execution',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Propagates autonomously via exploited network vulnerability',
+        'Spreads via network shares, email contacts, mapped drives',
+        'Uses stolen credentials to authenticate to new hosts',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Payload execution: data destruction, encryption, theft',
+        'Resource exhaustion from propagation traffic',
+        'Botnet recruitment for DDoS or spam campaigns',
+        'Logic bomb detonation on trigger condition',
+      ]},
+    ]
+  },
+  {
+    id:'logicbomb', cat:'mal', label:'Logic Bomb / Keylogger', color:'#ff4455',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Insider identifies critical system or process to target',
+        'Keylogger operator identifies high-value credential holders',
+        'Understand trigger conditions available (dates, user accounts)',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Insider plants code during routine development work',
+        'Keylogger delivered via malicious email attachment',
+        'Keylogger installed by unauthorized physical access to device',
+        'Remote keylogger installed via RAT / backdoor',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Logic bomb executes when trigger condition is met (date, file absent)',
+        'Keylogger hooks Windows keyboard API (SetWindowsHookEx)',
+        'Hardware keylogger passes keystrokes transparently while capturing',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Logic bomb embedded in production codebase — survives reboots',
+        'Software keylogger in startup registry key',
+        'Hardware keylogger physically inserted — no software footprint',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Logic bomb planted in privileged service runs with service permissions',
+        'Keylogger targets admin sessions for credential escalation',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Logic bomb obfuscated within legitimate-looking code',
+        'No network activity until triggered (evades traffic analysis)',
+        'Keylogger output encrypted and exfiltrated in small bursts',
+        'Hardware keylogger invisible to all software scanning',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Harvested credentials used to access additional systems',
+        'Admin credentials captured by keylogger enable full domain access',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Logic bomb: file deletion, database wipe, service crash, encryption',
+        'Keylogger: long-term credential harvest, banking fraud, corporate espionage',
+        'Logic bomb triggered on insider termination event',
+      ]},
+    ]
+  },
+
+  // ── NETWORK ───────────────────────────────────────────────────────────────
+  {
+    id:'ddos', cat:'net', label:'DDoS (Amplified/Reflected)', color:'#00bfff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Identify target IP ranges, CDN usage, upstream providers',
+        'Scan for open UDP amplification sources (DNS, NTP, SSDP, Memcached)',
+        'Measure amplification factor of available reflectors',
+        'Identify target choke points (upstream bandwidth, firewall capacity)',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Build or rent botnet (IoT devices, compromised servers)',
+        'Identify open reflector/amplifier server pool (millions available)',
+        'IP spoofing capability established at botnet nodes',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Botnet nodes send small spoofed-source UDP requests to amplifiers',
+        'Amplifiers respond with large payloads to victim IP',
+        'Amplification factors: DNS ×70, NTP ×556, Memcached ×51,000',
+        'Multi-vector: HTTP flood + UDP amplification simultaneously',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Maintain botnet through C2 channel for sustained campaigns',
+        'Rotate attack vectors when one is mitigated',
+        'Ransom-driven: attack continues until payment',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Not applicable to DDoS — target is availability, not access',
+        'May accompany a second intrusion during defensive distraction',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Randomize source IP ranges to evade IP-based blocking',
+        'Rotate attack protocols when signatures are written',
+        'Disguise C2 traffic as legitimate protocol (DNS-over-HTTPS)',
+        'Use CDN infrastructure as amplifier (harder to block)',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Attack used as smokescreen while secondary breach occurs',
+        'SOC resources saturated, enabling intrusion on other vectors',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Target services become unavailable (resource inaccessibility)',
+        'Revenue loss per minute of downtime',
+        'Reputational damage and SLA breaches',
+        'Diversion attack enables concurrent data breach',
+      ]},
+    ]
+  },
+  {
+    id:'mitm', cat:'net', label:'On-Path / MITM', color:'#00bfff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Map network topology: switches, routers, VLAN configuration',
+        'Identify unencrypted protocols in use (HTTP, FTP, Telnet, LDAP)',
+        'Discover ARP table entries and default gateway MAC addresses',
+        'Identify wireless network SSIDs and authentication type',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Gain access to target network segment (rogue AP, compromised LAN device)',
+        'Position attacker machine on same broadcast domain as victim',
+        'Wireless: deploy evil twin AP with stronger signal than legitimate AP',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'ARP poisoning: broadcast spoofed ARP replies to poison victim and gateway cache',
+        'DNS spoofing: return malicious DNS responses for target domains',
+        'SSL stripping: downgrade HTTPS connections to HTTP transparently',
+        'BGP hijacking: announce more specific route to capture internet traffic',
+        'HTTPS: present attacker-controlled certificate to victim',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Maintain ARP poisoning continuously (ARP entries time out every ~2 min)',
+        'Evil twin remains active passively',
+        'Poisoned DNS cache persists until TTL expires',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Capture admin credentials from intercepted sessions',
+        'Inject malicious code into HTTP responses for client code execution',
+        'Relay NTLM authentication to access SMB resources as victim',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'ARP poisoning appears as normal network traffic',
+        'Evil twin indistinguishable from legitimate AP without 802.1X cert check',
+        'SSL strip attack appears as normal HTTP to victim (no cert warning)',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Relay captured NTLM hashes to authenticate to other services',
+        'Use harvested credentials across VPN, email, cloud services',
+        'Pivot: position as router to maintain ongoing interception',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Complete credential theft (usernames, passwords, session tokens)',
+        'Exfiltration of all unencrypted data in transit',
+        'Injection of malware into HTTP responses received by victim',
+        'Session hijacking using captured cookies/tokens',
+      ]},
+    ]
+  },
+  {
+    id:'credreplay', cat:'net', label:'Credential Replay', color:'#00bfff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Identify authentication protocols in use (NTLM, Kerberos, LDAP)',
+        'Determine which services accept hash-based or ticket-based auth',
+        'Monitor for authentication traffic patterns',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Compromise a single endpoint to gain initial foothold',
+        'Capture network traffic containing authentication exchanges',
+        'Obtain database containing password hashes (breach or breach resale)',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Pass-the-Hash: inject NTLM hash directly into auth process without cracking',
+        'Pass-the-Ticket: steal Kerberos TGT or service ticket from lsass memory',
+        'Session cookie replay: resubmit captured HTTP session token to web app',
+        'OAuth token replay: reuse captured access token within validity window',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Golden Ticket: forge Kerberos TGT using stolen krbtgt hash (valid 10+ years)',
+        'Silver Ticket: forge service ticket for specific services',
+        'Maintain access through replayed tokens indefinitely',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Replay admin hash/ticket to gain domain administrator access',
+        'DCSync: replicate all hashes from Domain Controller using replayed creds',
+        'Gain Kerberoastable service account tickets for offline cracking',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Hash replay produces identical authentication fingerprint as legitimate login',
+        'No password cracking — evades complexity/length controls',
+        'Works even if original password changed (hash captured before change)',
+        'Kerberos tickets appear legitimate to target services',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Authenticate to any service accepting NTLM using replayed hash',
+        'Access file shares, remote desktops, databases as victim user',
+        'Overpass-the-Hash: convert NTLM hash to Kerberos TGT',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Complete impersonation of compromised accounts',
+        'Data exfiltration under cover of legitimate user identity',
+        'Persistence as legitimate user — difficult to detect and evict',
+      ]},
+    ]
+  },
+  {
+    id:'dns', cat:'net', label:'DNS Attacks', color:'#00bfff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Enumerate DNS records (A, MX, NS, TXT, SPF) via zone transfer or OSINT',
+        'Identify DNS resolver in use and whether DNSSEC is enabled',
+        'Map authoritative nameservers for target domain',
+        'Check registrar for account takeover vulnerabilities',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'DNS Cache Poisoning: exploit race condition to inject fake record into resolver cache',
+        'Registrar account hijack: change authoritative NS records',
+        'BGP hijack of DNS provider IP range',
+        'Compromise of DNS server via unpatched vulnerability',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Poisoned cache redirects all resolver queries to attacker IP',
+        'Malicious NS records route all domain lookups through attacker nameserver',
+        'DNS tunneling: encode C2 or exfil data in TXT/A record queries',
+        'NXDOMAIN hijacking: redirect failed lookups to ad/malware server',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Cache poisoning persists until DNS TTL expires',
+        'Hijacked registrar records persist until legitimate owner recovers access',
+        'DNS tunneling C2 operates continuously',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Control DNS for domain enables fraudulent TLS certificate issuance (DV certs)',
+        'Redirect password reset emails by hijacking MX records',
+        'Full domain takeover via registrar account compromise',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'DNS traffic typically allowed through firewalls — tunneling exploits this',
+        'Legitimate-looking domain names used for C2 (domain generation algorithms)',
+        'HTTPS (DoH) can hide DNS tunneling from network inspection',
+        'Low-and-slow DNS tunneling avoids volume-based detection',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Internal DNS poisoning redirects internal service names to attacker hosts',
+        'DNS-based C2 enables command delivery to compromised hosts behind firewalls',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Mass credential harvesting via forged login pages at valid domain',
+        'Email interception by hijacking MX records',
+        'Man-in-the-middle for all users resolving poisoned domain',
+        'DDoS amplification using open resolvers',
+      ]},
+    ]
+  },
+  {
+    id:'wireless', cat:'net', label:'Wireless Attacks', color:'#00bfff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Passive scan: capture beacon frames to enumerate SSIDs, BSSID, channels, security type',
+        'Active scan: probe requests to discover hidden SSIDs',
+        'Identify WEP/WPA2-PSK networks vs WPA2-Enterprise',
+        'Map physical coverage area (signal strength survey)',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'WEP: capture IV-reused packets and run statistical crack (aircrack-ng)',
+        'WPA2-PSK: capture 4-way handshake or PMKID and brute-force offline',
+        'Evil twin: broadcast same SSID with higher power, capture association',
+        'Deauth flood: force clients to deassociate and reconnect (capture handshake)',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Evil twin serves captive portal capturing credentials',
+        'Cracked WPA2-PSK grants full network segment access',
+        'WEP crack gives plaintext of all traffic retrospectively',
+        'Rogue AP performs SSL strip on victim traffic',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Rogue AP runs continuously while powered',
+        'Maintain LAN access after initial wireless entry',
+        'Plant physical rogue AP device in concealed location',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'From wireless segment, pivot to internal LAN',
+        'Exploit trust between wireless and wired networks',
+        'Capture domain credentials via captive portal or MITM',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Rogue AP mimics legitimate AP MAC address (BSSID spoofing)',
+        'Operate on less-monitored 5GHz band',
+        'Mobile rogue AP moves to avoid triangulation',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Access internal network resources from LAN segment',
+        'Pivot using captured credentials to corporate resources',
+        'Target networked printers, IoT, or unmanaged devices on wireless',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Credential theft from captive portal victims',
+        'Complete traffic interception from wireless clients',
+        'Network intrusion via established wireless foothold',
+      ]},
+    ]
+  },
+
+  // ── WEB APP ───────────────────────────────────────────────────────────────
+  {
+    id:'sqli', cat:'web', label:'SQL Injection', color:'#ffaa00',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Spider web application to identify input fields, parameters, form endpoints',
+        'Test error responses for database type disclosure (MySQL, MSSQL, Oracle)',
+        'Check for verbose error messages with SQL syntax',
+        'Identify injectable parameters in URL, POST body, cookies, headers',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Identify unparameterized input field with SQL interpreter backend',
+        'Confirm vulnerability: inject single quote (\')', 'verify syntax error',
+        'Determine injectable context (WHERE clause, ORDER BY, INSERT, etc.)',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'In-band SQLi: extract data via UNION SELECT into response',
+        'Error-based: extract data from verbose database error messages',
+        'Blind boolean: infer data bit-by-bit from true/false page differences',
+        'Time-based blind: use SLEEP()/WAITFOR DELAY to infer data',
+        'Auth bypass: inject OR 1=1-- to nullify WHERE clause',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Write webshell to disk via INTO OUTFILE (MySQL) or xp_cmdshell (MSSQL)',
+        'Create new admin user in application database',
+        'Modify stored procedures to create backdoor logic',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'MSSQL: enable xp_cmdshell for OS command execution as SQL service account',
+        'Leverage SQL service account for OS privilege escalation',
+        'Extract application admin credentials from database and use on OS login',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'URL-encode payloads to bypass simple WAF keyword filters',
+        'Use comments (/**/) to break up blocked keywords (SEL/**/ECT)',
+        'Case variation: SeLeCt vs SELECT',
+        'Use equivalent functions to bypass keyword blocking',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'From OS shell via xp_cmdshell, pivot to internal network',
+        'Dump all user hashes from application DB for credential reuse',
+        'Access linked databases or servers via DB server trust',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Full database exfiltration (all tables, all records)',
+        'Authentication bypass to admin panel',
+        'Data modification or destruction',
+        'OS-level code execution via database features',
+      ]},
+    ]
+  },
+  {
+    id:'xss', cat:'web', label:'Cross-Site Scripting (XSS)', color:'#ffaa00',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Identify user-controlled input reflected in page output (search, comments, usernames)',
+        'Test for lack of output encoding: inject <b>test</b>, observe bold rendering',
+        'Determine execution context: HTML body, HTML attribute, JavaScript, URL',
+        'Identify valuable targets: admin panels, financial apps, SSO portals',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Reflected XSS: deliver crafted URL to victim via email or other channel',
+        'Stored XSS: inject payload into persistent field (comment, profile, forum post)',
+        'DOM XSS: manipulate client-side JavaScript without server interaction',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Browser executes injected JavaScript in origin context of trusted site',
+        'Script accesses document.cookie to extract session token',
+        'Keylogger: capture form input via oninput event listeners',
+        'BeEF framework hooks browser for command-and-control',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Stored XSS persists in database — executes for every visitor',
+        'Cookie-based backdoor installs persistent hook in browser',
+        'Admin-targeted stored XSS fires when admin moderates content',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Steal admin session cookie and impersonate admin',
+        'Trigger privileged admin actions (create new admin, change passwords)',
+        'Access admin-only functionality via borrowed session',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Encode payload with HTML entities, URL encoding, JavaScript unicode escapes',
+        'Use event handlers instead of <script> tags: onerror, onload, onmouseover',
+        'SVG / IMG / IFRAME tags as alternative execution vectors',
+        'Polyglot payloads that execute in multiple contexts',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Use compromised browser as SSRF proxy to access internal services',
+        'Steal credentials visible in DOM or auto-filled forms',
+        'Send authenticated requests to internal network via victim\'s browser',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Session token theft → account takeover',
+        'Credential phishing via injected login form overlay',
+        'Browser-based cryptomining or DDoS participation',
+        'Defacement of web pages for all visitors (stored XSS)',
+      ]},
+    ]
+  },
+  {
+    id:'injection', cat:'web', label:'Injection / Buffer Overflow', color:'#ffaa00',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Buffer Overflow: identify target binary, determine language (C/C++), check for DEP/ASLR',
+        'Fuzzing: send large/malformed inputs to find crash-inducing inputs',
+        'OS Command Injection: test input fields passed to OS shell (ping, nslookup params)',
+        'Identify offset to EIP/RIP using pattern_create cyclic pattern',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Remote buffer overflow: send exploit payload over network to listening service',
+        'Local buffer overflow: requires local account / physical access',
+        'Command injection: accessible via any web input passed to shell',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Overflow writes shellcode past buffer into return address',
+        'Control redirected to attacker shellcode in stack/heap',
+        'NOP sled increases shellcode landing probability',
+        'Command injection: attacker appends ; <command> or | <command>',
+        'Shellcode opens reverse shell or drops additional payload',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Install backdoor or C2 implant via executed shellcode',
+        'Add new privileged user account via shell command',
+        'Modify service/daemon to persist backdoor',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Exploit SUID binary overflow to run shellcode as root',
+        'Kernel buffer overflow for ring-0 code execution',
+        'Command injection in privileged web server process runs as root',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'ROP (Return-Oriented Programming) bypasses DEP/NX without injected shellcode',
+        'Heap spray to increase reliability of exploitation despite ASLR',
+        'JIT spraying in browser exploits',
+        'Format string vulnerability to leak ASLR base address before exploit',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Reverse shell from buffer overflow used as pivot point',
+        'Extract credentials from process memory post-exploitation',
+        'Exploit same vulnerability on other hosts in subnet',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Arbitrary code execution at service privilege level',
+        'Complete system compromise if privilege escalation follows',
+        'Denial of service if shellcode reliability is low (frequent crashes)',
+      ]},
+    ]
+  },
+  {
+    id:'traversal', cat:'web', label:'Directory Traversal / Forgery', color:'#ffaa00',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Directory Traversal: identify file inclusion parameters (file=, page=, path=)',
+        'CSRF: identify state-changing endpoints without CSRF token protection',
+        'SSRF: identify server-side URL fetch parameters (url=, img=, webhook=)',
+        'Test for error messages revealing absolute server paths',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Traversal: accessible via any authenticated or unauthenticated HTTP request with path param',
+        'CSRF: victim must be authenticated; attacker embeds request in malicious page',
+        'SSRF: any server-side URL parameter accessible to attacker',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Traversal: ../../../../etc/passwd or ../../../../windows/win.ini',
+        'URL-encoded variants: %2e%2e%2f%2e%2e%2f (to evade filters)',
+        'CSRF: victim\'s browser submits forged form or AJAX request with auth cookies',
+        'SSRF: server fetches internal URL: http://169.254.169.254/ (AWS metadata)',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Read private keys or config files to establish persistent access',
+        'SSRF to access internal management interface and create backdoor account',
+        'Log poisoning combined with traversal for webshell execution',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Traversal to read /etc/shadow for offline password cracking',
+        'SSRF to access cloud metadata service and steal IAM credentials',
+        'CSRF to trigger admin account creation or privilege grant',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Double URL encoding: %252e%252e%252f bypasses single-decode filters',
+        'Null bytes in path: ../../../../etc/passwd%00.jpg',
+        'SSRF via DNS rebinding to bypass same-origin checks',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Stolen private keys used to authenticate to other systems',
+        'Cloud IAM credentials from SSRF metadata API enable cloud-wide lateral movement',
+        'Admin credentials from traversal-read config files',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Disclosure of sensitive files: configs, keys, source code, credentials',
+        'CSRF: unauthorized financial transactions, account changes, data deletion',
+        'SSRF: full cloud infrastructure compromise via metadata API abuse',
+      ]},
+    ]
+  },
+
+  // ── PHYSICAL ──────────────────────────────────────────────────────────────
+  {
+    id:'physical', cat:'phy', label:'Physical Brute Force', color:'#00e698',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Conduct physical surveillance of target facility',
+        'Identify entry points: doors, windows, delivery bays, roof access',
+        'Observe guard patrol schedules and shift changes',
+        'Identify CCTV camera positions and blind spots',
+        'Research physical security vendor (badge system model, lock types)',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Forced entry: cutting padlocks, prying doors, drilling cylinder locks',
+        'Piggyback / tailgate through access-controlled door behind authorized user',
+        'Bypass: shimming card readers, relay attacks on RFID locks',
+        'Delivery bay / loading dock: lower physical security typically',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Locate and access server room, wiring closet, or workstation',
+        'Boot from USB/CD to bypass OS authentication (physical access = game over)',
+        'Attach hardware keylogger between keyboard and workstation',
+        'Remove storage devices for offline data extraction',
+        'Photograph or photograph data on screens',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Install hardware implant (rogue network device, hardware keylogger)',
+        'Plant a Raspberry Pi with LTE connectivity for ongoing access',
+        'Leave covert wireless access point inside facility perimeter',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Physical access to server bypasses all software authentication',
+        'Extract disk, mount read-write, add admin user to SAM/passwd',
+        'Cold-boot attack: extract RAM contents for encryption keys',
+        'Access to unattended unlocked workstation with active session',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Wear high-visibility vest / uniform to appear authorized',
+        'Act with confidence to avoid suspicion (social engineering adjacent)',
+        'Disable CCTV by covering lens or cutting power',
+        'Work during off-hours when guards and staff are minimal',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Hardware implant provides persistent LAN access from inside perimeter',
+        'Stolen credentials from hardware keylogger enable remote access',
+        'Compromised device on internal network enables further exploitation',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Complete data extraction from physical media',
+        'Destruction of hardware (ransomware of physical kind)',
+        'Ongoing covert surveillance via planted devices',
+        'Complete system compromise via direct OS manipulation',
+      ]},
+    ]
+  },
+  {
+    id:'rfid', cat:'phy', label:'RFID Cloning', color:'#00e698',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Observe target facility access control system (proximity reader model)',
+        'Identify card type: 125kHz (HID ProxCard, EM4100) vs 13.56MHz (Mifare)',
+        'Test read range of target card type',
+        'Identify high-value targets carrying access badges',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Approach target in close proximity (elevator, queue, canteen)',
+        'Concealed RFID reader (Proxmark, RFID Thief) captures badge UID',
+        'Read range: 1–10cm for standard readers; up to 50cm with boosted antenna',
+        '125kHz cards transmit UID unencrypted — capture is trivial',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Write captured UID to blank T5577 or similar writable card',
+        'Clone card reads identically to original at target access reader',
+        'Present cloned card at entry point to gain physical access',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Cloned card functional indefinitely (no cryptographic validity check on legacy systems)',
+        'Original cardholder unaware — their badge still works normally',
+        'Multiple clones can be produced from single capture',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Physical access to server room enables full hardware compromise',
+        'Access to executive offices for targeted device compromise or document theft',
+        'If card-holder is admin, access to all areas their card opens',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'No alarm triggered — cloned card produces valid response to reader',
+        'Access logs show badge holder\'s ID — victim may be suspected',
+        'Difficult to distinguish from legitimate use without concurrent-use detection',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Physical movement between secured areas using cloned credential',
+        'Combine with insider knowledge to navigate to high-value targets',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Unauthorized access to secured physical areas',
+        'Hardware theft, data extraction, device implant',
+        'Bypasses all logical security if physical security is the only control',
+      ]},
+    ]
+  },
+  {
+    id:'environmental', cat:'phy', label:'Environmental Attack', color:'#00e698',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Research facility infrastructure: power feeds, cooling systems, fuel tanks',
+        'Identify single points of failure in power and cooling redundancy',
+        'Map UPS capacity and estimated runtime',
+        'Identify utility providers and external infrastructure dependencies',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Physical access to facility exterior, utility rooms, or roof',
+        'Insider with access to mechanical/electrical plant',
+        'Remote access to building management system (BMS) if internet-connected',
+        'Disruption of utility supply at external provider level',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Cut power feeds or disable UPS to cause immediate hardware failure',
+        'Disable HVAC to cause thermal runaway — hardware damage in 30-60 minutes',
+        'Activate fire suppression (halon/CO2) to damage equipment or cause evacuation',
+        'Flood computer room via sprinkler sabotage or burst pipe',
+        'BMS compromise: remotely alter temperature setpoints',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Sabotaged equipment remains failed until physically repaired',
+        'Compromised BMS provides ongoing environmental manipulation capability',
+        'Generator fuel contaminated for recurring power failure on extended outage',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Forced evacuation provides cover for physical entry during chaos',
+        'Disaster recovery failover may be to less-secured hot site',
+        'Emergency access procedures may bypass normal authentication controls',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Attack appears as equipment failure rather than malicious act',
+        'BMS attacks leave minimal forensic evidence',
+        'Natural disaster cover provides plausible deniability',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Extended outage forces recovery operations that may expose credentials',
+        'Chaos during incident enables physical access to normally secured areas',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Complete service availability loss (resource inaccessibility)',
+        'Permanent hardware damage from thermal, electrical, or water damage',
+        'Data loss if backup power fails before clean shutdown',
+        'Multi-day or multi-week recovery if redundancy insufficient',
+      ]},
+    ]
+  },
+
+  // ── CRYPTOGRAPHIC ─────────────────────────────────────────────────────────
+  {
+    id:'downgrade', cat:'cry', label:'Downgrade / Cryptographic Attack', color:'#bf7fff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Identify TLS version and cipher suite support of target server (sslscan, testssl.sh)',
+        'Check if server accepts SSL 3.0, TLS 1.0/1.1, RC4, DES, EXPORT ciphers',
+        'Test for HSTS header presence (prevents protocol downgrade)',
+        'Identify weak hash algorithms in use (MD5, SHA-1 in certificates)',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Attacker must be on-path between client and server (prerequisite)',
+        'Downgrade exploits happen during TLS ClientHello / ServerHello handshake',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Intercept TLS ClientHello, strip support for strong ciphers and TLS 1.3',
+        'Force negotiation to SSL 3.0 / TLS 1.0 with RC4 or DES cipher',
+        'POODLE: exploit CBC padding oracle in SSL 3.0 to decrypt sessions',
+        'FREAK: force EXPORT-grade RSA (512-bit) then factor in hours',
+        'BEAST: exploit predictable IV in TLS 1.0 CBC mode',
+        'Birthday/Collision: find MD5/SHA-1 collision to forge certificates',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Downgrade persists as long as MITM position is maintained',
+        'Forged certificate using MD5 collision usable until cert revocation',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Decrypted session reveals admin credentials or session tokens',
+        'Forged CA certificate trusted by browser enables full impersonation',
+        'Factored RSA key allows signing arbitrary certificates',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Attack happens at crypto layer — application is unaware of downgrade',
+        'Victim browser shows no warning (HTTPS padlock still appears)',
+        'SSL strip removes HTTPS entirely — victim sees HTTP without warning',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Captured admin credentials enable lateral movement to back-end systems',
+        'Forged certificate enables MITM of additional services',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Complete session decryption and credential theft',
+        'Certificate forgery enabling mass MITM attacks',
+        'Integrity violation: modify encrypted traffic without detection',
+      ]},
+    ]
+  },
+
+  // ── SUPPLY CHAIN ──────────────────────────────────────────────────────────
+  {
+    id:'supplychain', cat:'sup', label:'Supply Chain Attack', color:'#ff7722',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Identify widely-used libraries, build tools, or software in target\'s stack',
+        'Research MSP or vendor with privileged access to target network',
+        'Find open-source package maintainers with weak account security',
+        'Identify hardware procurement channels for targeted implant insertion',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Typosquatting: publish malicious package with near-identical name',
+        'Account takeover of legitimate maintainer (phishing / credential stuffing)',
+        'Compromise build server CI/CD pipeline (GitHub Actions, Jenkins)',
+        'Insert hardware implant during manufacturing or shipping',
+        'MSP compromise: attacker pivots through MSP to all client networks',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Malicious package installs post-install script with backdoor',
+        'Backdoored build server signs malicious binary with legitimate cert',
+        'Hardware implant activates on power-up or specific condition',
+        'Malicious software update deployed to all customers simultaneously',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Backdoor in dependency invoked on every build or runtime',
+        'SolarWinds pattern: backdoor dormant for weeks before activation',
+        'Hardware implant: permanent, survives all software changes',
+        'MSP access maintained through compromised management tools',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'MSP typically has domain admin or equivalent — immediate high privilege',
+        'Code executes with privilege of calling application or build agent',
+        'Hardware implant bypasses all software security controls',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Malicious code signed with legitimate certificate — trusted by OS',
+        'Backdoor hides in voluminous legitimate code — hard to detect in review',
+        'Traffic blends with legitimate software update traffic',
+        'Long dormancy period before activation avoids correlation with install',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Compromised MSP enables simultaneous access to hundreds of clients',
+        'Build server compromise propagates to all deployment targets',
+        'Backdoored software executes on all customer systems at once',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Simultaneous compromise of all customers of affected vendor',
+        'Espionage via persistent backdoor in critical infrastructure software',
+        'Hardware implant: covert data exfiltration or sabotage capability',
+        'Complete loss of trust in software supply chain',
+      ]},
+    ]
+  },
+
+  // ── CREDENTIAL ────────────────────────────────────────────────────────────
+  {
+    id:'bruteforce', cat:'crd', label:'Brute Force', color:'#ff88cc',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Identify online authentication endpoints (login page, VPN, SSH, RDP)',
+        'Determine lockout policy: attempts allowed before lockout, lockout duration',
+        'Gather username list via OSINT (LinkedIn, email format, breach data)',
+        'Select wordlist appropriate to org (seasons, year, company name patterns)',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Online attack: direct requests to authentication endpoint',
+        'Offline attack: obtain hash database from breach or compromised system',
+        'Identify which accounts exist (username enumeration vulnerability)',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Online: tool (Hydra, Medusa, Burp Intruder) sends rapid credential pairs',
+        'Offline hash cracking: Hashcat GPU-accelerated against captured hashes',
+        'Dictionary attack: try common passwords and variations first',
+        'Rule-based: append years, symbols to dictionary words (P@ssw0rd2024)',
+        'Full brute force: all character combinations for short passwords',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Cracked credentials used to create persistent backdoor account',
+        'Valid credentials stored for ongoing authentication',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'If cracked account is admin — immediate high privilege',
+        'If standard user — perform local privilege escalation next',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Offline cracking: no network contact with target — undetectable',
+        'Distribute online attack across multiple source IPs',
+        'Stay below lockout threshold per-account (merges with spraying)',
+        'Use legitimate user agent strings to blend with real traffic',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Cracked credentials reused across services (password reuse)',
+        'Cracked admin hash used for Pass-the-Hash lateral movement',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Account compromise and full takeover',
+        'Data exfiltration under legitimate user identity',
+        'Financial fraud (if banking/payment credentials)',
+        'Account lockout DoS if many legitimate accounts locked',
+      ]},
+    ]
+  },
+  {
+    id:'spraying', cat:'crd', label:'Password Spraying', color:'#ff88cc',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Enumerate valid usernames (no guessing needed — use known format)',
+        'Identify lockout threshold (e.g., 5 failures per 30 minutes)',
+        'Identify season, year, company naming patterns common to org',
+        'Enumerate hundreds to thousands of valid accounts from LDAP/OSINT',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Target authentication system: O365, VPN portal, OWA, RDP, ADFS',
+        'No insider knowledge required — just valid username list',
+        'Designed from the outset to avoid lockout policy triggering',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Try one password across ALL accounts (e.g., "Spring2024!")',
+        'Wait longer than lockout reset window before next password attempt',
+        'Rotate through 3-4 common passwords across weeks',
+        'Automated via tools: MSOLSpray, Spray, Ruler for Exchange',
+        'Goal: statistically some % of org uses predictable password',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Valid credential provides persistent access until password change',
+        'If MFA absent: access is immediately usable',
+        'Compromised account used to establish further persistence',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'If compromised account has admin rights — immediate escalation',
+        'Otherwise: use foothold to perform further exploitation for privilege',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'No individual account exceeds lockout threshold — no lockouts triggered',
+        'Low-and-slow pattern appears as sporadic legitimate failures',
+        'Distributing across multiple IPs makes correlation harder',
+        'No account lockout alert fires — traditional monitoring misses this',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Valid credentials used to access SharePoint, email, VPN, cloud resources',
+        'Email access enables further spear-phishing within org',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Account takeover without triggering any lockout-based detection',
+        'Cloud/SaaS platform access (O365, Salesforce, Workday)',
+        'Email access for further attacks or data exfiltration',
+        'Invisible to lockout-based alerting systems',
+      ]},
+    ]
+  },
+
+  // ── VIRTUALIZATION ────────────────────────────────────────────────────────
+  {
+    id:'vmescape', cat:'virt', label:'VM Escape', color:'#44ddff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Identify hypervisor type and version (VMware ESXi, Hyper-V, KVM, QEMU)',
+        'Identify hypervisor CVEs on attack surface (VMCI, shared folders, clipboard)',
+        'Determine multi-tenancy context (IaaS cloud = high-value target)',
+        'Check for virtual device vulnerabilities (virtual NIC, GPU passthrough)',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Gain code execution within a guest VM (via any guest exploitation vector)',
+        'Exploit vulnerable virtual device driver exposed to guest',
+        'Abuse hypervisor API accessible from guest',
+        'Exploit shared memory region between guest and host',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Exploit hypervisor vulnerability from guest OS context',
+        'VENOM (CVE-2015-3456): floppy controller overflow escapes QEMU/Xen',
+        'ESXi vulnerabilities: VMCI, 3D acceleration bugs used for escape',
+        'Craft specially formed data sent through virtual device to trigger host vulnerability',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Establish persistence on host hypervisor OS',
+        'Modify hypervisor to maintain backdoor across guest VM restarts',
+        'Control hypervisor enables persistence over all guest VMs',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Host OS access typically means root/SYSTEM on bare metal',
+        'Hypervisor context = god mode: read/modify any guest VM memory',
+        'Access to all other VMs on same physical host',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Activity within guest appears legitimate to guest-level monitoring',
+        'Host-level logs may not show guest-originated exploitation',
+        'In cloud: host is provider infrastructure — no customer visibility',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'From host: access all co-tenant VMs on same physical machine',
+        'Read encryption keys from other tenants\' RAM',
+        'Pivot to hypervisor management network (higher trust segment)',
+        'Access vCenter/SCVMM management plane for org-wide VM control',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Compromise of all guest VMs on affected host',
+        'Cloud multi-tenancy breach — access to other customers\' data',
+        'Complete infrastructure takeover via management plane access',
+        'Data theft from RAM of other VMs without touching their storage',
+      ]},
+    ]
+  },
+
+  // ── ZERO-DAY ──────────────────────────────────────────────────────────────
+  {
+    id:'zeroday', cat:'zday', label:'Zero-Day Exploit', color:'#ffffff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Advanced threat actor: internal research team discovers novel vulnerability',
+        'Or: purchase from exploit broker (dark web, legitimate broker like Zerodium)',
+        'Prices: iOS browser zero-day up to $2.5M; enterprise zero-days $250K+',
+        'Identify target software stack to match owned zero-day to target',
+        'Nation-state: maintain portfolio of zero-days for strategic use',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Deploy zero-day in spear-phishing: weaponized PDF/Office/browser exploit',
+        'Watering hole: embed exploit in website target is known to visit',
+        'Supply chain delivery to specific target',
+        'Direct network exploitation of remotely triggerable zero-day',
+        'Physical delivery via USB (Stuxnet model)',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Exploit triggers with no user interaction (zero-click) or minimal (one-click)',
+        'Shellcode executes — no AV signature match (zero-day = unknown to AV)',
+        'Browser zero-day: drive-by download with no user action beyond page visit',
+        'Stage-1 payload: minimal implant that downloads full toolset',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Sophisticated implant (Pegasus, FinFisher class) installed',
+        'Multiple persistence mechanisms in parallel for redundancy',
+        'Dormant period to avoid correlation between exploit and detection',
+        'C2 infrastructure uses legitimate cloud services for traffic blending',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Often paired with local privilege escalation zero-day',
+        'Browser sandbox escape paired with kernel privilege escalation',
+        'One zero-day may chain multiple vulnerabilities for full privilege',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'No CVE exists — no signature possible in AV/IPS',
+        'Exploit code often encrypted and fileless',
+        'Polymorphic shellcode defeats heuristic scanning',
+        'Advanced implants detect VM/sandbox and refuse to execute',
+        'Network traffic blends with legitimate HTTPS to cloud services',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Full-featured implant enables complete lateral movement toolkit',
+        'Exfil reconnaissance data to plan further movement',
+        'Use legitimate credentials stolen from compromised host',
+        'May deploy additional zero-days if needed for specific targets',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Espionage: months of covert data collection',
+        'Sabotage: Stuxnet model — physical infrastructure damage',
+        'Zero-day used once then discarded to preserve its value',
+        'Once discovered: rapid mass exploitation before patch (1-day race)',
+      ]},
+    ]
+  },
+  {
+    id:'firmware', cat:'zday', label:'Firmware / Hardware Attack', color:'#ffffff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Identify device firmware version (web interface, SNMP, Shodan)',
+        'Check for known firmware CVEs or default credential databases',
+        'Obtain firmware image from vendor website for offline analysis',
+        'Reverse engineer firmware with binwalk, Ghidra to find vulnerabilities',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Exploit web management interface CVE (authenticated or unauthenticated)',
+        'Default credentials on management interface (admin/admin, admin/password)',
+        'Physical JTAG/UART serial console access for firmware extraction',
+        'Intercept firmware update via compromised update server (supply chain)',
+        'Exploit bootloader vulnerability via physical access',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Flash malicious firmware via legitimate update mechanism',
+        'Firmware backdoor activates on boot — below OS layer',
+        'Hardware implant physically soldered to PCB',
+        'UEFI rootkit injected into NVRAM flash',
+        'BMC (Baseboard Management Controller) compromise for server implant',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Firmware survives: OS reinstall, disk wipe, factory reset',
+        'UEFI implant persists through all OS-level remediation',
+        'Hardware implant: only physical device replacement removes it',
+        'BMC compromise: survives main system power cycle',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Firmware operates below OS — intrinsically highest privilege',
+        'Can manipulate OS boot process for ring-0 code execution',
+        'Control hypervisor from firmware level in server environments',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Below OS — invisible to all OS-level security tools',
+        'Signed firmware check bypassed if signing key compromised',
+        'Hardware implant: no software signature at all',
+        'Communication via legitimate protocol channels (IPMI, BMC)',
+        'Firmware checks: secure boot validation may be disabled in BIOS settings',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Persistent implant acts as a jumping-off point indefinitely',
+        'Compromise additional devices on same management network (OOB/IPMI)',
+        'Hardware implant passively intercepts all device traffic',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Permanent covert access surviving all remediation attempts',
+        'Brick device on command (destroy firmware)',
+        'Covert data exfiltration from below OS level',
+        'Physical destruction via firmware manipulation (overheating, power surge)',
+      ]},
+    ]
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BUILD UI
+// ══════════════════════════════════════════════════════════════════════════════
+let activeAttack = ATTACKS[0];
+let activeCategory = 'all';
+
+function buildSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.innerHTML = '';
+  const groups = {};
+  ATTACKS.forEach(a => {
+    if (!groups[a.cat]) groups[a.cat] = [];
+    groups[a.cat].push(a);
+  });
+  CATEGORIES.forEach(cat => {
+    if (activeCategory !== 'all' && activeCategory !== cat.id) return;
+    if (!groups[cat.id]) return;
+    const g = document.createElement('div');
+    g.className = 'sidebar-group';
+    g.innerHTML = `<div class="group-header">${cat.label}</div>`;
+    groups[cat.id].forEach(atk => {
+      const btn = document.createElement('button');
+      btn.className = 'attack-btn' + (atk.id === activeAttack.id ? ' active' : '');
+      btn.style.borderLeftColor = atk.id === activeAttack.id ? cat.color : 'transparent';
+      btn.innerHTML = `<div class="attack-dot" style="background:${cat.color}"></div>
+                       <div class="attack-label">${atk.label}</div>`;
+      btn.onclick = () => { activeAttack = atk; buildSidebar(); renderMindmap(); };
+      g.appendChild(btn);
+    });
+    sidebar.appendChild(g);
+  });
+}
+
+function buildCatTabs() {
+  const tabs = document.getElementById('catTabs');
+  const all = document.createElement('button');
+  all.className = 'cat-tab' + (activeCategory === 'all' ? ' active' : '');
+  all.textContent = 'ALL';
+  all.style.background = activeCategory === 'all' ? '#fff' : '';
+  all.onclick = () => { activeCategory = 'all'; buildCatTabs(); buildSidebar(); };
+  tabs.appendChild(all);
+  CATEGORIES.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-tab' + (activeCategory === cat.id ? ' active' : '');
+    btn.textContent = cat.label;
+    btn.style.background = activeCategory === cat.id ? cat.color : '';
+    btn.style.borderColor = activeCategory === cat.id ? cat.color : '';
+    btn.style.color = activeCategory === cat.id ? '#000' : '';
+    btn.onclick = () => {
+      activeCategory = cat.id;
+      const first = ATTACKS.find(a => a.cat === cat.id);
+      if (first) activeAttack = first;
+      buildCatTabs();
+      buildSidebar();
+      renderMindmap();
+    };
+    tabs.appendChild(btn);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MINDMAP RENDERER
+// ══════════════════════════════════════════════════════════════════════════════
+const svg = document.getElementById('mindmap-svg');
+const g = document.getElementById('zoom-group');
+let viewBox = { x: 0, y: 0, scale: 1 };
+let dragging = false, lastX, lastY;
+let expandedPhase = null;
+
+function renderMindmap() {
+  expandedPhase = null;
+  closeDetail();
+  g.innerHTML = '';
+
+  const atk = activeAttack;
+  const W = svg.clientWidth || 900;
+  const H = svg.clientHeight || 600;
+  const cx = W / 2, cy = H / 2;
+
+  // Reset view
+  viewBox = { x: 0, y: 0, scale: 1 };
+  applyViewBox();
+
+  const phases = atk.phases;
+  const phaseCount = phases.length;
+  const phaseColors = Object.values(PHASE_COLORS);
+
+  // Radii
+  const R_INNER = 110;   // center to phase node center
+  const R_OUTER = 230;   // phase to child nodes
+
+  // Draw center glow
+  const glow = createSVGEl('circle', { cx, cy, r: R_INNER - 20, fill: `url(#bg-grad)`, stroke: atk.color, 'stroke-width': 2, opacity: 0.6, filter: 'url(#glow-soft)' });
+  g.appendChild(glow);
+
+  const centerText = createSVGEl('text', { x: cx, y: cy - 12, 'text-anchor': 'middle', 'font-family': 'Orbitron', 'font-size': 13, fill: atk.color, 'font-weight': 700, 'letter-spacing': 2 });
+  centerText.textContent = atk.label.toUpperCase();
+  g.appendChild(centerText);
+
+  const catObj = CATEGORIES.find(c => c.id === atk.cat);
+  const catText = createSVGEl('text', { x: cx, y: cy + 10, 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 9, fill: catObj?.color || '#888', 'letter-spacing': 2 });
+  catText.textContent = (catObj?.label || '').toUpperCase();
+  g.appendChild(catText);
+
+  const typeText = createSVGEl('text', { x: cx, y: cy + 26, 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 8, fill: '#555', 'letter-spacing': 1 });
+  typeText.textContent = 'CLICK PHASE TO EXPAND';
+  g.appendChild(typeText);
+
+  phases.forEach((phase, i) => {
+    const angle = (2 * Math.PI / phaseCount) * i - Math.PI / 2;
+    const px = cx + R_INNER * Math.cos(angle);
+    const py = cy + R_INNER * Math.sin(angle);
+    const phaseColor = Object.values(PHASE_COLORS)[i % 8];
+
+    // Line from center to phase
+    const line = createSVGEl('line', { x1: cx, y1: cy, x2: px, y2: py, stroke: phaseColor, 'stroke-width': 1.5, opacity: 0.4 });
+    g.appendChild(line);
+
+    // Phase node circle
+    const phaseG = createSVGEl('g', { class: 'phase-node', cursor: 'pointer' });
+    const circle = createSVGEl('circle', { cx: px, cy: py, r: 38, fill: '#0d1220', stroke: phaseColor, 'stroke-width': 2 });
+    phaseG.appendChild(circle);
+
+    // Phase label (wrap)
+    const words = phase.phase.split(' ');
+    if (words.length === 1) {
+      const t = createSVGEl('text', { x: px, y: py + 4, 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 9, fill: phaseColor, 'font-weight': 600, 'letter-spacing': 1 });
+      t.textContent = phase.phase;
+      phaseG.appendChild(t);
+    } else {
+      words.forEach((w, wi) => {
+        const t = createSVGEl('text', { x: px, y: py - 5 + wi * 12, 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 9, fill: phaseColor, 'font-weight': 600, 'letter-spacing': 1 });
+        t.textContent = w;
+        phaseG.appendChild(t);
+      });
+    }
+
+    // Node count badge
+    const badge = createSVGEl('circle', { cx: px + 26, cy: py - 26, r: 10, fill: phaseColor, opacity: 0.9 });
+    const badgeNum = createSVGEl('text', { x: px + 26, y: py - 22, 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 9, fill: '#000', 'font-weight': 700 });
+    badgeNum.textContent = phase.nodes.length;
+    phaseG.appendChild(badge);
+    phaseG.appendChild(badgeNum);
+
+    // Child nodes (positioned around the phase node)
+    const childCount = phase.nodes.length;
+    const spreadAngle = Math.PI * 0.7;
+    const startAngle = angle - spreadAngle / 2;
+
+    const childEls = [];
+
+    phase.nodes.forEach((node, ni) => {
+      const childAngle = childCount === 1 ? angle : startAngle + (spreadAngle / (childCount - 1)) * ni;
+      const nx = px + R_OUTER * Math.cos(childAngle);
+      const ny = py + R_OUTER * Math.sin(childAngle);
+
+      const childG = createSVGEl('g', { class: 'child-node', opacity: 0, cursor: 'pointer' });
+
+      const cline = createSVGEl('line', { x1: px, y1: py, x2: nx, y2: ny, stroke: phaseColor, 'stroke-width': 1, opacity: 0.3, 'stroke-dasharray': '4 3' });
+      childG.appendChild(cline);
+
+      // Text box
+      const truncated = node.length > 42 ? node.substring(0, 40) + '…' : node;
+      const boxW = Math.min(truncated.length * 5.2 + 20, 180);
+      const boxH = 24;
+      const bx = nx - boxW / 2;
+      const by = ny - boxH / 2;
+
+      const rect = createSVGEl('rect', { x: bx, y: by, width: boxW, height: boxH, rx: 3, fill: '#0a0f1a', stroke: phaseColor, 'stroke-width': 1, opacity: 0.85 });
+      childG.appendChild(rect);
+
+      const txt = createSVGEl('text', { x: nx, y: ny + 4, 'text-anchor': 'middle', 'font-family': 'IBM Plex Sans', 'font-size': 9, fill: '#c8d8f0', 'letter-spacing': 0.3 });
+      txt.textContent = truncated;
+      childG.appendChild(txt);
+
+      // Tooltip on hover
+      childG.addEventListener('mouseenter', (e) => showTooltip(e, node));
+      childG.addEventListener('mousemove', (e) => moveTooltip(e));
+      childG.addEventListener('mouseleave', hideTooltip);
+
+      g.appendChild(childG);
+      childEls.push(childG);
+    });
+
+    // Phase hover / click
+    phaseG.addEventListener('mouseenter', () => {
+      circle.setAttribute('fill', phaseColor + '22');
+      circle.setAttribute('filter', 'url(#glow-soft)');
+    });
+    phaseG.addEventListener('mouseleave', () => {
+      if (expandedPhase !== i) {
+        circle.setAttribute('fill', '#0d1220');
+        circle.removeAttribute('filter');
+      }
+    });
+    phaseG.addEventListener('click', () => {
+      if (expandedPhase === i) {
+        // Collapse
+        expandedPhase = null;
+        childEls.forEach(c => animateOpacity(c, 0));
+        circle.setAttribute('fill', '#0d1220');
+        circle.removeAttribute('filter');
+        closeDetail();
+      } else {
+        // Collapse previous
+        if (expandedPhase !== null) {
+          // collapse all children (we track by data attribute)
+          document.querySelectorAll('.child-node[data-phase]').forEach(c => {
+            if (c.getAttribute('data-phase') !== String(i)) animateOpacity(c, 0);
+          });
+        }
+        expandedPhase = i;
+        childEls.forEach(c => animateOpacity(c, 1));
+        circle.setAttribute('fill', phaseColor + '33');
+        circle.setAttribute('filter', 'url(#glow-soft)');
+        showDetailPanel(phase, phaseColor, atk);
+      }
+    });
+
+    childEls.forEach(c => c.setAttribute('data-phase', i));
+    g.appendChild(phaseG);
+  });
+}
+
+function animateOpacity(el, target) {
+  let current = parseFloat(el.getAttribute('opacity') || 0);
+  const step = (target - current) / 8;
+  const interval = setInterval(() => {
+    current += step;
+    if ((step > 0 && current >= target) || (step < 0 && current <= target)) {
+      current = target;
+      clearInterval(interval);
+    }
+    el.setAttribute('opacity', current.toFixed(3));
+  }, 16);
+}
+
+function showDetailPanel(phase, phaseColor, atk) {
+  const panel = document.getElementById('detailPanel');
+  document.getElementById('dDot').style.background = phaseColor;
+  document.getElementById('dTitle').textContent = `${atk.label.toUpperCase()} // ${phase.phase}`;
+  document.getElementById('dTitle').style.color = phaseColor;
+
+  const body = document.getElementById('dBody');
+  body.innerHTML = '';
+  const dp = document.createElement('div');
+  dp.className = 'detail-phase';
+  const nameEl = document.createElement('div');
+  nameEl.className = 'd-phase-name';
+  nameEl.style.color = phaseColor;
+  nameEl.textContent = phase.phase;
+  dp.appendChild(nameEl);
+  const items = document.createElement('div');
+  items.className = 'd-items';
+  phase.nodes.forEach(n => {
+    const d = document.createElement('div');
+    d.className = 'd-item';
+    d.textContent = n;
+    items.appendChild(d);
+  });
+  dp.appendChild(items);
+  body.appendChild(dp);
+  panel.classList.add('visible');
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('visible');
+}
+
+// ── TOOLTIP ────────────────────────────────────────────────────────────────
+function showTooltip(e, text) {
+  const t = document.getElementById('tooltip');
+  t.textContent = text;
+  t.style.display = 'block';
+  moveTooltip(e);
+}
+function moveTooltip(e) {
+  const t = document.getElementById('tooltip');
+  const main = document.querySelector('.main');
+  const rect = main.getBoundingClientRect();
+  let x = e.clientX - rect.left + 12;
+  let y = e.clientY - rect.top + 12;
+  if (x + 290 > rect.width) x = e.clientX - rect.left - 290;
+  t.style.left = x + 'px';
+  t.style.top = y + 'px';
+}
+function hideTooltip() {
+  document.getElementById('tooltip').style.display = 'none';
+}
+
+// ── SVG HELPERS ────────────────────────────────────────────────────────────
+function createSVGEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  return el;
+}
+
+// ── PAN & ZOOM ─────────────────────────────────────────────────────────────
+function applyViewBox() {
+  const W = svg.clientWidth, H = svg.clientHeight;
+  const tX = W / 2 - viewBox.x * viewBox.scale - (W / 2) * viewBox.scale + W / 2 * (viewBox.scale - 1) / viewBox.scale;
+  g.setAttribute('transform', `translate(${-viewBox.x * (viewBox.scale - 1)},${-viewBox.y * (viewBox.scale - 1)}) scale(${viewBox.scale})`);
+}
+
+svg.addEventListener('mousedown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
+svg.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const dx = (e.clientX - lastX) / viewBox.scale;
+  const dy = (e.clientY - lastY) / viewBox.scale;
+  viewBox.x -= dx; viewBox.y -= dy;
+  lastX = e.clientX; lastY = e.clientY;
+  applyViewBox();
+});
+svg.addEventListener('mouseup', () => dragging = false);
+svg.addEventListener('mouseleave', () => dragging = false);
+
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  viewBox.scale = Math.max(0.3, Math.min(3, viewBox.scale * delta));
+  applyViewBox();
+}, { passive: false });
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+buildCatTabs();
+buildSidebar();
+renderMindmap();
+window.addEventListener('resize', renderMindmap);
+</script>
+</body>
+</html>

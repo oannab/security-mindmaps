@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SY0-701 Domain 2 — Threat Intelligence Map</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Exo+2:wght@300;400;600&display=swap');
+
+  :root {
+    --bg: #080c10;
+    --bg2: #0d1318;
+    --bg3: #111820;
+    --border: #1e2d3d;
+    --accent-r: #ff3c3c;
+    --accent-o: #ff8c00;
+    --accent-y: #ffd700;
+    --accent-g: #00e676;
+    --accent-b: #29b6f6;
+    --accent-p: #b388ff;
+    --text: #c8d8e8;
+    --text-dim: #5a7a9a;
+    --grid: rgba(30,45,61,0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    font-weight: 300;
+    line-height: 1.5;
+    padding: 32px 24px;
+    background-image: 
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    min-height: 100vh;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-r), var(--accent-o));
+  }
+
+  .domain-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--accent-o);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(24px, 4vw, 42px);
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #fff;
+    text-transform: uppercase;
+  }
+
+  .subtitle {
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    margin-top: 6px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 40px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* FLOW HEADER */
+  .flow-header {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    margin-bottom: 6px;
+    padding: 0 4px;
+  }
+
+  .flow-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    text-align: center;
+  }
+
+  .fl-vuln  { color: var(--accent-r); border-bottom: 2px solid var(--accent-r); }
+  .fl-atk   { color: var(--accent-o); border-bottom: 2px solid var(--accent-o); }
+  .fl-ind   { color: var(--accent-y); border-bottom: 2px solid var(--accent-y); }
+  .fl-mit   { color: var(--accent-g); border-bottom: 2px solid var(--accent-g); }
+
+  /* SECTION GROUPS */
+  .section-group {
+    margin-bottom: 36px;
+  }
+
+  .group-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 8px 0 8px 12px;
+    border-left: 3px solid var(--border);
+    margin-bottom: 8px;
+  }
+
+  /* ROW */
+  .row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    margin-bottom: 2px;
+    position: relative;
+  }
+
+  .row:hover .cell {
+    filter: brightness(1.15);
+  }
+
+  .row:hover .arrow-connector {
+    opacity: 1;
+  }
+
+  .cell {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    font-size: 12.5px;
+    position: relative;
+    transition: all 0.15s;
+  }
+
+  .cell-header {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+    opacity: 0.5;
+    text-transform: uppercase;
+  }
+
+  .cell strong {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 3px;
+    letter-spacing: 0.5px;
+  }
+
+  .cell p { font-size: 11.5px; line-height: 1.55; }
+  .cell ul { padding-left: 14px; font-size: 11.5px; }
+  .cell li { margin-bottom: 2px; }
+
+  .tag {
+    display: inline-block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+    margin: 2px 2px 0 0;
+    text-transform: uppercase;
+  }
+
+  /* Cell color variants */
+  .c-vuln  { border-left: 3px solid var(--accent-r);  }
+  .c-atk   { border-left: 3px solid var(--accent-o);  }
+  .c-ind   { border-left: 3px solid var(--accent-y);  }
+  .c-mit   { border-left: 3px solid var(--accent-g);  }
+
+  .c-vuln .cell-header  { color: var(--accent-r); }
+  .c-atk  .cell-header  { color: var(--accent-o); }
+  .c-ind  .cell-header  { color: var(--accent-y); }
+  .c-mit  .cell-header  { color: var(--accent-g); }
+
+  .c-vuln strong { color: #ffaaaa; }
+  .c-atk  strong { color: #ffcc88; }
+  .c-ind  strong { color: var(--accent-y); }
+  .c-mit  strong { color: #88ffcc; }
+
+  /* Context pill */
+  .ctx {
+    display: inline-block;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9.5px;
+    padding: 1px 6px;
+    color: var(--accent-b);
+    margin: 2px 2px 0 0;
+    letter-spacing: 0.5px;
+  }
+
+  /* Severity badges */
+  .sev-crit { background: rgba(255,60,60,0.15); color: var(--accent-r); }
+  .sev-high { background: rgba(255,140,0,0.15); color: var(--accent-o); }
+  .sev-med  { background: rgba(255,215,0,0.12); color: var(--accent-y); }
+
+  /* Special wide row for related attacks */
+  .note-row {
+    background: rgba(255,140,0,0.04);
+    border: 1px solid rgba(255,140,0,0.15);
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  .note-row span { color: var(--accent-o); }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 28px 0;
+  }
+
+  /* Arrow connectors visual */
+  .arrow-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    height: 14px;
+    margin-bottom: 2px;
+  }
+
+  .arrow-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--border);
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  @media (max-width: 700px) {
+    .row, .flow-header, .arrow-row { grid-template-columns: 1fr 1fr; }
+    .c-ind, .c-mit { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="domain-badge">CompTIA Security+ SY0-701</div>
+  <h1>Domain 2 — Threats, Vulnerabilities &amp; Mitigations</h1>
+  <div class="subtitle">// Relational Study Map — Technical &amp; Physical Focus //</div>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--accent-r)"></div>VULNERABILITY</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--accent-o)"></div>ATTACK / THREAT</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--accent-y)"></div>INDICATORS</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--accent-g)"></div>MITIGATION</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--accent-b)"></div>CONTEXT (where/what)</div>
+</div>
+
+<div class="flow-header">
+  <div class="flow-label fl-vuln">⚠ Vulnerability</div>
+  <div class="flow-label fl-atk">⚔ Attack</div>
+  <div class="flow-label fl-ind">◉ Indicators</div>
+  <div class="flow-label fl-mit">✦ Mitigation</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- APPLICATION VULNERABILITIES -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Application Vulnerabilities</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Buffer Overflow</strong>
+      <p>Memory written beyond allocated buffer boundary</p>
+      <span class="tag sev-crit">CRITICAL</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Memory Injection / Code Exec</strong>
+      <p>Attacker overwrites return address, injects shellcode or escalates privileges</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Application crash / unexpected restart</li>
+        <li>Resource consumption spikes</li>
+        <li>Out-of-cycle logging</li>
+        <li>Anomalous process spawning</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Input validation</li>
+        <li>ASLR (Address Space Layout Randomization)</li>
+        <li>DEP (Data Execution Prevention)</li>
+        <li>Static &amp; dynamic code analysis</li>
+        <li>Patching</li>
+      </ul>
+      <span class="ctx">app / OS / compiler</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Race Condition (TOC/TOU)</strong>
+      <p>Time-of-check vs. time-of-use gap exploited between validation and execution</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Privilege Escalation / File Swap</strong>
+      <p>Attacker swaps resource between check and use to gain unauthorized access</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Unexpected privilege changes</li>
+        <li>Out-of-cycle logging</li>
+        <li>Resource inaccessibility</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Atomic file operations</li>
+        <li>Static code analysis</li>
+        <li>Least privilege</li>
+        <li>Sandboxing</li>
+      </ul>
+      <span class="ctx">OS / application</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Malicious Update</strong>
+      <p>Unsigned or tampered software update delivered to target</p>
+      <span class="tag sev-crit">CRITICAL</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Supply Chain / Backdoor Install</strong>
+      <p>Malware embedded in legitimate-appearing update package</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Unexpected outbound connections post-update</li>
+        <li>Hash mismatch on update file</li>
+        <li>Unexpected resource consumption</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Code signing verification</li>
+        <li>Hash validation before install</li>
+        <li>Application allow list</li>
+        <li>Test environment before deployment</li>
+      </ul>
+      <span class="ctx">workstation / server / mobile</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- WEB-BASED VULNERABILITIES -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Web-Based Vulnerabilities</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>SQL Injection (SQLi)</strong>
+      <p>Unsanitized user input passed directly to database query</p>
+      <span class="tag sev-crit">CRITICAL</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>DB Dump / Auth Bypass / Deletion</strong>
+      <p>Attacker reads, modifies or destroys database; bypasses login; executes OS commands via DB</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Unusual DB query patterns in logs</li>
+        <li>Error messages exposing DB structure</li>
+        <li>Unexpected data exfiltration</li>
+        <li>Blocked content alerts</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Parameterized queries / prepared statements</li>
+        <li>Input validation &amp; sanitization</li>
+        <li>WAF (Web App Firewall)</li>
+        <li>Least privilege on DB accounts</li>
+        <li>Static &amp; dynamic analysis</li>
+      </ul>
+      <span class="ctx">web server / database / WAF</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Cross-Site Scripting (XSS)</strong>
+      <p>Malicious scripts injected into trusted web pages viewed by other users</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Session Hijack / Credential Theft</strong>
+      <p>Script steals cookies/tokens, redirects users, or modifies page content</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Unexpected script execution in app logs</li>
+        <li>Cookie theft / session anomalies</li>
+        <li>Concurrent session usage</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Output encoding</li>
+        <li>Content Security Policy (CSP)</li>
+        <li>Secure &amp; HttpOnly cookie flags</li>
+        <li>Input validation</li>
+        <li>WAF</li>
+      </ul>
+      <span class="ctx">web app / browser / WAF</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- NETWORK ATTACKS -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Network Attacks</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Open Service Ports / Unsecured Network</strong>
+      <p>Exposed services, lack of segmentation, unencrypted traffic</p>
+      <span class="tag sev-crit">CRITICAL</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>DDoS — Amplified &amp; Reflected</strong>
+      <p>Attacker floods target using amplification (DNS/NTP/SSDP) or reflection to overwhelm bandwidth/resources</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Resource inaccessibility / service down</li>
+        <li>Resource consumption spike</li>
+        <li>Unusual inbound traffic volumes</li>
+        <li>NetFlow anomalies</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Rate limiting / traffic scrubbing</li>
+        <li>IPS/IDS signatures</li>
+        <li>Disable unnecessary services/ports</li>
+        <li>Segmentation</li>
+        <li>ISP-level black hole routing (RTBH)</li>
+      </ul>
+      <span class="ctx">router / firewall / ISP / DNS server</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Unencrypted / Unsegmented Network</strong>
+      <p>Traffic traverses network in plaintext; no network access controls</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>On-Path (MITM) / Credential Replay</strong>
+      <p>Attacker intercepts traffic, captures credentials/tokens, replays them for unauthorized access</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Duplicate authentication events</li>
+        <li>Impossible travel / geo anomaly</li>
+        <li>ARP table anomalies</li>
+        <li>Concurrent session usage</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>TLS/HTTPS enforcement</li>
+        <li>IPSec / VPN tunneling</li>
+        <li>Network segmentation (VLANs)</li>
+        <li>802.1X port authentication</li>
+        <li>MFA (defeats replayed passwords)</li>
+      </ul>
+      <span class="ctx">switch / router / wireless / VPN</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>DNS Misconfiguration / Open Resolvers</strong>
+      <p>Poorly configured DNS allowing cache poisoning or amplification abuse</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>DNS Attacks — Poisoning / Hijacking</strong>
+      <p>Redirects users to malicious servers; enables DDoS amplification via open resolvers</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Unexpected DNS resolution results</li>
+        <li>Users redirected to unknown IPs</li>
+        <li>DNS query volume spikes</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>DNSSEC validation</li>
+        <li>DNS filtering</li>
+        <li>Disable open recursion on DNS servers</li>
+        <li>Monitoring / SIEM alerts on DNS</li>
+      </ul>
+      <span class="ctx">DNS server / firewall / network</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Unsecure Wireless (WEP / open AP)</strong>
+      <p>Weak or absent encryption on wireless networks</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Wireless Eavesdropping / Evil Twin</strong>
+      <p>Traffic interception on open/WEP networks; rogue AP mimics legitimate one</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Rogue AP detected by WIDS</li>
+        <li>Deauth flood events</li>
+        <li>Unexpected clients on AP</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>WPA3 / WPA2-Enterprise</li>
+        <li>RADIUS/AAA authentication</li>
+        <li>WIDS/WIPS deployment</li>
+        <li>Site surveys &amp; heat maps</li>
+        <li>Certificate-based EAP</li>
+      </ul>
+      <span class="ctx">wireless AP / RADIUS / WIDS</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MALWARE ATTACKS -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Malware Attacks</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Unpatched OS / No Endpoint Protection</strong>
+      <p>Missing security updates, absent AV/EDR, unrestricted execution</p>
+      <span class="tag sev-crit">CRITICAL</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Ransomware</strong>
+      <p>Encrypts files/drives; demands payment. Often delivered via phishing attachment or exploit kit</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Mass file extension changes</li>
+        <li>Rapid CPU/disk spike</li>
+        <li>Resource inaccessibility</li>
+        <li>C2 outbound connections</li>
+        <li>Shadow copy deletion events</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Offline encrypted backups (3-2-1 rule)</li>
+        <li>EDR / endpoint protection</li>
+        <li>Application allow listing</li>
+        <li>Patching</li>
+        <li>Segmentation (limits lateral spread)</li>
+        <li>Least privilege</li>
+      </ul>
+      <span class="ctx">workstation / server / backup system</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>No Egress Filtering / User Permissions</strong>
+      <p>Lack of outbound controls; excessive user rights allow persistence</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Rootkit / Trojan</strong>
+      <p>Rootkit hides deep in OS/firmware; Trojan masquerades as legitimate software to establish persistence</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Hidden processes / file discrepancies</li>
+        <li>AV detection disabled</li>
+        <li>Outbound C2 traffic</li>
+        <li>Missing or altered logs</li>
+        <li>Kernel integrity check failures</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Secure boot / UEFI integrity</li>
+        <li>TPM attestation</li>
+        <li>EDR / XDR monitoring</li>
+        <li>File integrity monitoring (FIM)</li>
+        <li>Reinstall from known-good image</li>
+        <li>Least privilege</li>
+      </ul>
+      <span class="ctx">OS / firmware / endpoint / SIEM</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Network Shares / Weak Segmentation</strong>
+      <p>Flat network allows lateral movement; open file shares enable propagation</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Worm / Malicious Code Propagation</strong>
+      <p>Self-replicating malware spreads autonomously across network without user interaction</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Unusual lateral network scanning</li>
+        <li>Multiple hosts showing same anomaly</li>
+        <li>Bandwidth consumption spikes</li>
+        <li>SNMP traps on multiple devices</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Network segmentation / micro-segmentation</li>
+        <li>Host-based firewall</li>
+        <li>Patching (worms exploit known vulns)</li>
+        <li>Disable unnecessary SMB/shares</li>
+        <li>Isolation of infected hosts</li>
+      </ul>
+      <span class="ctx">network / switch / firewall / endpoint</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>No Code Review / Insider Access</strong>
+      <p>Logic bomb planted by insider; triggered on condition (date, event, deletion of user)</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Logic Bomb / Keylogger</strong>
+      <p>Logic bomb: timed/triggered destructive payload. Keylogger: silently captures credentials &amp; input</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Scheduled task anomalies</li>
+        <li>Credential misuse post-resignation</li>
+        <li>Unexpected process with network I/O</li>
+        <li>Account lockouts from unknown source</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Code review &amp; peer sign-off</li>
+        <li>Static analysis tools</li>
+        <li>Offboarding: immediate account deprovisioning</li>
+        <li>EDR / UEBA (user behavior analytics)</li>
+        <li>MFA (defeats keylogged passwords)</li>
+      </ul>
+      <span class="ctx">SDLC / HR offboarding / EDR</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- HARDWARE VULNERABILITIES -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Hardware Vulnerabilities</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>End-of-Life / Legacy Hardware</strong>
+      <p>Vendor no longer releases patches; known CVEs remain permanently unaddressed</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Known Exploit Abuse</strong>
+      <p>Attackers target publicly documented CVEs on devices that will never receive patches</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Published/documented CVEs matching asset</li>
+        <li>Vulnerability scanner hits on EOL device</li>
+        <li>No available patch in vendor portal</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Decommissioning / replacement</li>
+        <li>Network isolation / air-gap</li>
+        <li>Compensating controls (firewall, IPS)</li>
+        <li>Asset inventory tracking with EOL dates</li>
+      </ul>
+      <span class="ctx">ICS/SCADA / embedded / switch / router</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Firmware Vulnerability</strong>
+      <p>Outdated or tampered firmware in device; unsigned firmware accepted</p>
+      <span class="tag sev-crit">CRITICAL</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Firmware Implant / Persistent Backdoor</strong>
+      <p>Attacker flashes malicious firmware; survives OS reinstall; gains persistent low-level access</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Firmware hash mismatch</li>
+        <li>Persistent behavior after full wipe</li>
+        <li>Unexpected network activity from device</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Signed firmware verification</li>
+        <li>Secure boot / UEFI</li>
+        <li>TPM-based attestation</li>
+        <li>Firmware update management</li>
+        <li>Physical access controls to hardware</li>
+      </ul>
+      <span class="ctx">BIOS/UEFI / TPM / router / IoT / server</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- VIRTUALIZATION VULNERABILITIES -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Virtualization Vulnerabilities</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>VM Escape</strong>
+      <p>Flaw in hypervisor allows code in guest VM to execute on host or other VMs</p>
+      <span class="tag sev-crit">CRITICAL</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Hypervisor Exploitation</strong>
+      <p>Attacker breaks out of isolated VM to access host system, other tenants, or hypervisor itself</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Host-level processes launched from VM context</li>
+        <li>Hypervisor error/crash logs</li>
+        <li>Unexpected cross-VM network traffic</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Hypervisor patching (priority)</li>
+        <li>VM isolation &amp; micro-segmentation</li>
+        <li>Least privilege on hypervisor admin</li>
+        <li>Monitoring hypervisor logs in SIEM</li>
+      </ul>
+      <span class="ctx">hypervisor / cloud / virtualization host</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Resource Reuse</strong>
+      <p>Memory/storage not properly wiped between tenant use in shared environments</p>
+      <span class="tag sev-med">MEDIUM</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Data Remnant Extraction</strong>
+      <p>Attacker allocates previously used memory/disk to read residual data from prior tenant</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Data found that doesn't match current session</li>
+        <li>Sensitive data in allocated storage</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Memory zeroing / secure deallocation</li>
+        <li>Encryption at rest</li>
+        <li>Secure VM decommissioning procedures</li>
+        <li>Use dedicated hardware where possible</li>
+      </ul>
+      <span class="ctx">cloud / hypervisor / shared hosting</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- CRYPTOGRAPHIC ATTACKS -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Cryptographic Attacks</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Weak/Outdated Cipher Negotiation</strong>
+      <p>System accepts legacy protocols (SSL, RC4, DES) during handshake</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Downgrade Attack</strong>
+      <p>MITM forces negotiation to weakest supported cipher; then cracks weak encryption</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>TLS version downgrade in handshake logs</li>
+        <li>Unexpected cipher suite negotiated</li>
+        <li>On-path network anomalies</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Disable SSL, TLS 1.0/1.1, RC4, DES</li>
+        <li>Enforce TLS 1.2/1.3 minimum</li>
+        <li>Strong cipher suite configuration</li>
+        <li>HSTS (HTTP Strict Transport Security)</li>
+      </ul>
+      <span class="ctx">web server / load balancer / VPN</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Weak Hashing (MD5, SHA-1) / No Salting</strong>
+      <p>Collision-vulnerable hash algorithms; unsalted hashes enable rainbow table attacks</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Collision / Birthday / Password Cracking</strong>
+      <p>Birthday: find two inputs with same hash. Rainbow table: precomputed hash lookup to crack unsalted passwords</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Credential stuffing attempts</li>
+        <li>Mass authentication failures then success</li>
+        <li>Leaked password database matched</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Use SHA-256/SHA-3, bcrypt, Argon2</li>
+        <li>Salting all passwords</li>
+        <li>Key stretching (PBKDF2)</li>
+        <li>MFA (credential alone insufficient)</li>
+      </ul>
+      <span class="ctx">authentication system / DB / IAM</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- PASSWORD / CREDENTIAL ATTACKS -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Password / Credential Attacks</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Weak Password Policy / No Lockout</strong>
+      <p>Short, simple, or reused passwords; no account lockout threshold</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Brute Force</strong>
+      <p>Systematically tries every possible password combination against an account or hash</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Account lockout events</li>
+        <li>High volume failed auth attempts (same account)</li>
+        <li>Out-of-cycle login attempts</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Account lockout policy</li>
+        <li>Long complex passphrases</li>
+        <li>MFA</li>
+        <li>CAPTCHA on login forms</li>
+        <li>Rate limiting auth endpoints</li>
+      </ul>
+      <span class="ctx">IAM / AD / web app / VPN</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Password Reuse / Common Passwords</strong>
+      <p>Users reuse passwords across services; common passwords not blocked</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Password Spraying</strong>
+      <p>Tests one common password (e.g. "Summer2024!") across many accounts — evades lockout policies</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Failed auth spread across many usernames</li>
+        <li>Slow, low-volume pattern across accounts</li>
+        <li>Impossible travel after successful login</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>MFA (critical — spray succeeds with just password)</li>
+        <li>Password managers</li>
+        <li>UEBA / behavioral analytics</li>
+        <li>Block known common passwords</li>
+        <li>Passwordless authentication</li>
+      </ul>
+      <span class="ctx">IAM / AD / cloud SSO / SIEM</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MOBILE / DEVICE VULNERABILITIES -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Mobile &amp; Endpoint Vulnerabilities</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Jailbreaking / Side Loading</strong>
+      <p>OS security controls removed; untrusted apps installed outside app store</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Malicious App / Spyware / Data Theft</strong>
+      <p>Untrusted app with excessive permissions harvests data, credentials, location</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>MDM detects jailbreak/root status</li>
+        <li>Unrecognized app in inventory</li>
+        <li>Unexpected data exfiltration</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>MDM policy: block jailbroken devices</li>
+        <li>BYOD policy enforcement</li>
+        <li>App allow listing via MDM</li>
+        <li>Certificate-based device enrollment</li>
+        <li>Remote wipe capability</li>
+      </ul>
+      <span class="ctx">MDM / mobile device / NAC</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Removable Media / Uncontrolled USB</strong>
+      <p>USB drives can introduce malware or exfiltrate data without network detection</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Malware Delivery / Data Exfiltration</strong>
+      <p>Infected USB auto-runs payload; or used to copy sensitive data out of air-gapped network</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>New USB device in endpoint logs</li>
+        <li>DLP alert on file copy</li>
+        <li>Unexpected process after USB insert</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Disable USB ports via Group Policy</li>
+        <li>DLP tools</li>
+        <li>Endpoint protection (auto-scan on connect)</li>
+        <li>Configuration enforcement</li>
+        <li>Physical port blockers</li>
+      </ul>
+      <span class="ctx">workstation / Group Policy / DLP / EDR</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SUPPLY CHAIN & MISCONFIGURATION -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Supply Chain &amp; Misconfiguration</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Supply Chain — Vendor / Software Provider</strong>
+      <p>Trusted third-party code or hardware contains malicious components before delivery</p>
+      <span class="tag sev-crit">CRITICAL</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Backdoored Library / Hardware Implant</strong>
+      <p>Compromised dependency or hardware shipped with embedded malicious functionality (e.g. SolarWinds style)</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Unexpected C2 traffic from trusted software</li>
+        <li>Package hash mismatch</li>
+        <li>Published CVE for vendor product</li>
+        <li>Anomalous behavior post-update</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Software Bill of Materials (SBOM)</li>
+        <li>Package monitoring</li>
+        <li>Right-to-audit clauses in vendor contracts</li>
+        <li>Vendor assessment / due diligence</li>
+        <li>Egress filtering + SIEM monitoring</li>
+      </ul>
+      <span class="ctx">software repo / vendor mgmt / SIEM</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Misconfiguration / Default Credentials</strong>
+      <p>Devices/services left with factory defaults, open ports, permissive ACLs</p>
+      <span class="tag sev-crit">CRITICAL</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Unauthorized Access / Lateral Movement</strong>
+      <p>Attacker logs in with default admin:admin or accesses internet-exposed management interfaces</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Login with default credentials in auth logs</li>
+        <li>Vulnerability scanner finding default creds</li>
+        <li>Unexpected admin session</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Change default passwords immediately</li>
+        <li>Disable unused ports/services/protocols</li>
+        <li>Configuration enforcement &amp; baseline hardening</li>
+        <li>Regular vulnerability scanning</li>
+        <li>Network access control (NAC)</li>
+      </ul>
+      <span class="ctx">router / switch / IoT / cloud / server</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- ZERO-DAY -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Zero-Day Vulnerabilities</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Zero-Day</strong>
+      <p>Unknown vulnerability — no patch exists; vendor may be unaware. Often chained with other exploits</p>
+      <span class="tag sev-crit">CRITICAL</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>APT / Nation-State Exploitation</strong>
+      <p>Zero-days command high value; used by sophisticated actors, sold on dark web, weaponized before disclosure</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>No matching CVE for observed behavior</li>
+        <li>Anomalous resource consumption</li>
+        <li>Unknown process / blocked content</li>
+        <li>Threat intel feed alerts</li>
+        <li>Missing logs (attacker covering tracks)</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Defense-in-depth (no single point)</li>
+        <li>EDR / XDR behavioral detection</li>
+        <li>Sandboxing unknown executables</li>
+        <li>Least privilege (limits blast radius)</li>
+        <li>Network segmentation</li>
+        <li>Threat hunting &amp; OSINT feeds</li>
+        <li>Rapid patching once CVE published</li>
+      </ul>
+      <span class="ctx">all platforms — defense-in-depth required</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- PHYSICAL ATTACKS -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Physical Attacks</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Weak Physical Access Controls</strong>
+      <p>No badge readers, unsecured server room, unattended workstations</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Physical Brute Force / Device Theft</strong>
+      <p>Forced entry, lock bypass, or theft of hardware to extract data offline</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>CCTV footage of unauthorized entry</li>
+        <li>Badge reader failure/tamper alert</li>
+        <li>Missing hardware in inventory</li>
+        <li>Physical damage to locks/equipment</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Access control vestibule / mantrap</li>
+        <li>Badge + PIN (two-factor physical)</li>
+        <li>CCTV with monitoring</li>
+        <li>Full-disk encryption (FDE) on all devices</li>
+        <li>Cable locks / hardware anchoring</li>
+        <li>Bollards for vehicle-based threats</li>
+      </ul>
+      <span class="ctx">facility / server room / workstation</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>RFID Systems Without Encryption</strong>
+      <p>Contactless badges using weak/no encryption can be read and cloned at range</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>RFID Cloning</strong>
+      <p>Attacker uses skimmer near victim to capture badge UID; clones to blank card for facility access</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Badge used at unusual time / location</li>
+        <li>Concurrent badge use (same card, different door)</li>
+        <li>Access logs show entry without CCTV match</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Encrypted RFID / smart cards (PKI-based)</li>
+        <li>Multi-factor physical access (badge + PIN)</li>
+        <li>RFID-blocking wallets for personnel</li>
+        <li>Anomaly alerts on concurrent badge use</li>
+        <li>Regular badge audit &amp; revocation</li>
+      </ul>
+      <span class="ctx">access control system / badge / facility mgmt</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Environmental Controls Failure</strong>
+      <p>No backup power, inadequate cooling, fire suppression gaps</p>
+      <span class="tag sev-high">HIGH</span>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Environmental Attack / Sabotage</strong>
+      <p>Deliberate disruption of cooling, power, or physical environment to cause hardware failure and downtime</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Temperature/humidity sensor alarms</li>
+        <li>UPS / generator activation</li>
+        <li>Hardware failure cascade</li>
+        <li>Physical security breach events</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>UPS + generators with auto-failover</li>
+        <li>Redundant HVAC systems</li>
+        <li>Environmental sensors with SNMP alerts</li>
+        <li>Geographic redundancy (hot/warm site)</li>
+        <li>Physical security perimeter (fencing, guards)</li>
+      </ul>
+      <span class="ctx">data center / server room / infrastructure</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- APPLICATION ATTACKS QUICK REF -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title">Application Attacks — Quick Reference</div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Directory Traversal</strong>
+      <p>Path input not sanitized; attacker navigates outside web root using "../" sequences</p>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>File System Access</strong>
+      <p>Read /etc/passwd, config files with credentials, private keys</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>URL patterns containing "../" in web logs</li>
+        <li>Access to paths outside web root in logs</li>
+        <li>403/404 errors on system paths</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Input validation / canonicalization</li>
+        <li>WAF rules for traversal patterns</li>
+        <li>Chroot jails / sandboxing</li>
+        <li>Least privilege on web server process</li>
+      </ul>
+      <span class="ctx">web server / WAF / OS</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="cell c-vuln">
+      <div class="cell-header">vulnerability</div>
+      <strong>Privilege Escalation via Injection</strong>
+      <p>Insufficient input validation in privileged processes</p>
+    </div>
+    <div class="cell c-atk">
+      <div class="cell-header">attack</div>
+      <strong>Command / Code Injection</strong>
+      <p>Attacker injects OS commands or code through application input to run as elevated process</p>
+    </div>
+    <div class="cell c-ind">
+      <div class="cell-header">indicators</div>
+      <ul>
+        <li>Unexpected OS command in app logs</li>
+        <li>New privileged accounts created</li>
+        <li>Suspicious outbound connections</li>
+      </ul>
+    </div>
+    <div class="cell c-mit">
+      <div class="cell-header">mitigation</div>
+      <ul>
+        <li>Input validation &amp; whitelisting</li>
+        <li>Run services as least-privilege accounts</li>
+        <li>Host-based IPS (HIPS)</li>
+        <li>SIEM alerting on privilege changes</li>
+      </ul>
+      <span class="ctx">app server / OS / HIPS / SIEM</span>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- INDICATORS MASTER REFERENCE -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="section-group">
+  <div class="group-title" style="border-left-color: var(--accent-y); color: var(--accent-y);">◉ Indicators of Malicious Activity — Master Reference</div>
+
+  <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 2px; margin-bottom: 4px;">
+    <div class="cell" style="border-left: 3px solid var(--accent-y);">
+      <strong style="color:var(--accent-y); font-size:13px;">Account Lockout</strong>
+      <p>Brute force or spraying attempts; also insider misuse</p>
+    </div>
+    <div class="cell" style="border-left: 3px solid var(--accent-y);">
+      <strong style="color:var(--accent-y); font-size:13px;">Concurrent Sessions</strong>
+      <p>Credential compromise; session token theft; RFID clone in use</p>
+    </div>
+    <div class="cell" style="border-left: 3px solid var(--accent-y);">
+      <strong style="color:var(--accent-y); font-size:13px;">Impossible Travel</strong>
+      <p>Login from NYC then London 30min later → credential theft</p>
+    </div>
+    <div class="cell" style="border-left: 3px solid var(--accent-y);">
+      <strong style="color:var(--accent-y); font-size:13px;">Resource Consumption</strong>
+      <p>Cryptomining, worm propagation, DoS, ransomware encryption in progress</p>
+    </div>
+    <div class="cell" style="border-left: 3px solid var(--accent-y);">
+      <strong style="color:var(--accent-y); font-size:13px;">Resource Inaccessibility</strong>
+      <p>Active DDoS, ransomware lock, hardware/service failure</p>
+    </div>
+    <div class="cell" style="border-left: 3px solid var(--accent-y);">
+      <strong style="color:var(--accent-y); font-size:13px;">Blocked Content</strong>
+      <p>WAF/IPS firing; C2 domain blocked by DNS filtering; DLP alert</p>
+    </div>
+    <div class="cell" style="border-left: 3px solid var(--accent-y);">
+      <strong style="color:var(--accent-y); font-size:13px;">Out-of-Cycle Logging</strong>
+      <p>Events at 3am; activity during maintenance windows; non-business-hours admin access</p>
+    </div>
+    <div class="cell" style="border-left: 3px solid var(--accent-y);">
+      <strong style="color:var(--accent-y); font-size:13px;">Missing Logs</strong>
+      <p>Attacker cleared logs; log tampering; ransomware deleted VSS copies</p>
+    </div>
+    <div class="cell" style="border-left: 3px solid var(--accent-y);">
+      <strong style="color:var(--accent-y); font-size:13px;">Published / Documented</strong>
+      <p>CVE published matching asset version; threat intel feed match; dark web leak</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  SY0-701 &nbsp;|&nbsp; DOMAIN 2 STUDY MAP &nbsp;|&nbsp; TECHNICAL &amp; PHYSICAL FOCUS &nbsp;|&nbsp; NOT FOR REDISTRIBUTION
+</footer>
+
+</body>
+</html>
