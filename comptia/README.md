@@ -7,11 +7,11 @@ All maps in this folder follow the official **SY0-701 exam objectives**.
 
 | File | Domain | Status |
 |------|--------|--------|
-| `D1-Threats-Attacks.md` | 1.0 — Threats, Attacks & Vulnerabilities | 🔜 Pending |
-| `D2-Cryptography-PKI.md` | 2.0 — Cryptography & PKI | 🔜 Pending |
+| `D1-.md` | 1.0 — General Security Concepts | 🔜 Pending |
+| `D2-ThreatVulnMitigation.md` | 2.0 — Threat, Vulnerabilities, Mitigation | ✅ Available |
 | `D3-Security-Architecture.md` | 3.0 — Security Architecture | ✅ Available |
 | `D4-Security-Operations.md` | 4.0 — Security Operations | ✅ Available |
-| `D5-Governance-Risk.md` | 5.0 — Governance, Risk & Compliance | 🔜 Pending |
+| `D5-.md` | 5.0 — Security, Program Management & Oversight | 🔜 Pending |
 
 ## How to Render
 
