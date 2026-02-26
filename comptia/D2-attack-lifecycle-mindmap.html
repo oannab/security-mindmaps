@@ -16,7 +16,7 @@
   --dim:      #4a6080;
   --c-mal:    #ff4455;
   --c-net:    #00bfff;
-  --c-web:    #ffaa00;
+  --c-app:    #ffaa00;
   --c-phy:    #00e698;
   --c-cry:    #bf7fff;
   --c-sup:    #ff7722;
@@ -311,6 +311,31 @@ body {
   text-align: center;
   pointer-events: none;
 }
+
+/* ── EXPAND ALL BUTTON ────────────────────────────── */
+.expand-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: rgba(9,13,24,0.9);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.2s;
+  z-index: 50;
+}
+.expand-btn:hover { color: #fff; border-color: #fff; }
+.expand-btn.active { color: #000; background: #fff; border-color: #fff; }
+.expand-btn .eb-icon { font-size: 13px; line-height: 1; }
 </style>
 </head>
 <body>
@@ -319,7 +344,7 @@ body {
 <div class="topbar">
   <div>
     <div class="logo">ATTACK<span>MAP</span></div>
-    <div class="subtitle">SY0-701 DOMAIN 2 // LIFECYCLE INTELLIGENCE</div>
+    <div class="subtitle">SY0-701 // DOMAIN 2</div>
   </div>
   <div class="cat-tabs" id="catTabs"></div>
 </div>
@@ -349,6 +374,10 @@ body {
       </defs>
       <g id="zoom-group"></g>
     </svg>
+
+    <button class="expand-btn" id="expandAllBtn" onclick="toggleExpandAll()">
+      <span class="eb-icon">⊞</span><span id="expandAllLabel">EXPAND ALL</span>
+    </button>
 
     <div class="ring-legend">
       <div class="ring-legend-title">LIFECYCLE PHASES</div>
@@ -395,7 +424,7 @@ const PHASE_COLORS = {
 const CATEGORIES = [
   { id:'mal',  label:'Malware',      color:'#ff4455' },
   { id:'net',  label:'Network',      color:'#00bfff' },
-  { id:'web',  label:'Web App',      color:'#ffaa00' },
+  { id:'app',  label:'Application',  color:'#ffaa00' },
   { id:'phy',  label:'Physical',     color:'#00e698' },
   { id:'cry',  label:'Cryptographic',color:'#bf7fff' },
   { id:'sup',  label:'Supply Chain', color:'#ff7722' },
@@ -723,7 +752,7 @@ const ATTACKS = [
       { phase:'EXECUTION', nodes:[
         'Pass-the-Hash: inject NTLM hash directly into auth process without cracking',
         'Pass-the-Ticket: steal Kerberos TGT or service ticket from lsass memory',
-        'Session cookie replay: resubmit captured HTTP session token to web app',
+        'Session cookie replay: resubmit captured HTTP session token to Application',
         'OAuth token replay: reuse captured access token within validity window',
       ]},
       { phase:'PERSISTENCE', nodes:[
@@ -852,12 +881,12 @@ const ATTACKS = [
     ]
   },
 
-  // ── WEB APP ───────────────────────────────────────────────────────────────
+  // ── Application ───────────────────────────────────────────────────────────────
   {
-    id:'sqli', cat:'web', label:'SQL Injection', color:'#ffaa00',
+    id:'sqli', cat:'app', label:'SQL Injection', color:'#ffaa00',
     phases:[
       { phase:'RECON', nodes:[
-        'Spider web application to identify input fields, parameters, form endpoints',
+        'Spider app application to identify input fields, parameters, form endpoints',
         'Test error responses for database type disclosure (MySQL, MSSQL, Oracle)',
         'Check for verbose error messages with SQL syntax',
         'Identify injectable parameters in URL, POST body, cookies, headers',
@@ -904,7 +933,7 @@ const ATTACKS = [
     ]
   },
   {
-    id:'xss', cat:'web', label:'Cross-Site Scripting (XSS)', color:'#ffaa00',
+    id:'xss', cat:'app', label:'Cross-Site Scripting (XSS)', color:'#ffaa00',
     phases:[
       { phase:'RECON', nodes:[
         'Identify user-controlled input reflected in page output (search, comments, usernames)',
@@ -948,12 +977,12 @@ const ATTACKS = [
         'Session token theft → account takeover',
         'Credential phishing via injected login form overlay',
         'Browser-based cryptomining or DDoS participation',
-        'Defacement of web pages for all visitors (stored XSS)',
+        'Defacement of app pages for all visitors (stored XSS)',
       ]},
     ]
   },
   {
-    id:'injection', cat:'web', label:'Injection / Buffer Overflow', color:'#ffaa00',
+    id:'injection', cat:'app', label:'Injection / Buffer Overflow', color:'#ffaa00',
     phases:[
       { phase:'RECON', nodes:[
         'Buffer Overflow: identify target binary, determine language (C/C++), check for DEP/ASLR',
@@ -964,7 +993,7 @@ const ATTACKS = [
       { phase:'INITIAL ACCESS', nodes:[
         'Remote buffer overflow: send exploit payload over network to listening service',
         'Local buffer overflow: requires local account / physical access',
-        'Command injection: accessible via any web input passed to shell',
+        'Command injection: accessible via any app input passed to shell',
       ]},
       { phase:'EXECUTION', nodes:[
         'Overflow writes shellcode past buffer into return address',
@@ -981,7 +1010,7 @@ const ATTACKS = [
       { phase:'PRIV ESCALATION', nodes:[
         'Exploit SUID binary overflow to run shellcode as root',
         'Kernel buffer overflow for ring-0 code execution',
-        'Command injection in privileged web server process runs as root',
+        'Command injection in privileged app server process runs as root',
       ]},
       { phase:'DEFENSE EVASION', nodes:[
         'ROP (Return-Oriented Programming) bypasses DEP/NX without injected shellcode',
@@ -1002,7 +1031,7 @@ const ATTACKS = [
     ]
   },
   {
-    id:'traversal', cat:'web', label:'Directory Traversal / Forgery', color:'#ffaa00',
+    id:'traversal', cat:'app', label:'Directory Traversal / Forgery', color:'#ffaa00',
     phases:[
       { phase:'RECON', nodes:[
         'Directory Traversal: identify file inclusion parameters (file=, page=, path=)',
@@ -1450,13 +1479,649 @@ const ATTACKS = [
     ]
   },
 
+  // ── MALWARE (additional) ──────────────────────────────────────────────────
+  {
+    id:'spyware', cat:'mal', label:'Spyware / Mobile Malware', color:'#ff4455',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Identify high-value mobile targets: executives, journalists, activists',
+        'Research device OS versions and MDM profile to identify attack surface',
+        'Determine app permissions available to disguised spyware app',
+        'Check if target uses outdated iOS/Android version with known exploit',
+        'Monitor target app usage patterns via passive intelligence',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Trojanised app distributed via third-party app store (Android sideload)',
+        'Spear-phish link to malicious app install prompt',
+        'Zero-click exploit via iMessage/WhatsApp (Pegasus model — no interaction needed)',
+        'Malicious MDM configuration profile delivered via phishing URL',
+        'PUP bundled with legitimate free software installer (desktop)',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Hooks keyboard API (SetWindowsHookEx / iOS input delegate) for all keystrokes',
+        'Periodic screenshot via MediaProjection API (Android) or accessibility services',
+        'Microphone and camera activated silently without indicator',
+        'Clipboard monitoring captures passwords and MFA codes on copy',
+        'GPS polling for real-time location exfiltration',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Android: WorkManager job or AlarmManager persists across reboots',
+        'iOS: MDM profile or enterprise certificate prevents deletion',
+        'Desktop: startup registry key or launchd plist for persistent execution',
+        'Watchdog process relaunches primary spyware if killed',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Exploit rooting/jailbreak vulnerability for OS-level access',
+        'Accessibility service abuse gives full device control on Android',
+        'Once rooted: access all app sandboxes and system files',
+        'Desktop: exploit SUID binary to elevate from user to root',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Masquerades as legitimate app (calculator, flashlight, VPN)',
+        'Battery and CPU throttling to avoid performance monitoring detection',
+        'Exfiltrates data only on Wi-Fi to avoid anomalous data usage alerts',
+        'Small incremental exfil uploads blend with normal app traffic',
+        'Detects device analysis/sandbox environment and suspends operation',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Captured credentials used to access corporate email, VPN, cloud services',
+        'MFA codes captured in real-time enable two-factor bypass',
+        'Corporate SSO session cookies stolen from mobile browser',
+        'Contact list and email access enables further social engineering targeting',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Long-term continuous credential and communication interception',
+        'Real-time audio/video surveillance of target physical environment',
+        'Corporate espionage: intellectual property theft via email monitoring',
+        'Complete behavioral profiling: location history, contacts, browsing',
+        'MFA bypass enabling account takeover even on protected services',
+      ]},
+    ]
+  },
+
+  // ── NETWORK (additional) ──────────────────────────────────────────────────
+  {
+    id:'phishing', cat:'net', label:'Phishing / Social Engineering', color:'#00bfff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'OSINT: LinkedIn for employee names, roles, org chart, email format',
+        'Identify target relationships: suppliers, IT helpdesk, HR vendors',
+        'Register lookalike domain (homograph, typosquat, hyphenated variant)',
+        'Clone legitimate email template from target org (public newsletters)',
+        'Check for public breach data to personalise lures (HIBP, OSINT frameworks)',
+        'Identify named executives for whaling or BEC targeting',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Mass phishing: high-volume generic lures to broad employee list',
+        'Spear phishing: personalised email referencing real colleague or project',
+        'Whaling: target C-suite with forged CFO/CEO communication',
+        'BEC (Business Email Compromise): compromise email account, forge wire transfer request',
+        'Smishing: SMS with fake parcel/bank alert containing malicious link',
+        'Vishing: call posing as IT helpdesk requesting password reset confirmation',
+        'Quishing: QR code in email bypasses URL inspection; victim scans on mobile',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Victim clicks link → browser exploit or credential harvesting page',
+        'Macro-enabled Office document executes dropper on open/enable',
+        'ISO/IMG attachment mounts and auto-executes without Mark-of-the-app (MOTW)',
+        'HTML attachment opens locally — bypasses email gateway URL scanning',
+        'Reverse proxy phishing kit (Evilginx2) relays real site — captures session tokens live',
+        'Vishing: victim verbally provides credentials or OTP codes to attacker',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Harvested credentials used to establish persistent VPN / cloud access',
+        'Delivered malware creates scheduled task or registry run key',
+        'Inbox rule created to forward all email to attacker (BEC persistence)',
+        'Attacker registers new MFA device using captured credentials + OTP code',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Credentials belong to privileged user — immediate high-level access',
+        'BEC compromise of finance team email enables fraudulent payment authorisation',
+        'Helpdesk vishing extracts admin credentials directly from employee',
+        'Delivered malware performs UAC bypass for local privilege escalation',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Lookalike domain passes visual inspection; HTTPS padlock on phishing page',
+        'Email sent from compromised legitimate account — passes SPF/DKIM/DMARC',
+        'Reverse proxy kit relays real site content — no obvious fake indicators',
+        'Multi-stage redirect through legitimate services pre-final payload',
+        'Quishing bypasses all email URL scanners entirely',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Compromised email account sends internal phishing to trusted colleagues',
+        'Stolen credentials reused across SSO and SaaS platforms',
+        'BEC pivot: attacker inside email thread redirects vendor bank payment details',
+        'Internal spear phishing generates zero suspicion from recipients',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Credential theft → account takeover of email, cloud, VPN, banking',
+        'Wire transfer fraud via BEC (average loss $125K+)',
+        'Malware delivery → ransomware, RAT, data exfiltration',
+        'Ongoing espionage via email forwarding rule (silent, persistent)',
+        'Reputational damage from internal account misuse',
+      ]},
+    ]
+  },
+  {
+    id:'wateringhole', cat:'net', label:'Watering Hole / Typosquatting', color:'#00bfff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Profile target group: industry forums, niche vendor portals, trade body sites',
+        'Identify websites exclusively visited by target demographic',
+        'Scan legitimate target sites for vulnerabilities (CMS, plugins, widgets)',
+        'Register typosquatting domains for target org and its key suppliers',
+        'Map client-side framework versions on target site (outdated jQuery, React)',
+        'Check npm/PyPI for unregistered package names resembling popular libraries',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Compromise legitimate website via CMS exploit (WordPress plugin CVE, SQLi)',
+        'Inject malicious script into third-party analytics/CDN widget loaded by target',
+        'Register typosquat domain (g00gle.com, Microsofft.com, orgname-portal.com)',
+        'Publish malicious npm/PyPI package at typosquatted name with postinstall backdoor',
+        'Purchase expired domain previously trusted by target employees',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Injected script fingerprints visitor: browser version, OS, plugins, IP geofence',
+        'Only deliver exploit payload to matching target profiles — skip generic visitors',
+        'Browser exploit (CVE) silently executes drive-by code without user interaction',
+        'Typosquat page clones legitimate login form → credential harvest',
+        'Malicious package postinstall hook runs on developer npm install',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Compromised third-party widget persists until site owner detects modification',
+        'Typosquat domain continues harvesting as long as registered',
+        'Delivered malware creates scheduled task / startup entry',
+        'C2 beacon established from victim device once exploit lands',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Browser exploit + sandbox escape + kernel LPE chain achieves SYSTEM access',
+        'Harvested credentials from typosquat used to log in as privileged user',
+        'Malicious npm package in developer env executes as CI/CD build agent',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Attack originates from otherwise-trusted legitimate website',
+        'Conditional exploit delivery: payload only fires for specific visitor fingerprint',
+        'Script injected into third-party resource — difficult for site owner to detect',
+        'Typosquat HTTPS cert obtained via Let\'s Encrypt — padlock shown to victim',
+        'Short-lived exploit pages rotate frequently to evade threat intelligence',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Compromised developer browser enables access to internal tooling',
+        'Harvested SSO credentials pivot attacker across entire org platform',
+        'Malicious npm package in dev supply chain infects build environment and CI',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Mass credential harvest targeting entire industry sector simultaneously',
+        'Silent compromise of high-value targets with no email or direct contact needed',
+        'Supply chain poisoning via malicious package typosquats (popular npm packages)',
+        'Zero-attribution attack — victim has no obvious attack vector to investigate',
+      ]},
+    ]
+  },
+
+  // ── Application (additional) ──────────────────────────────────────────────────
+  {
+    id:'ldapxxe', cat:'app', label:'LDAP / XXE / NoSQL Injection', color:'#ffaa00',
+    phases:[
+      { phase:'RECON', nodes:[
+        'LDAP: identify LDAP-backed login forms, directory search functions',
+        'XXE: identify XML-consuming endpoints (SOAP APIs, file upload, RSS parsers)',
+        'NoSQL: detect MongoDB/CouchDB backend via error messages or response timing',
+        'Test for LDAP special characters: *, (, ), \\, NUL in input fields',
+        'Check WSDL/swagger for XML or LDAP operations exposed via API',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'LDAP injection accessible via any unsanitised input passed to LDAP filter',
+        'XXE via file upload (SVG, XML, DOCX, XLSX) or XML body in POST request',
+        'NoSQL injection in JSON body parameters or URL-encoded MongoDB operators',
+        'LDAP bypass: inject *)(uid=*))(|(uid=* to return all directory entries',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'LDAP: (*)(uid=admin)(|(password=*) bypasses authentication checks',
+        'XXE: <!ENTITY xxe SYSTEM "file:///etc/passwd"> reads arbitrary local files',
+        'XXE SSRF: point external entity to internal service (http://169.254.169.254/)',
+        'XXE Billion Laughs DoS: exponentially expanding entity references crash parser',
+        'NoSQL: inject {"$gt":""} in password field bypasses MongoDB authentication',
+        'Blind XXE: exfiltrate data via DNS or HTTP out-of-band channel',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'LDAP: enumerate all users, groups, and OUs for future targeting',
+        'XXE SSRF: access internal API to create backdoor account',
+        'Stolen credentials from LDAP dump used for persistent access',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'LDAP dump reveals privileged group membership and admin account credentials',
+        'XXE reads application config files containing database or API credentials',
+        'NoSQL operator injection reads all user records including admin password hashes',
+        'XXE SSRF accesses AWS metadata endpoint for IAM credentials',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'LDAP special characters URL-encoded to bypass simple input filters',
+        'XXE via uncommon vector (SVG upload) evades WAF rules tuned for JSON/form',
+        'Out-of-band XXE leaves no trace in application response',
+        'NoSQL injection embedded in nested JSON structure bypasses flat filters',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'LDAP: extracted user attributes and group memberships map entire org',
+        'Stolen service account credentials from config files read via XXE',
+        'Cloud IAM keys from XXE SSRF used for cloud-wide lateral movement',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'LDAP: full corporate directory dump (all users, emails, groups, attributes)',
+        'XXE: arbitrary file read including private keys, shadow files, AWS credentials',
+        'NoSQL: complete database exfiltration bypassing all query-level controls',
+        'XXE DoS: crash XML parser causing application unavailability',
+      ]},
+    ]
+  },
+  {
+    id:'privesc_idor', cat:'app', label:'Privilege Escalation / IDOR', color:'#ffaa00',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Map application roles: guest, user, moderator, admin — identify privilege gaps',
+        'Identify IDOR candidates: numeric IDs in URLs, GUIDs, account references',
+        'Test horizontal IDOR: change account_id in URL to access other user data',
+        'Check for mass assignment: POST/PUT body parameters that set role or is_admin',
+        'Look for JWT with role claim: decode (base64), test claim manipulation',
+        'Check for forced browsing: guess admin panel paths (/admin, /management)',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'IDOR requires only a valid low-privilege account to begin testing',
+        'Mass assignment exploitable on any account registration or update endpoint',
+        'Vertical privilege escalation often requires just one authenticated account',
+        'JWT manipulation: alg:none bypass requires only a valid token to decode',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Horizontal IDOR: GET /api/users/1001/profile → change to /api/users/1002/profile',
+        'Vertical IDOR: access /admin/users/list with standard user session token',
+        'Mass assignment: POST {"username":"alice","role":"admin"} during registration',
+        'JWT manipulation: decode JWT, change role claim, re-sign with alg:none',
+        'Parameter pollution: supply duplicate parameters to confuse access checks',
+        'Path traversal in API: /api/user/../../admin/endpoint',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Mass assignment grants permanent admin role to attacker account',
+        'IDOR used to reset admin password and maintain privileged access',
+        'Create backdoor admin account via elevated API access obtained through IDOR',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Vertical IDOR directly achieves admin privilege from standard user context',
+        'JWT alg:none bypass grants arbitrary claims without valid signature',
+        'Mass assignment sets is_superuser=true on own account',
+        'Admin endpoint access enables resetting any account password',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'IDOR looks identical to legitimate user API usage — just a different ID value',
+        'Mass assignment uses standard POST format — indistinguishable from normal signup',
+        'Low request volume makes automated detection unlikely',
+        'JWT alg:none may not trigger alerts if token appears structurally valid',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Admin access via IDOR enables full account enumeration and takeover',
+        'Read all user records including password reset tokens or stored credentials',
+        'Pivot from Application admin to underlying server via admin file upload or exec',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Complete takeover of any user account in application (horizontal IDOR)',
+        'Full administrative access to application (vertical IDOR / JWT bypass)',
+        'Mass exfiltration of all user PII and sensitive application data',
+        'Financial fraud via access to payment records of other users',
+      ]},
+    ]
+  },
+  {
+    id:'racecondition', cat:'app', label:'Race Condition / Logic Flaw', color:'#ffaa00',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Identify state-dependent operations: redemptions, withdrawals, coupon use, votes',
+        'Map multi-step workflows with intermediate state stored server-side',
+        'Look for operations that perform check-then-act in separate steps (TOC/TOU)',
+        'Test idempotency of API endpoints — repeat identical requests and compare',
+        'Identify high-value business logic targets: referral bonuses, discount codes',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Any authenticated user can trigger race condition against their own resources',
+        'Multi-step checkout or redemption workflows accessible to all users',
+        'Concurrent request vulnerability requires no special privileges to exploit',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'TOC/TOU: fire 50 simultaneous POST /redeem requests for single-use code',
+        'Negative balance: race withdrawal requests to withdraw more than balance',
+        'Coupon race: apply same coupon in parallel across multiple browser sessions',
+        'File race: swap symbolic link target between security check and file write',
+        'Turbo Intruder (Burp) sends parallel requests with near-zero time gap',
+        'Thread-level parallelism exploits gap between balance check and deduction',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Exploitation of logic flaws generates persistent account credits or free goods',
+        'Unlimited resource accrual without per-exploit persistence mechanism needed',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Admin invite race condition: simultaneously accept invite and delete account',
+        'Role assignment race: trigger privilege grant and use window before revocation',
+        'Concurrent signup race can create duplicate privileged accounts',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Each individual request is legitimate — no single malicious request to detect',
+        'Attack pattern looks like legitimate high-traffic event (marketing campaign)',
+        'Timing-based exploitation leaves no distinct attack signature in WAF logs',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Credits/funds accumulated used for further platform manipulation',
+        'Logic flaws in RBAC enforcement enable accessing other users resources',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Financial loss via double-spend or balance manipulation',
+        'Free goods/services via coupon race or referral bonus exploitation',
+        'Privilege escalation to admin via role assignment race condition',
+        'Data integrity corruption when concurrent writes produce inconsistent state',
+      ]},
+    ]
+  },
+
+  // ── CREDENTIAL (additional) ───────────────────────────────────────────────
+  {
+    id:'stuffing', cat:'crd', label:'Credential Stuffing', color:'#ff88cc',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Obtain breach credential database (HIBP corpus, dark app marketplaces)',
+        'Select target service (banking, ecommerce, SaaS, gaming platform)',
+        'Verify breach data freshness — older breaches have lower success rates',
+        'Assess target rate limiting and bot detection capability',
+        'Identify proxy/residential IP infrastructure to evade IP blocking',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'No vulnerability required — uses real credentials from third-party breaches',
+        'Success relies entirely on users reusing passwords across services',
+        'Scale: 1-5% success rate on large dataset still yields thousands of accounts',
+        'Automated tool (Sentry MBA, STORM, custom scripts) submits credential pairs',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Distribute requests across large residential proxy pool to avoid IP blocks',
+        'Rotate User-Agent strings to mimic legitimate browser diversity',
+        'Solve CAPTCHA via automated CAPTCHA-solving services (2Captcha)',
+        'Rate: 10,000–100,000 attempts per hour across distributed infrastructure',
+        'Target multiple services simultaneously from same breach dataset',
+        'Token-less attacks via credential-pair POST to login API endpoint',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Valid credentials provide persistent access until victim changes password',
+        'Register new MFA device if account has no MFA (immediate full control)',
+        'Change recovery email to maintain access after victim discovers breach',
+        'Sell valid credential pairs on dark app for downstream exploitation',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Compromised admin/super-user account immediately yields elevated access',
+        'Access to privileged SaaS (HR platform, payroll, ERP) via credential stuffing',
+        'Compromised cloud root account enables full infrastructure control',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Residential proxy IPs indistinguishable from legitimate user geographies',
+        'Automated CAPTCHA solving defeats challenge-based bot detection',
+        'Slow-and-low attack rate stays under velocity thresholds',
+        'Headless browser (Playwright, Puppeteer) passes JS-challenge WAF checks',
+        'Each request is a valid login attempt — no malformed traffic to detect',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Password reuse means one breach enables access to dozens of services',
+        'Compromised corporate SSO credentials provide access to all linked apps',
+        'Financial account access enables further social engineering or direct fraud',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Mass account takeover across consumer and enterprise platforms',
+        'Account resale market: gaming, streaming, airline, financial accounts sold',
+        'Financial fraud via payment cards stored in compromised accounts',
+        'Corporate data exfiltration via compromised employee SaaS accounts',
+        'Reputational harm to targeted service from reported account takeovers',
+      ]},
+    ]
+  },
+  {
+    id:'kerberoast', cat:'crd', label:'Kerberoasting / AS-REP Roasting', color:'#ff88cc',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Any domain-authenticated account can enumerate SPNs — no special privilege required',
+        'Query Active Directory for accounts with ServicePrincipalName (SPN) set',
+        'Identify AS-REP Roastable accounts: Do not require Kerberos preauthentication',
+        'Prioritise service accounts: DBA, SQL, IIS, app services — likely weak passwords',
+        'Tools: GetUserSPNs.py (Impacket), PowerView, BloodHound for SPN enumeration',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Kerberoasting: requires any valid low-privilege domain user account',
+        'AS-REP Roasting: does not require authentication — only a username list',
+        'LDAP query to DC returns SPN list for all service accounts',
+        'AS-REP attack sends unauthenticated AS-REQ and receives offline-crackable hash',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Request Kerberos TGS ticket for each target SPN (RC4-HMAC encrypted)',
+        'Extract TGS ticket from memory — ticket hash is crackable offline',
+        'AS-REP: receive encrypted portion without needing credentials',
+        'Hashcat mode 13100 (Kerberoast) / mode 18200 (AS-REP): GPU offline crack',
+        'Prioritise accounts with weak/dictionary passwords — IT service accounts common',
+        'No interaction with target service — only Domain Controller queried',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Cracked service account password provides persistent domain access',
+        'Service accounts often have no password expiry — access persists indefinitely',
+        'Use cracked creds to create backdoor AD account or malicious GPO',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'SQL service account often has SysAdmin on SQL Server — immediate priv esc',
+        'Cracked domain admin service account — direct DA compromise',
+        'Service accounts often members of privileged groups (Backup Operators)',
+        'Use cracked creds to DCSync and dump entire domain hash database',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Kerberoasting is entirely in-memory — no disk artifacts',
+        'Standard Kerberos TGS requests blend with normal authentication traffic',
+        'AS-REP requests look like failed pre-auth — common in large AD environments',
+        'Offline cracking: Domain Controller sees only a standard ticket request',
+        'RC4 downgrade requested silently — target DC complies without anomaly logging',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Cracked service account credentials used for Pass-the-Hash or direct auth',
+        'SQL service account: execute commands on DB server, read all data',
+        'IIS service account: access all app application data and configuration files',
+        'Domain admin cracked: PSExec / WMIexec to any domain-joined host',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Domain privilege escalation from any low-privilege AD account',
+        'Complete Active Directory compromise via cracked DA service account',
+        'Data exfiltration via service account access to databases and file shares',
+        'Persistent backdoor access via service accounts with no password expiry',
+      ]},
+    ]
+  },
+
+  // ── CRYPTOGRAPHIC (additional) ────────────────────────────────────────────
+  {
+    id:'hashcrack', cat:'cry', label:'Hash Cracking / Rainbow Tables', color:'#bf7fff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Identify hashing algorithm: check /etc/shadow, NTDS.dit, leaked DB schema',
+        'MD5 ($1$): fast, broken; SHA-1: broken; NTLM: very fast; bcrypt/Argon2: slow',
+        'Estimate cracking time: NTLM cracked in seconds; bcrypt may take years per hash',
+        'Obtain hash database via SQLi, breach dump, NTDS.dit extraction, memory dump',
+        'Check HaveIBeenPwned for known password:hash pairs to short-circuit cracking',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Dump /etc/shadow (requires root or world-readable misconfiguration)',
+        'Extract Windows SAM hive (offline from VSS or live via registry)',
+        'Domain: DCSync attack replicates NTDS.dit hashes for all AD accounts',
+        'Database breach: application stores MD5(password) — extracted via SQLi',
+        'Memory dump: lsass.exe contains NTLM hashes of all recently logged-in users',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Rainbow tables: precomputed hash→plaintext chains; O(1) lookup; defeated by salt',
+        'Dictionary attack (Hashcat -a 0): try wordlist of known passwords against hashes',
+        'Rule-based (Hashcat -a 0 -r rules): transformations (capitalise, append digits)',
+        'Mask attack (Hashcat -a 3): pattern-based ?u?l?l?l?d?d (e.g. Summer23)',
+        'Combinator: combine two wordlists (password + 2024) for hybrid patterns',
+        'GPU acceleration: modern GPUs crack NTLM at 100B+ hashes/second',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Cracked plaintext passwords reused for direct authentication without hash',
+        'Store cracked credentials for future access if hashes rotate but passwords reused',
+        'Cracked domain admin hash enables DCSync at any time for fresh hash dump',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Cracked admin/root password provides immediate privileged shell',
+        'Domain admin NTLM hash enables Pass-the-Hash for DA access without cracking',
+        'Service account password cracked enables SPN-based lateral movement',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Offline cracking: zero network traffic to target during cracking phase',
+        'Cracking happens entirely on attacker hardware — completely undetectable',
+        'Cracked credential used for legitimate authentication — hard to distinguish',
+        'NTLM Pass-the-Hash avoids cracking entirely — no need to recover plaintext',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Cracked credentials tested across all internal services (password reuse)',
+        'Domain account password reused for local admin on other hosts',
+        'Service password reuse common: one crack opens multiple systems',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Plaintext password recovery enables full account compromise',
+        'Historical credential reuse exposes accounts on unrelated external services',
+        'Mass domain compromise if Domain Admin hash is cracked',
+        'Long-term covert access under legitimate user identity',
+      ]},
+    ]
+  },
+
+  // ── VIRTUALIZATION (additional) ───────────────────────────────────────────
+  {
+    id:'cloudmisc', cat:'virt', label:'Cloud Misconfiguration / IAM', color:'#44ddff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Enumerate public cloud assets: S3 bucket names, Azure Blob, GCP storage',
+        'Probe S3 buckets with authenticated and unauthenticated GET requests',
+        'Scan cloud provider IP ranges for exposed management interfaces',
+        'Use OSINT to find cloud account IDs, role ARNs, or API keys in public repos',
+        'Tools: CloudBrute, ScoutSuite, Prowler, CloudMapper enumerate misconfigs',
+        'Check GitHub/GitLab for hardcoded AWS_ACCESS_KEY_ID in commit history',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Access open S3 bucket or blob storage without any credentials',
+        'Exposed EC2 metadata endpoint (169.254.169.254) via SSRF from Application',
+        'API key in public GitHub repo: aws configure with leaked key',
+        'Overly permissive security group allows SSH/RDP from 0.0.0.0/0',
+        'No MFA on cloud root account — brute-force or spraying login',
+        'IAM role with wildcard (*) resource and action policy on public Lambda',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'List S3 bucket contents and download all objects (customer PII, backups)',
+        'EC2 metadata endpoint returns IAM role credentials for AWS API calls',
+        'Lambda environment variables read via metadata — secrets, DB passwords',
+        'IAM enumerate: list-users, list-roles, list-policies to map privilege graph',
+        'Use over-privileged role to create new admin IAM user for persistent access',
+        'Access RDS instance open to internet with default credentials',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Create new IAM user with admin policy and access keys for persistent access',
+        'Add backdoor Lambda function with high-privilege execution role',
+        'Attach persistent CloudTrail disabling policy to compromise logging',
+        'Register new MFA device on compromised root account',
+        'Create cross-account role trust from attacker-controlled account',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'iam:PassRole + lambda:InvokeFunction → create Lambda with admin role',
+        'iam:CreatePolicyVersion → overwrite existing policy with wildcard admin',
+        'iam:AttachUserPolicy → directly attach AdministratorAccess to own user',
+        'EC2 user data exploit: launch EC2 with admin role, execute via user-data',
+        'SSRF: retrieve IAM credentials of role with higher privilege than original',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Disable CloudTrail or create competing trail to overwhelm SIEM',
+        'Use legitimate AWS CLI and SDK — identical fingerprint to legitimate access',
+        'Access from AWS IP ranges appears as internal AWS service traffic',
+        'Operate within existing over-privileged role — no new suspicious resources',
+        'GuardDuty disabled or findings suppressed via IAM policy manipulation',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'Enumerate all EC2 instances and access via SSM Session Manager with IAM creds',
+        'Assume cross-account roles to pivot to other AWS accounts in organisation',
+        'Access RDS, ElastiCache, Secrets Manager using elevated IAM permissions',
+        'Use S3 bucket access to find credentials for non-cloud systems',
+        'EKS cluster access via misconfigured RBAC — pivot to Kubernetes workloads',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Full cloud environment takeover via IAM privilege escalation',
+        'Mass data exfiltration from S3 (PII, financials, IP, backups)',
+        'Cryptomining: launch hundreds of GPU instances (cost: $50K+/day to victim)',
+        'Ransomware equivalent: delete all S3 objects or encrypt with attacker-held key',
+        'Exfiltrate and publish customer data (regulatory fines, reputational damage)',
+        'Persistent backdoor in organisation-wide cloud footprint',
+      ]},
+    ]
+  },
+  {
+    id:'containerescape', cat:'virt', label:'Container / Kubernetes Escape', color:'#44ddff',
+    phases:[
+      { phase:'RECON', nodes:[
+        'Detect containerised environment: /.dockerenv file, cgroup v1/v2 paths',
+        'Check for exposed Docker socket: /var/run/docker.sock mounted in container',
+        'Enumerate Kubernetes RBAC permissions: kubectl auth can-i --list',
+        'Check service account token and API server accessibility from within pod',
+        'Identify privileged containers or hostPID/hostNetwork pods via kubectl describe',
+        'Check for writable hostPath mounts pointing to host filesystem directories',
+      ]},
+      { phase:'INITIAL ACCESS', nodes:[
+        'Exploit vulnerable containerised application (RCE via Application vulnerability)',
+        'Pull image from public registry with embedded backdoor (trojanised image)',
+        'Misconfigured Docker API exposed to network without authentication',
+        'Kubernetes dashboard exposed to internet without auth (CVE-2018-18264)',
+        'Insecure default service account token with excessive cluster-wide RBAC',
+      ]},
+      { phase:'EXECUTION', nodes:[
+        'Docker socket escape: docker run -v /:/host --privileged to mount host root',
+        'Privileged container: load kernel module or write to /proc/sysrq-trigger',
+        'Create new privileged container from host with host root mounted — chroot out',
+        'Kubernetes: create privileged pod via misconfigured service account',
+        'Exploit kernel CVE from container (Dirty Pipe CVE-2022-0847)',
+        'runc CVE-2019-5736 (RunC breakout): overwrite host runc binary from inside',
+      ]},
+      { phase:'PERSISTENCE', nodes:[
+        'Create DaemonSet that runs privileged container on every cluster node',
+        'Add backdoor admission webhook that modifies all new pods transparently',
+        'Install cron job on host OS via escape for persistent node-level access',
+        'Register attacker-controlled node via compromised cluster admin credentials',
+      ]},
+      { phase:'PRIV ESCALATION', nodes:[
+        'Container escape achieves root on underlying Kubernetes node',
+        'Node-level access enables reading other pods secrets from host memory/disk',
+        'Steal cluster-admin service account token from node filesystem',
+        'Access etcd (Kubernetes datastore) from node — read all cluster secrets',
+      ]},
+      { phase:'DEFENSE EVASION', nodes:[
+        'Operations within container appear legitimate to container-level monitoring',
+        'Container escape to host bypasses all container-scoped security controls',
+        'Namespaced resources used to hide workloads from default admin view',
+        'Image pulled from legitimate registry — scanner may miss runtime exploits',
+      ]},
+      { phase:'LATERAL MOVEMENT', nodes:[
+        'From compromised node: read secrets of all pods scheduled on that node',
+        'Use cluster-admin credentials to access any namespace, pod, or secret',
+        'Pivot from Kubernetes to cloud provider via node attached IAM instance role',
+        'Access cluster networking to reach services in other namespaces',
+      ]},
+      { phase:'IMPACT', nodes:[
+        'Compromise of all workloads across entire Kubernetes cluster',
+        'Extraction of all Kubernetes secrets (DB passwords, API keys, TLS certs)',
+        'Cloud account takeover via node IAM role privilege escalation',
+        'Sabotage: delete all deployments, PVCs, namespaces causing full outage',
+        'Cryptomining at scale across all cluster nodes simultaneously',
+      ]},
+    ]
+  },
+
   // ── ZERO-DAY ──────────────────────────────────────────────────────────────
   {
     id:'zeroday', cat:'zday', label:'Zero-Day Exploit', color:'#ffffff',
     phases:[
       { phase:'RECON', nodes:[
         'Advanced threat actor: internal research team discovers novel vulnerability',
-        'Or: purchase from exploit broker (dark web, legitimate broker like Zerodium)',
+        'Or: purchase from exploit broker (dark app, legitimate broker like Zerodium)',
         'Prices: iOS browser zero-day up to $2.5M; enterprise zero-days $250K+',
         'Identify target software stack to match owned zero-day to target',
         'Nation-state: maintain portfolio of zero-days for strategic use',
@@ -1510,13 +2175,13 @@ const ATTACKS = [
     id:'firmware', cat:'zday', label:'Firmware / Hardware Attack', color:'#ffffff',
     phases:[
       { phase:'RECON', nodes:[
-        'Identify device firmware version (web interface, SNMP, Shodan)',
+        'Identify device firmware version (app interface, SNMP, Shodan)',
         'Check for known firmware CVEs or default credential databases',
         'Obtain firmware image from vendor website for offline analysis',
         'Reverse engineer firmware with binwalk, Ghidra to find vulnerabilities',
       ]},
       { phase:'INITIAL ACCESS', nodes:[
-        'Exploit web management interface CVE (authenticated or unauthenticated)',
+        'Exploit app management interface CVE (authenticated or unauthenticated)',
         'Default credentials on management interface (admin/admin, admin/password)',
         'Physical JTAG/UART serial console access for firmware extraction',
         'Intercept firmware update via compromised update server (supply chain)',
@@ -1597,6 +2262,7 @@ function buildSidebar() {
 
 function buildCatTabs() {
   const tabs = document.getElementById('catTabs');
+  tabs.innerHTML = '';
   const all = document.createElement('button');
   all.className = 'cat-tab' + (activeCategory === 'all' ? ' active' : '');
   all.textContent = 'ALL';
@@ -1630,9 +2296,14 @@ const g = document.getElementById('zoom-group');
 let viewBox = { x: 0, y: 0, scale: 1 };
 let dragging = false, lastX, lastY;
 let expandedPhase = null;
+let allExpanded = false;
+let phaseRegistry = []; // [{childEls, circle, phaseColor, phase, atk}]
 
 function renderMindmap() {
   expandedPhase = null;
+  allExpanded = false;
+  phaseRegistry = [];
+  updateExpandBtn();
   closeDetail();
   g.innerHTML = '';
 
@@ -1650,23 +2321,54 @@ function renderMindmap() {
   const phaseColors = Object.values(PHASE_COLORS);
 
   // Radii
-  const R_INNER = 110;   // center to phase node center
-  const R_OUTER = 230;   // phase to child nodes
+  const R_INNER = 130;   // center to phase node center
+  const R_OUTER = 250;   // phase to child nodes
+  const R_CIRCLE = 38;   // phase node circle radius
 
-  // Draw center glow
-  const glow = createSVGEl('circle', { cx, cy, r: R_INNER - 20, fill: `url(#bg-grad)`, stroke: atk.color, 'stroke-width': 2, opacity: 0.6, filter: 'url(#glow-soft)' });
+  // Center glow — must stay well inside R_INNER minus phase radius
+  const centerGlowR = R_INNER - R_CIRCLE - 18; // ~74px — no overlap with phase circles
+  const glow = createSVGEl('circle', { cx, cy, r: centerGlowR, fill: `url(#bg-grad)`, stroke: atk.color, 'stroke-width': 2, opacity: 0.6, filter: 'url(#glow-soft)' });
   g.appendChild(glow);
 
-  const centerText = createSVGEl('text', { x: cx, y: cy - 12, 'text-anchor': 'middle', 'font-family': 'Orbitron', 'font-size': 13, fill: atk.color, 'font-weight': 700, 'letter-spacing': 2 });
-  centerText.textContent = atk.label.toUpperCase();
-  g.appendChild(centerText);
+  // Center label — word-wrap into tspans to stay inside glow circle (~148px diameter)
+  const labelText = atk.label.toUpperCase();
+  const labelFontSize = 11;
+  const maxCharsPerLine = 10; // ~10 chars at font-size 11 Orbitron fits ~120px
+  const labelWords = labelText.split(/[\s\/]+/); // split on spaces and slashes
+  const labelLines = [];
+  let labelCur = '';
+  labelWords.forEach(w => {
+    const test = labelCur ? labelCur + ' ' + w : w;
+    if (test.length <= maxCharsPerLine) {
+      labelCur = test;
+    } else {
+      if (labelCur) labelLines.push(labelCur);
+      labelCur = w;
+    }
+  });
+  if (labelCur) labelLines.push(labelCur);
 
+  const labelLineH = 14;
   const catObj = CATEGORIES.find(c => c.id === atk.cat);
-  const catText = createSVGEl('text', { x: cx, y: cy + 10, 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 9, fill: catObj?.color || '#888', 'letter-spacing': 2 });
+  // Stack: label lines + category + hint — total block centred in circle
+  const totalLines = labelLines.length + 2; // +cat +hint
+  const blockH = labelLines.length * labelLineH + 10 + 12; // label block + cat + hint
+  let lineY = cy - blockH / 2 + labelLineH * 0.6;
+
+  const centerTextEl = createSVGEl('text', { 'text-anchor': 'middle', 'font-family': 'Orbitron', 'font-size': labelFontSize, fill: atk.color, 'font-weight': 700, 'letter-spacing': 1 });
+  labelLines.forEach((line, li) => {
+    const ts = createSVGEl('tspan', { x: cx, y: lineY + li * labelLineH, 'dominant-baseline': 'middle' });
+    ts.textContent = line;
+    centerTextEl.appendChild(ts);
+  });
+  g.appendChild(centerTextEl);
+
+  const catLineY = lineY + labelLines.length * labelLineH + 4;
+  const catText = createSVGEl('text', { x: cx, y: catLineY, 'text-anchor': 'middle', 'dominant-baseline': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 8, fill: catObj?.color || '#888', 'letter-spacing': 1.5 });
   catText.textContent = (catObj?.label || '').toUpperCase();
   g.appendChild(catText);
 
-  const typeText = createSVGEl('text', { x: cx, y: cy + 26, 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 8, fill: '#555', 'letter-spacing': 1 });
+  const typeText = createSVGEl('text', { x: cx, y: catLineY + 14, 'text-anchor': 'middle', 'dominant-baseline': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 7, fill: '#555', 'letter-spacing': 1 });
   typeText.textContent = 'CLICK PHASE TO EXPAND';
   g.appendChild(typeText);
 
@@ -1680,28 +2382,46 @@ function renderMindmap() {
     const line = createSVGEl('line', { x1: cx, y1: cy, x2: px, y2: py, stroke: phaseColor, 'stroke-width': 1.5, opacity: 0.4 });
     g.appendChild(line);
 
-    // Phase node circle
+    // Phase node circle — r=38, text wraps to fit
     const phaseG = createSVGEl('g', { class: 'phase-node', cursor: 'pointer' });
-    const circle = createSVGEl('circle', { cx: px, cy: py, r: 38, fill: '#0d1220', stroke: phaseColor, 'stroke-width': 2 });
+    const circle = createSVGEl('circle', { cx: px, cy: py, r: R_CIRCLE, fill: '#0d1220', stroke: phaseColor, 'stroke-width': 2 });
     phaseG.appendChild(circle);
 
-    // Phase label (wrap)
+    // Phase label — word-wrap to fit inside circle (usable chord ~62px at font-size 7)
     const words = phase.phase.split(' ');
-    if (words.length === 1) {
-      const t = createSVGEl('text', { x: px, y: py + 4, 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 9, fill: phaseColor, 'font-weight': 600, 'letter-spacing': 1 });
-      t.textContent = phase.phase;
-      phaseG.appendChild(t);
-    } else {
-      words.forEach((w, wi) => {
-        const t = createSVGEl('text', { x: px, y: py - 5 + wi * 12, 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 9, fill: phaseColor, 'font-weight': 600, 'letter-spacing': 1 });
-        t.textContent = w;
-        phaseG.appendChild(t);
-      });
-    }
+    const MAX_LINE_CHARS = 10;
+    const lines = [];
+    let cur = '';
+    words.forEach(w => {
+      const test = cur ? cur + ' ' + w : w;
+      if (test.length <= MAX_LINE_CHARS) {
+        cur = test;
+      } else {
+        if (cur) lines.push(cur);
+        cur = w;
+      }
+    });
+    if (cur) lines.push(cur);
 
-    // Node count badge
-    const badge = createSVGEl('circle', { cx: px + 26, cy: py - 26, r: 10, fill: phaseColor, opacity: 0.9 });
-    const badgeNum = createSVGEl('text', { x: px + 26, y: py - 22, 'text-anchor': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 9, fill: '#000', 'font-weight': 700 });
+    const lineH = 10;
+    const totalTextH = lines.length * lineH;
+    const textStartY = py - totalTextH / 2 + lineH * 0.5;
+    lines.forEach((line, li) => {
+      const t = createSVGEl('text', {
+        x: px, y: textStartY + li * lineH,
+        'text-anchor': 'middle', 'dominant-baseline': 'middle',
+        'font-family': 'IBM Plex Mono', 'font-size': 7,
+        fill: phaseColor, 'font-weight': 600, 'letter-spacing': 0.3
+      });
+      t.textContent = line;
+      phaseG.appendChild(t);
+    });
+
+    // Badge — outside circle at top-right
+    const bx = px + Math.cos(-Math.PI / 4) * (R_CIRCLE + 10);
+    const by = py + Math.sin(-Math.PI / 4) * (R_CIRCLE + 10);
+    const badge = createSVGEl('circle', { cx: bx, cy: by, r: 9, fill: phaseColor, opacity: 0.9 });
+    const badgeNum = createSVGEl('text', { x: bx, y: by + 0.5, 'text-anchor': 'middle', 'dominant-baseline': 'middle', 'font-family': 'IBM Plex Mono', 'font-size': 8, fill: '#000', 'font-weight': 700 });
     badgeNum.textContent = phase.nodes.length;
     phaseG.appendChild(badge);
     phaseG.appendChild(badgeNum);
@@ -1723,19 +2443,42 @@ function renderMindmap() {
       const cline = createSVGEl('line', { x1: px, y1: py, x2: nx, y2: ny, stroke: phaseColor, 'stroke-width': 1, opacity: 0.3, 'stroke-dasharray': '4 3' });
       childG.appendChild(cline);
 
-      // Text box
-      const truncated = node.length > 42 ? node.substring(0, 40) + '…' : node;
-      const boxW = Math.min(truncated.length * 5.2 + 20, 180);
-      const boxH = 24;
+      // Text box with wrapped text
+      const maxCharsPerLine = 28;
+      const fontSize = 9;
+      const lineH = 13;
+      const padding = 8;
+
+      // Word-wrap the node text
+      const wrapWords = node.split(' ');
+      const textLines = [];
+      let currentLine = '';
+      wrapWords.forEach(word => {
+        const test = currentLine ? currentLine + ' ' + word : word;
+        if (test.length <= maxCharsPerLine) {
+          currentLine = test;
+        } else {
+          if (currentLine) textLines.push(currentLine);
+          // If a single word is too long, truncate it
+          currentLine = word.length > maxCharsPerLine ? word.substring(0, maxCharsPerLine - 1) + '…' : word;
+        }
+      });
+      if (currentLine) textLines.push(currentLine);
+
+      const boxW = Math.min(maxCharsPerLine * 5.4 + padding * 2, 200);
+      const boxH = textLines.length * lineH + padding * 2;
       const bx = nx - boxW / 2;
       const by = ny - boxH / 2;
 
       const rect = createSVGEl('rect', { x: bx, y: by, width: boxW, height: boxH, rx: 3, fill: '#0a0f1a', stroke: phaseColor, 'stroke-width': 1, opacity: 0.85 });
       childG.appendChild(rect);
 
-      const txt = createSVGEl('text', { x: nx, y: ny + 4, 'text-anchor': 'middle', 'font-family': 'IBM Plex Sans', 'font-size': 9, fill: '#c8d8f0', 'letter-spacing': 0.3 });
-      txt.textContent = truncated;
-      childG.appendChild(txt);
+      const textStartY = by + padding + fontSize;
+      textLines.forEach((line, li) => {
+        const txt = createSVGEl('text', { x: nx, y: textStartY + li * lineH, 'text-anchor': 'middle', 'font-family': 'IBM Plex Sans', 'font-size': fontSize, fill: '#c8d8f0', 'letter-spacing': 0.3 });
+        txt.textContent = line;
+        childG.appendChild(txt);
+      });
 
       // Tooltip on hover
       childG.addEventListener('mouseenter', (e) => showTooltip(e, node));
@@ -1752,25 +2495,47 @@ function renderMindmap() {
       circle.setAttribute('filter', 'url(#glow-soft)');
     });
     phaseG.addEventListener('mouseleave', () => {
-      if (expandedPhase !== i) {
+      const isExpanded = allExpanded || expandedPhase === i;
+      if (!isExpanded) {
         circle.setAttribute('fill', '#0d1220');
         circle.removeAttribute('filter');
       }
     });
     phaseG.addEventListener('click', () => {
-      if (expandedPhase === i) {
-        // Collapse
+      if (allExpanded) {
+        // In expand-all mode: clicking collapses just this one and exits expand-all
+        allExpanded = false;
+        updateExpandBtn();
+        phaseRegistry.forEach(entry => {
+          if (entry.idx !== i) {
+            entry.childEls.forEach(c => animateOpacity(c, 0));
+            entry.circle.setAttribute('fill', '#0d1220');
+            entry.circle.removeAttribute('filter');
+          }
+        });
+        expandedPhase = i;
+        // keep this phase expanded
+        circle.setAttribute('fill', phaseColor + '33');
+        circle.setAttribute('filter', 'url(#glow-soft)');
+        showDetailPanel(phase, phaseColor, atk);
+      } else if (expandedPhase === i) {
+        // Collapse this phase
         expandedPhase = null;
         childEls.forEach(c => animateOpacity(c, 0));
         circle.setAttribute('fill', '#0d1220');
         circle.removeAttribute('filter');
         closeDetail();
       } else {
-        // Collapse previous
+        // Collapse previous expanded phase
         if (expandedPhase !== null) {
-          // collapse all children (we track by data attribute)
           document.querySelectorAll('.child-node[data-phase]').forEach(c => {
             if (c.getAttribute('data-phase') !== String(i)) animateOpacity(c, 0);
+          });
+          phaseRegistry.forEach(entry => {
+            if (entry.idx !== i) {
+              entry.circle.setAttribute('fill', '#0d1220');
+              entry.circle.removeAttribute('filter');
+            }
           });
         }
         expandedPhase = i;
@@ -1782,21 +2547,72 @@ function renderMindmap() {
     });
 
     childEls.forEach(c => c.setAttribute('data-phase', i));
+    phaseRegistry.push({ idx: i, childEls, circle, phaseColor, phase, atk });
     g.appendChild(phaseG);
   });
 }
 
+function toggleExpandAll() {
+  allExpanded = !allExpanded;
+  expandedPhase = null;
+  updateExpandBtn();
+  phaseRegistry.forEach(entry => {
+    if (allExpanded) {
+      entry.childEls.forEach(c => animateOpacity(c, 1));
+      entry.circle.setAttribute('fill', entry.phaseColor + '33');
+      entry.circle.setAttribute('filter', 'url(#glow-soft)');
+    } else {
+      entry.childEls.forEach(c => animateOpacity(c, 0));
+      entry.circle.setAttribute('fill', '#0d1220');
+      entry.circle.removeAttribute('filter');
+    }
+  });
+  if (!allExpanded) closeDetail();
+}
+
+function updateExpandBtn() {
+  const btn = document.getElementById('expandAllBtn');
+  const label = document.getElementById('expandAllLabel');
+  if (!btn) return;
+  if (allExpanded) {
+    btn.classList.add('active');
+    btn.querySelector('.eb-icon').textContent = '⊟';
+    label.textContent = 'COLLAPSE ALL';
+  } else {
+    btn.classList.remove('active');
+    btn.querySelector('.eb-icon').textContent = '⊞';
+    label.textContent = 'EXPAND ALL';
+  }
+}
+
+// Track in-flight animation intervals per element so we can cancel before starting a new one.
+// Without this, rapid clicks spawn multiple competing setIntervals on the same element —
+// one pushing opacity toward 1, another toward 0 — causing the flash-then-disappear bug.
+const _animIntervals = new WeakMap();
+
 function animateOpacity(el, target) {
+  // Cancel any existing animation on this element before starting a new one
+  if (_animIntervals.has(el)) {
+    clearInterval(_animIntervals.get(el));
+    _animIntervals.delete(el);
+  }
   let current = parseFloat(el.getAttribute('opacity') || 0);
+  // If already at target, just set it immediately — no interval needed
+  if (Math.abs(current - target) < 0.01) {
+    el.setAttribute('opacity', target);
+    return;
+  }
   const step = (target - current) / 8;
   const interval = setInterval(() => {
     current += step;
     if ((step > 0 && current >= target) || (step < 0 && current <= target)) {
       current = target;
       clearInterval(interval);
+      _animIntervals.delete(el);
     }
     el.setAttribute('opacity', current.toFixed(3));
   }, 16);
+  _animIntervals.set(el, interval);
 }
 
 function showDetailPanel(phase, phaseColor, atk) {
@@ -1860,18 +2676,16 @@ function createSVGEl(tag, attrs) {
 }
 
 // ── PAN & ZOOM ─────────────────────────────────────────────────────────────
+// viewBox.x/y are raw pixel pan offsets; scale is a multiplier
 function applyViewBox() {
-  const W = svg.clientWidth, H = svg.clientHeight;
-  const tX = W / 2 - viewBox.x * viewBox.scale - (W / 2) * viewBox.scale + W / 2 * (viewBox.scale - 1) / viewBox.scale;
-  g.setAttribute('transform', `translate(${-viewBox.x * (viewBox.scale - 1)},${-viewBox.y * (viewBox.scale - 1)}) scale(${viewBox.scale})`);
+  g.setAttribute('transform', `translate(${viewBox.x},${viewBox.y}) scale(${viewBox.scale})`);
 }
 
 svg.addEventListener('mousedown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
 svg.addEventListener('mousemove', e => {
   if (!dragging) return;
-  const dx = (e.clientX - lastX) / viewBox.scale;
-  const dy = (e.clientY - lastY) / viewBox.scale;
-  viewBox.x -= dx; viewBox.y -= dy;
+  viewBox.x += e.clientX - lastX;
+  viewBox.y += e.clientY - lastY;
   lastX = e.clientX; lastY = e.clientY;
   applyViewBox();
 });
@@ -1881,6 +2695,11 @@ svg.addEventListener('mouseleave', () => dragging = false);
 svg.addEventListener('wheel', e => {
   e.preventDefault();
   const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  const rect = svg.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  viewBox.x = mx - (mx - viewBox.x) * delta;
+  viewBox.y = my - (my - viewBox.y) * delta;
   viewBox.scale = Math.max(0.3, Math.min(3, viewBox.scale * delta));
   applyViewBox();
 }, { passive: false });

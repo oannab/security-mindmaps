@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SY0-701 - Domain 2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #080b10;
+    --surface: #0e1219;
+    --surface2: #141820;
+    --surface3: #1c2130;
+    --border: #1f2535;
+    --border2: #2a3248;
+
+    /* Objective colours */
+    --c21: #00d4aa;   /* 2.1 teal */
+    --c22: #7c8ff5;   /* 2.2 indigo */
+    --c23: #f5c842;   /* 2.3 amber */
+    --c24: #ff5f57;   /* 2.4 red */
+    --c25: #bf6fff;   /* 2.5 purple */
+
+    --text: #dde2f0;
+    --text2: #8b93b0;
+    --text3: #525a72;
+    --dim: #2a3045;
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 48px 16px 100px;
+  }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  .badge-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 2px;
+    border: 1px solid;
+  }
+  .badge-main { background: rgba(255,95,87,0.12); border-color: rgba(255,95,87,0.4); color: #ff5f57; }
+  .badge-pct  { background: rgba(255,255,255,0.05); border-color: var(--border2); color: var(--text2); }
+
+  h1 {
+    font-size: clamp(22px, 3.5vw, 42px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #fff;
+    line-height: 1.15;
+    margin-bottom: 10px;
+  }
+  .page-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+  }
+
+  /* ── ROOT NODE ── */
+  .root-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 0; }
+  .root-box {
+    background: linear-gradient(120deg,  #bf662ac7 100%, #7d6e64 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: clamp(12px, 3vw, 38px);
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    padding: 20px 30px;
+    border-radius: 3px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(255,95,87,0.2), 0 4px 24px rgba(0,0,0,0.4);
+  }
+  .root-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 400;
+    opacity: 0.75;
+    display: block;
+    margin-top: 4px;
+    letter-spacing: 0.1em;
+  }
+  .v-line { width: 2px; background: var(--dim); margin: 0 auto; }
+
+  /* ── OBJECTIVES STRIP ── */
+  .obj-strip {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 0;
+  }
+  .obj-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 6px 14px;
+    border-radius: 3px;
+    border: 1.5px solid;
+    text-align: center;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .obj-pill:hover { opacity: 0.85; transform: translateY(-1px); }
+  .p21 { background: rgba(0,212,170,0.1); border-color: rgba(0,212,170,0.5); color: var(--c21); }
+  .p22 { background: rgba(124,143,245,0.1); border-color: rgba(124,143,245,0.5); color: var(--c22); }
+  .p23 { background: rgba(245,200,66,0.1); border-color: rgba(245,200,66,0.5); color: var(--c23); }
+  .p24 { background: rgba(255,95,87,0.1); border-color: rgba(255,95,87,0.5); color: var(--c24); }
+  .p25 { background: rgba(191,111,255,0.1); border-color: rgba(191,111,255,0.5); color: var(--c25); }
+
+  /* ── MAIN LAYOUT ── */
+  .domain-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    max-width: 1400px;
+    margin: 40px auto 0;
+  }
+
+  /* ── SECTION (one per objective) ── */
+  .section {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 24px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+  }
+  .section-header:hover { background: rgba(255,255,255,0.02); }
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .section-toggle {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    transition: transform 0.25s;
+    flex-shrink: 0;
+  }
+  details[open] > .section-header .section-toggle { transform: rotate(90deg); }
+
+  .section-body {
+    padding: 0 20px 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+  }
+
+  /* accent colours per section */
+  .s21 { --acc: var(--c21); --acc-bg: rgba(0,212,170,0.07); --acc-b: rgba(0,212,170,0.25); }
+  .s22 { --acc: var(--c22); --acc-bg: rgba(124,143,245,0.07); --acc-b: rgba(124,143,245,0.25); }
+  .s23 { --acc: var(--c23); --acc-bg: rgba(245,200,66,0.07); --acc-b: rgba(245,200,66,0.25); }
+  .s24 { --acc: var(--c24); --acc-bg: rgba(255,95,87,0.07); --acc-b: rgba(255,95,87,0.25); }
+  .s25 { --acc: var(--c25); --acc-bg: rgba(191,111,255,0.07); --acc-b: rgba(191,111,255,0.25); }
+
+  .section > details > .section-header { background: var(--acc-bg); border-bottom: 1px solid var(--acc-b); }
+  .section-num { color: var(--acc); }
+
+  /* ── CATEGORY CARD ── */
+  .cat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .cat-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .cat-head:hover { background: var(--surface3); }
+  .cat-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--acc);
+    flex-shrink: 0;
+  }
+  .cat-name {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--acc);
+    flex: 1;
+  }
+  .cat-toggle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    transition: transform 0.2s;
+  }
+  details[open] > .cat-head .cat-toggle { transform: rotate(90deg); }
+
+  .cat-body {
+    padding: 10px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ── ENTRY (leaf or parent) ── */
+  .entry {
+    border-left: 2px solid var(--border2);
+    padding-left: 12px;
+  }
+  .entry-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .entry-title::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--acc);
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  .entry-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text2);
+    line-height: 1.65;
+  }
+
+  /* ── SUB-ENTRIES ── */
+  .sub-entries {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding-left: 10px;
+    border-left: 1.5px solid var(--border2);
+  }
+  .sub-entry { }
+  .sub-title {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #9aa3c0;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .sub-title::before {
+    content: '›';
+    color: var(--acc);
+    opacity: 0.5;
+    font-size: 13px;
+  }
+  .sub-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    line-height: 1.6;
+  }
+
+  /* ── DEFENCE TAG ── */
+  .def-tag {
+    display: inline-block;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    background: rgba(0,212,170,0.08);
+    border: 1px solid rgba(0,212,170,0.2);
+    color: #00d4aa;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── INDICATOR TAG ── */
+  .ind-tag {
+    display: inline-block;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    background: rgba(255,95,87,0.08);
+    border: 1px solid rgba(255,95,87,0.2);
+    color: #ff7a75;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── SPAN ACROSS full width ── */
+  .span-full {
+    grid-column: 1 / -1;
+  }
+
+  /* ── HORIZONTAL SEPARATOR ── */
+  .section-sep {
+    height: 1px;
+    background: var(--border);
+    grid-column: 1/-1;
+    margin: 4px 0;
+  }
+
+  /* ── SCROLL NAV ── */
+  .nav-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(8,11,16,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    margin-bottom: 0;
+  }
+  .nav-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 6px 14px;
+    border-radius: 3px;
+    border: 1.5px solid var(--border2);
+    background: none;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+  .nav-btn:hover { border-color: var(--acc); color: var(--acc); }
+  .nb21:hover { --acc: var(--c21); }
+  .nb22:hover { --acc: var(--c22); }
+  .nb23:hover { --acc: var(--c23); }
+  .nb24:hover { --acc: var(--c24); }
+  .nb25:hover { --acc: var(--c25); }
+
+  @media (max-width: 700px) {
+    .section-body { grid-template-columns: 1fr; }
+    .root-box { padding: 16px 24px; font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV BAR -->
+<nav class="nav-bar">
+  <a class="nav-btn nb21" href="#s21">2.1 · Threat Actors</a>
+  <a class="nav-btn nb22" href="#s22">2.2 · Threat Vectors</a>
+  <a class="nav-btn nb23" href="#s23">2.3 · Vulnerabilities</a>
+  <a class="nav-btn nb24" href="#s24">2.4 · Malicious Activity</a>
+  <a class="nav-btn nb25" href="#s25">2.5 · Mitigations</a>
+</nav>
+
+<!-- HEADER -->
+<div class="page-header">
+  <div class="badge-row">
+    <span class="badge badge-main">SY0-701 · Domain 2</span>
+    <!--<span class="badge badge-pct">22% of Exam</span>-->
+    <!--<span class="badge badge-pct">5 Objectives</span>-->
+  </div>
+  <!--<h1>Threats, Vulnerabilities<br>&amp; Mitigations</h1>-->
+  <!--<p class="page-sub">Full Expanded Hierarchy — All Subcategories &amp; Notes</p>-->
+</div>
+
+<!-- ROOT -->
+<div class="root-wrap">
+  <div class="root-box">
+    2.0 &nbsp;·&nbsp; Threats, Vulnerabilities, &amp; Mitigations
+    <!-- <span class="root-meta">ROOT &nbsp;·&nbsp; 22% EXAMINATION WEIGHT</span>-->
+  </div>
+  <div class="v-line" style="height:32px;"></div>
+  <div class="obj-strip">
+    <a class="obj-pill p21" href="#s21">2.1 · Threat Actors &amp; Motivations</a>
+    <a class="obj-pill p22" href="#s22">2.2 · Threat Vectors &amp; Attack Surfaces</a>
+    <a class="obj-pill p23" href="#s23">2.3 · Vulnerability Types</a>
+    <a class="obj-pill p24" href="#s24">2.4 · Indicators of Malicious Activity</a>
+    <a class="obj-pill p25" href="#s25">2.5 · Mitigation Techniques</a>
+  </div>
+</div>
+
+<!-- DOMAIN GRID -->
+<div class="domain-grid">
+
+  <!-- ═══════════════════════════════ 2.1 ═══════════════════════════════ -->
+  <div class="section s21" id="s21">
+    <details open>
+      <summary class="section-header">
+        <span class="section-num">2.1</span>
+        <span class="section-title">Compare &amp; Contrast Common Threat Actors and Motivations</span>
+        <span class="section-toggle">▶</span>
+      </summary>
+      <div class="section-body">
+
+        <!-- Threat Actors -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Threat Actors</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Nation-State</div>
+                <div class="entry-desc">State-sponsored APT groups; long-term persistent access; espionage, sabotage, critical infrastructure targeting; highest resources &amp; sophistication</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Unskilled Attacker (Script Kiddie)</div>
+                <div class="entry-desc">Uses pre-built tools without deep understanding; opportunistic targets; low sophistication; high noise/detection; motivated by curiosity or notoriety</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Hacktivist</div>
+                <div class="entry-desc">Ideology-driven; defacement, DDoS, data leaks to embarrass targets; Anonymous, LulzSec; moderate capability; public-facing targets preferred</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Insider Threat</div>
+                <div class="entry-desc">Current/former employees, contractors, partners; intentional sabotage or unintentional negligence; hardest to detect — already has legitimate access</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Organized Crime</div>
+                <div class="entry-desc">Financial motivation; ransomware, fraud, theft; RaaS franchises; high sophistication; use hired specialists for different attack phases</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Shadow IT</div>
+                <div class="entry-desc">Unauthorised systems/services deployed by employees; bypasses security controls; cloud services, personal devices; not malicious intent but creates unmanaged risk</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Attributes -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Attributes of Actors</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Internal / External</div>
+                <div class="entry-desc">Internal actors have existing access, knowledge of systems, and bypass perimeter controls. External actors must first gain access — perimeter controls more effective against them</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Resources / Funding</div>
+                <div class="entry-desc">Nation-states: unlimited resources, zero-days, custom implants. Organized crime: well-funded, RaaS economy. Hacktivists/script kiddies: limited, rely on free/public tools</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Level of Sophistication / Capability</div>
+                <div class="entry-desc">Ranges from copy-paste exploit scripts to custom zero-day development, AI-assisted attacks, and supply chain compromises. Higher sophistication = harder to detect and attribute</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Motivations -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Motivations</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry"><div class="entry-title">Data Exfiltration</div><div class="entry-desc">Steal PII, credentials, IP, trade secrets for resale or competitive advantage</div></div>
+              <div class="entry"><div class="entry-title">Espionage</div><div class="entry-desc">Long-term intelligence gathering; nation-states targeting government, defence, research</div></div>
+              <div class="entry"><div class="entry-title">Service Disruption</div><div class="entry-desc">DDoS, destructive malware (wiper); impact operations, cause reputational/financial damage</div></div>
+              <div class="entry"><div class="entry-title">Blackmail / Financial Gain</div><div class="entry-desc">Ransomware, extortion via stolen data, BEC fraud, cryptocurrency theft</div></div>
+              <div class="entry"><div class="entry-title">Ideological / Political Beliefs</div><div class="entry-desc">Hacktivism — deface sites, leak documents, disrupt services of ideologically opposed targets</div></div>
+              <div class="entry"><div class="entry-title">Revenge / Ethical / War</div><div class="entry-desc">Disgruntled insiders; whistleblowing gone rogue; state-level cyber warfare targeting critical infrastructure</div></div>
+            </div>
+          </details>
+        </div>
+
+      </div>
+    </details>
+  </div>
+
+  <!-- ═══════════════════════════════ 2.2 ═══════════════════════════════ -->
+  <div class="section s22" id="s22">
+    <details open>
+      <summary class="section-header">
+        <span class="section-num">2.2</span>
+        <span class="section-title">Common Threat Vectors and Attack Surfaces</span>
+        <span class="section-toggle">▶</span>
+      </summary>
+      <div class="section-body">
+
+        <!-- Message-Based -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Message-Based Vectors</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Email Phishing</div>
+                <div class="entry-desc">Mass phishing (broad targets); spear phishing (targeted individual); whaling (C-suite); BEC (Business Email Compromise); malicious links/attachments
+                <br><span class="def-tag">🛡 DMARC · DKIM · SPF · email filtering · user awareness</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Smishing (SMS)</div>
+                <div class="entry-desc">Phishing via text message; fake delivery notifications; bank alerts with malicious links; harder to identify on mobile; growing attack vector with limited filtering controls</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Instant Messaging</div>
+                <div class="entry-desc">Malicious links via Slack, Teams, WhatsApp; attackers compromise accounts then target contacts; trusted channel exploited — users lower guard vs. email</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Network & Hardware -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Network &amp; Hardware Vectors</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Removable Devices</div>
+                <div class="entry-desc">USB drives with malware (BadUSB); HID spoofing attacks; autorun exploits; physical delivery bypasses network controls entirely
+                <br><span class="def-tag">🛡 Disable USB ports · endpoint controls · physical security</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Vulnerable Software</div>
+                <div class="entry-desc">Unpatched applications; outdated libraries; default configurations; public-facing services with known CVEs; large software inventory = large attack surface
+                <br><span class="def-tag">🛡 Patch management · vulnerability scanning · asset inventory</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Wireless Attacks</div>
+                <div class="entry-desc">Evil Twin AP; deauthentication attacks; WPA2 weaknesses; rogue access points in corporate environments; sniffing on open networks
+                <br><span class="def-tag">🛡 WPA3 · WIPS · 802.1X · EAP-TLS</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Supply Chain Attacks</div>
+                <div class="entry-desc">Compromised third-party software/hardware; malicious updates (SolarWinds example); counterfeit hardware with backdoors; vendor access exploitation
+                <br><span class="def-tag">🛡 Vendor vetting · code signing · integrity verification · MFA for vendor access</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Open Service Ports &amp; Default Credentials</div>
+                <div class="entry-desc">Unnecessary open ports expand attack surface; default manufacturer credentials on routers, IoT, servers are trivially exploited — first thing attackers check
+                <br><span class="def-tag">🛡 Port hardening · change all defaults · periodic scans</span></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Social Engineering -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Human Vectors / Social Engineering</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Vishing</div>
+                <div class="entry-desc">Voice phishing; attacker calls posing as IT support, bank, or government; creates urgency; extracts credentials or authorises wire transfers; caller ID spoofing makes it convincing</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Watering Hole</div>
+                <div class="entry-desc">Attacker compromises website frequently visited by a target group; delivers malware to visitors; difficult to detect as the legitimate site is trusted; targeted by industry sector</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Typosquatting</div>
+                <div class="entry-desc">Register domains resembling legitimate brands (g00gle.com, arnazon.com); used for phishing or malware delivery; exploits typing errors and inattention; can harvest credentials</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Pretexting</div>
+                <div class="entry-desc">Fabricated scenario to manipulate target; attacker assumes false identity (vendor, auditor, co-worker) to extract information or gain physical/logical access</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Impersonation &amp; Brand Impersonation</div>
+                <div class="entry-desc">Claiming to be a trusted entity (IT helpdesk, vendor, Microsoft); brand impersonation spoofs logos and domains; used in phishing and BEC attacks</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Misinformation / Disinformation</div>
+                <div class="entry-desc">Misinformation: false info spread without malicious intent. Disinformation: deliberately false info to deceive; used in social manipulation, market manipulation, election interference</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+      </div>
+    </details>
+  </div>
+
+  <!-- ═══════════════════════════════ 2.3 ═══════════════════════════════ -->
+  <div class="section s23" id="s23">
+    <details open>
+      <summary class="section-header">
+        <span class="section-num">2.3</span>
+        <span class="section-title">Types of Vulnerabilities</span>
+        <span class="section-toggle">▶</span>
+      </summary>
+      <div class="section-body">
+
+        <!-- Technical / Application -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Application Vulnerabilities</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Buffer Overflow</div>
+                <div class="entry-desc">Writing past allocated memory boundary; overwrites adjacent memory including return address; enables arbitrary code execution</div>
+                <div class="def-tag">🛡 ASLR · DEP/NX · Stack Canaries · Bounds Checking</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Memory Injection</div>
+                <div class="entry-desc">Process Hollowing: replaces legit process memory with malicious code; DLL Injection: forces process to load malicious DLL; bypasses file-based AV — no malicious file on disk</div>
+                <div class="def-tag">🛡 EDR behavioural analysis · memory scanning</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Race Conditions (TOC/TOU)</div>
+                <div class="entry-desc">Time-of-Check vs Time-of-Use: gap between security check and resource access; attacker swaps resource in the gap; common in multi-threaded apps</div>
+                <div class="def-tag">🛡 Mutex/lock mechanisms · atomic operations</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Malicious Updates</div>
+                <div class="entry-desc">Compromised software update mechanism delivers backdoored code; SolarWinds Orion example; signed code trusted by security tools — bypasses traditional defences</div>
+                <div class="def-tag">🛡 Code signing · supply chain vetting · integrity verification</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Web-Based -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Web-Based Vulnerabilities</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">SQL Injection (SQLi)</div>
+                <div class="entry-desc">Attacker inserts SQL commands via unsanitised input fields; can dump entire database, bypass auth (1=1), delete data</div>
+                <div class="sub-entries">
+                  <div class="sub-entry">
+                    <div class="sub-title">Input Validation</div>
+                    <div class="sub-desc">All user input must be treated as untrusted; whitelist acceptable characters; reject unexpected characters before processing</div>
+                  </div>
+                  <div class="sub-entry">
+                    <div class="sub-title">Stored Procedures &amp; Parameterised Queries</div>
+                    <div class="sub-desc">Input treated as data, not SQL code; primary SQLi defence — parameterised queries separate code from data at the DB driver level</div>
+                  </div>
+                </div>
+                <div class="def-tag">🛡 Parameterised queries · WAF · least-privilege DB accounts</div>
+              </div>
+
+              <div class="entry">
+                <div class="entry-title">Cross-Site Scripting (XSS)</div>
+                <div class="entry-desc">Attacker injects malicious scripts into pages viewed by other users; steals session cookies, credentials, redirects users</div>
+                <div class="sub-entries">
+                  <div class="sub-entry">
+                    <div class="sub-title">Stored (Persistent)</div>
+                    <div class="sub-desc">Malicious script saved in database; executes when victim loads the page; targets ALL users of the application; highest severity XSS type</div>
+                  </div>
+                  <div class="sub-entry">
+                    <div class="sub-title">Reflected (Non-Persistent)</div>
+                    <div class="sub-desc">Script in URL parameter reflected back in response; victim must click malicious link; used in phishing campaigns; server never stores the payload</div>
+                  </div>
+                  <div class="sub-entry">
+                    <div class="sub-title">DOM-Based (Client-Side)</div>
+                    <div class="sub-desc">Manipulates DOM directly without server interaction; script executes in browser; harder to detect server-side; CSP (Content Security Policy) mitigates</div>
+                  </div>
+                </div>
+                <div class="def-tag">🛡 Output encoding · CSP headers · HTTPOnly cookies</div>
+              </div>
+
+              <div class="entry">
+                <div class="entry-title">SSRF (Server-Side Request Forgery)</div>
+                <div class="entry-desc">Attacker causes server to make requests to internal resources; bypass firewall to reach internal APIs; AWS metadata endpoint (169.254.169.254) exploitation
+                <br><span class="def-tag">🛡 Validate &amp; allowlist URLs server-side · block internal IP ranges</span></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Hardware & OS -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Hardware &amp; OS Vulnerabilities</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">OS Flaws</div>
+                <div class="entry-desc">BlueKeep (CVE-2019-0708): wormable RDP vuln, unauthenticated RCE; EternalBlue (MS17-010): used in WannaCry / NotPetya; patch management is primary defence</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Firmware Vulnerabilities</div>
+                <div class="entry-desc">Hard to patch; persists across OS reinstalls; BIOS/UEFI flaws; network device firmware; IoT devices with no update mechanism; lowest level of software = most trusted layer if compromised
+                <br><span class="def-tag">🛡 Secure Boot · TPM attestation · vendor firmware updates</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">End-of-Life / End-of-Support (EOL/EOS)</div>
+                <div class="entry-desc">No patches ever available again; known vulnerabilities permanently unpatched; regulatory compliance risk; Windows XP / Server 2003 prime examples of real-world exposure
+                <br><span class="def-tag">🛡 Network isolation · virtual patching via IPS · migration planning</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Legacy Systems</div>
+                <div class="entry-desc">Cannot be patched or replaced; industrial control systems (ICS); medical devices; compensating controls required: network isolation, virtual patching via IPS, strict monitoring</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Cloud & Virtualisation -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Cloud &amp; Virtualisation Vulnerabilities</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">VM Escape</div>
+                <div class="entry-desc">Attacker breaks out of VM to access hypervisor or other VMs; extremely rare but catastrophic if achieved; hypervisor CVEs (VMware, Hyper-V); keep hypervisors patched
+                <br><span class="def-tag">🛡 Hypervisor patching · workload isolation · minimal VM-host trust</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Resource Reuse</div>
+                <div class="entry-desc">Memory or storage not properly zeroed between tenant uses in cloud; cloud provider residual data risk
+                <br><span class="def-tag">🛡 Encryption at rest · provider SLAs on data sanitisation</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">VM Sprawl</div>
+                <div class="entry-desc">Unmanaged VMs accumulate; unpatched, forgotten VMs become easy targets; shadow IT of virtual machines
+                <br><span class="def-tag">🛡 Asset management · automated VM lifecycle policies</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Shared Tenancy / Side-Channel</div>
+                <div class="entry-desc">Side-channel attacks between cloud tenants; Spectre/Meltdown CPU vulnerabilities; cache timing attacks; co-location of sensitive workloads with untrusted tenants</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Cloud Misconfiguration</div>
+                <div class="entry-desc">Public S3 buckets; open security groups; no MFA on root account; overly permissive IAM roles; #1 cause of cloud data breaches
+                <br><span class="def-tag">🛡 CSPM tools · automated compliance scans · CIS Benchmarks</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">IAM Flaws</div>
+                <div class="entry-desc">Over-privileged service accounts; lack of MFA on cloud accounts; key exposure in code repos (GitHub secrets); federation misconfigurations granting excessive access
+                <br><span class="def-tag">🛡 Least privilege · MFA · secrets management · key rotation</span></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Mobile -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Mobile Device Vulnerabilities</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Jailbreaking (iOS)</div>
+                <div class="entry-desc">Removes Apple sandboxing; enables unsigned app installation; disables security controls; device no longer manageable by MDM; policy violation
+                <br><span class="def-tag">🛡 MDM jailbreak detection · compliance enforcement · app allowlisting</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Rooting (Android)</div>
+                <div class="entry-desc">Gains superuser access; bypasses OS security model; enables malware persistence; MDM can detect via Android attestation APIs
+                <br><span class="def-tag">🛡 SafetyNet/Play Integrity attestation · MDM enforcement</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Sideloading</div>
+                <div class="entry-desc">Installing apps from outside official stores; bypasses vetting process; common malware delivery vector on Android; MDM policy can block unknown sources
+                <br><span class="def-tag">🛡 MDM policy · disable unknown sources · app allowlisting</span></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Cryptographic -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Cryptographic Vulnerabilities</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Compromised Keys / CAs</div>
+                <div class="entry-desc">Stolen private keys enable MitM; rogue CA certificates allow trusted HTTPS interception; DigiNotar breach (2011) as real-world CA compromise example
+                <br><span class="def-tag">🛡 Certificate pinning · CAA DNS records · CT logs monitoring</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Outdated Algorithms</div>
+                <div class="entry-desc">MD5/SHA-1: collision attacks proven; DES: brute-forceable (56-bit key); RC4: statistical biases; RSA-512: factorable
+                <br><span class="def-tag">🛡 Use SHA-256+ · AES-256 · RSA-2048+ · migrate legacy protocols</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Weak Random Number Generation</div>
+                <div class="entry-desc">Predictable IVs or nonces; weak seed values; allows session token prediction; directly affects key generation security — cryptography is only as strong as its randomness</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Side-Channel Attacks</div>
+                <div class="entry-desc">Timing attacks: measure processing time to infer key bits; power analysis; cache timing (Spectre/Meltdown); attacks the implementation, not the algorithm itself</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Downgrade &amp; Stripping Attacks</div>
+                <div class="entry-desc">Forces negotiation to weaker protocol (SSLv3, TLS 1.0); SSL stripping converts HTTPS to HTTP; POODLE attack exploited SSLv3 downgrade
+                <br><span class="def-tag">🛡 HSTS headers · enforce TLS minimum version · disable legacy protocols</span></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Zero-Day -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Zero-Day Vulnerabilities</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Undiscovered / Undisclosed Flaws</div>
+                <div class="entry-desc">Unknown to vendor and public; no patch exists; exploited in wild before disclosure; detected only by behaviour-based tools — signature-based AV is blind to zero-days</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">No Available Patches</div>
+                <div class="entry-desc">Vendor has no fix yet; mitigate via WAF virtual patching, network isolation, enhanced monitoring, disable affected feature if operationally possible
+                <br><span class="def-tag">🛡 Behaviour-based EDR · network segmentation · WAF virtual patching</span></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+      </div>
+    </details>
+  </div>
+
+  <!-- ═══════════════════════════════ 2.4 ═══════════════════════════════ -->
+  <div class="section s24" id="s24">
+    <details open>
+      <summary class="section-header">
+        <span class="section-num">2.4</span>
+        <span class="section-title">Given a Scenario, Analyze Indicators of Malicious Activity</span>
+        <span class="section-toggle">▶</span>
+      </summary>
+      <div class="section-body">
+
+        <!-- Ransomware -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Ransomware</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">File Encryption Mechanism</div>
+                <div class="entry-desc">Encrypts user files with attacker-controlled key; demands payment for decryption; often uses asymmetric key wrapping so decryption impossible without attacker's private key</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Double Extortion</div>
+                <div class="entry-desc">Encrypt AND exfiltrate data; pay ransom or stolen data published; RaaS (Ransomware-as-a-Service): criminal franchises (LockBit, REvil, ALPHV/BlackCat)</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Indicators</div>
+                <div class="entry-desc">
+                  <span class="ind-tag">⚠ Mass file extension changes (.locked)</span>
+                  <span class="ind-tag">⚠ High sudden disk I/O</span>
+                  <span class="ind-tag">⚠ VSS / shadow copy deletion</span>
+                  <span class="ind-tag">⚠ Ransom note creation</span>
+                  <span class="ind-tag">⚠ C2 beacon traffic spike</span>
+                </div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Defence: Offline Backup Strategy</div>
+                <div class="entry-desc">3-2-1 rule: 3 copies, 2 media types, 1 offsite/offline; air-gapped backups cannot be encrypted by ransomware; test restores regularly — untested backups are not backups</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Trojans & RATs -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Trojans &amp; RATs</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Trojan: Disguised as Legitimate Software</div>
+                <div class="entry-desc">Appears useful (game, tool, crack); malicious payload hidden inside; distributed via phishing, fake software cracks, trojanised installers; no self-replication</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">RAT: Remote Access Trojan</div>
+                <div class="entry-desc">Full interactive remote control via hidden backdoor; keylogging, screenshots, file access, webcam activation; beacons to attacker's C2 server at regular intervals</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Indicators</div>
+                <div class="entry-desc">
+                  <span class="ind-tag">⚠ C2 beacon traffic (regular intervals)</span>
+                  <span class="ind-tag">⚠ New scheduled tasks / startup entries</span>
+                  <span class="ind-tag">⚠ Outbound connections to unusual IPs</span>
+                  <span class="ind-tag">⚠ Unexpected processes with network connections</span>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Worms -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Worms</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Self-Replicating, Autonomous Spread</div>
+                <div class="entry-desc">Spreads without user action via network shares, email, exploits; no host file needed; WannaCry used EternalBlue (SMB) to spread automatically across networks</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Indicators</div>
+                <div class="entry-desc">
+                  <span class="ind-tag">⚠ Sudden bandwidth spikes</span>
+                  <span class="ind-tag">⚠ Lateral scanning (port 445 SMB)</span>
+                  <span class="ind-tag">⚠ High failed connection attempts</span>
+                  <span class="ind-tag">⚠ New processes spawning network connections</span>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Spyware & Keyloggers -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Spyware &amp; Keyloggers</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Monitors Activity &amp; Records Keystrokes</div>
+                <div class="entry-desc">Captures passwords, PINs, credit card numbers; screenshots; clipboard monitoring; audio/video capture; exfiltrates data silently over time</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Indicators</div>
+                <div class="entry-desc">
+                  <span class="ind-tag">⚠ Battery drain / device overheating</span>
+                  <span class="ind-tag">⚠ Unexpected background processes</span>
+                  <span class="ind-tag">⚠ Elevated data usage</span>
+                  <span class="ind-tag">⚠ Persistent data exfiltration patterns</span>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Rootkits -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Rootkits</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Kernel-Level Persistence</div>
+                <div class="entry-desc">Modifies OS kernel to hide processes, files, network connections; intercepts system calls to manipulate what OS reports; firmware rootkits survive full OS reinstall</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Indicators</div>
+                <div class="entry-desc">
+                  <span class="ind-tag">⚠ Survives OS reinstall</span>
+                  <span class="ind-tag">⚠ Disables AV / security tools</span>
+                  <span class="ind-tag">⚠ System calls return inconsistent results</span>
+                  <span class="ind-tag">⚠ Memory scanners (Volatility) detect hidden processes</span>
+                </div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Defence: Secure Boot + TPM</div>
+                <div class="entry-desc">UEFI Secure Boot verifies bootloader integrity; TPM measures entire boot chain; hardware-level attestation detects kernel tampering before OS loads</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Logic Bombs -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Logic Bombs</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Triggers on Specific Conditions</div>
+                <div class="entry-desc">Executes when date reached, file accessed, user logs in, or condition met; planted by insiders as delayed sabotage; common in disgruntled employee scenarios</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Indicators</div>
+                <div class="entry-desc">
+                  <span class="ind-tag">⚠ Suspicious scheduled tasks / cron jobs</span>
+                  <span class="ind-tag">⚠ Code reviews revealing conditional destruction logic</span>
+                  <span class="ind-tag">⚠ Unusual file monitoring triggers in logs</span>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- DDoS -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">DDoS Attacks</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Amplified DDoS</div>
+                <div class="entry-desc">Small request triggers massive response; DNS amplification (50× factor), NTP Monlist (500×); attacker spoofs victim IP as source; reflectors overwhelm target
+                <br><span class="def-tag">🛡 Anycast · CDN scrubbing · rate limiting · BCP38 source validation</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Reflected DDoS</div>
+                <div class="entry-desc">Spoofs victim IP to reflectors (DNS/NTP servers); response traffic floods victim; attacker never directly contacts victim; hard to trace and block at origin</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Mitigations</div>
+                <div class="entry-desc">Anycast routing; CDN scrubbing centres; rate limiting; BCP38 (source IP validation at ISP level); cloud DDoS protection (Cloudflare Magic Transit, AWS Shield Advanced)</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- DNS Attacks -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">DNS Attacks</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Cache Poisoning</div>
+                <div class="entry-desc">Fraudulent DNS records inserted into resolver cache; redirects users to attacker-controlled IP; all users of that resolver affected until TTL expires
+                <br><span class="def-tag">🛡 DNSSEC · randomised source ports · short TTLs</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">DNS Tunneling</div>
+                <div class="entry-desc">Encodes data in DNS queries/responses; bypasses firewall rules allowing DNS; exfiltrates data or provides C2 communication channel through DNS traffic
+                <br><span class="ind-tag">⚠ Anomalous DNS query volume / unusually long query strings</span><br>
+                <span class="def-tag">🛡 DNS filtering · anomaly detection on query patterns</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">DNS Hijacking</div>
+                <div class="entry-desc">Modifying DNS settings at registrar or resolver level; redirects all users of a domain; requires registrar account compromise or ISP/router-level attack</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- On-Path / MitM -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">On-Path (MitM) Attacks</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Interception &amp; Modification</div>
+                <div class="entry-desc">Attacker positions between two communicating parties; can read and modify traffic in transit; requires ARP poisoning or rogue AP on LAN; TLS mitigates interception</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">ARP Poisoning</div>
+                <div class="entry-desc">MAC-to-IP spoofing on LAN; sends gratuitous ARP replies associating attacker MAC with victim IP; enables MitM on local network segment
+                <br><span class="def-tag">🛡 Dynamic ARP Inspection (DAI) · static ARP entries · 802.1X</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Credential Replay</div>
+                <div class="entry-desc">Reusing captured authentication tokens without decrypting the password; Pass-the-Hash (NTLM); Kerberoasting; replay captured session cookies
+                <br><span class="def-tag">🛡 MFA · short token lifetimes · Kerberos constrained delegation</span></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Wireless Attacks -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Wireless Attacks</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Evil Twin AP</div>
+                <div class="entry-desc">Rogue AP mimicking legitimate SSID and BSSID; client auto-connects; attacker intercepts all traffic; particularly effective in public Wi-Fi environments
+                <br><span class="def-tag">🛡 WPA3 SAE · EAP-TLS certificate auth · WIPS detection</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Deauthentication Attack</div>
+                <div class="entry-desc">Forged 802.11 deauth management frames kick clients off AP; forces reconnection to attacker-controlled Evil Twin; combined for credential capture
+                <br><span class="def-tag">🛡 WPA3 Management Frame Protection (PMF / 802.11w)</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">RF Jamming</div>
+                <div class="entry-desc">Radio frequency interference disrupts wireless communications; physical attack targeting availability; detection via RF spectrum monitoring; limited by FCC regulations on transmitter power</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">WPA Cracking / MAC Spoofing</div>
+                <div class="entry-desc">WPA2 PMKID capture without requiring 4-way handshake; offline dictionary attack against captured hash; MAC spoofing bypasses basic MAC address filtering
+                <br><span class="def-tag">🛡 WPA3 SAE prevents offline attacks · use enterprise auth (802.1X)</span></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Application Attacks -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Application Attacks</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Injection Attacks</div>
+                <div class="entry-desc">SQL, OS Command, LDAP, XML/XXE Injection; malicious input manipulates backend systems</div>
+                <div class="sub-entries">
+                  <div class="sub-entry">
+                    <div class="sub-title">OS Command Injection</div>
+                    <div class="sub-desc">System() calls with unsanitised input execute OS commands; full server compromise; avoid shell calls; use allowlisted commands only</div>
+                  </div>
+                  <div class="sub-entry">
+                    <div class="sub-title">LDAP Injection</div>
+                    <div class="sub-desc">Manipulate LDAP queries to bypass authentication or extract directory info; sanitise all LDAP filter characters</div>
+                  </div>
+                  <div class="sub-entry">
+                    <div class="sub-title">XML / XXE Injection</div>
+                    <div class="sub-desc">XML External Entity: malicious XML references external entities; reads local files, enables SSRF, DoS; disable external entity processing in XML parsers</div>
+                  </div>
+                </div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Forgery Attacks</div>
+                <div class="entry-desc">Tricks authenticated sessions into making unintended requests</div>
+                <div class="sub-entries">
+                  <div class="sub-entry">
+                    <div class="sub-title">CSRF: Cross-Site Request Forgery</div>
+                    <div class="sub-desc">Tricks authenticated user's browser into making unwanted requests to trusted site; anti-CSRF tokens and SameSite cookies prevent; attacker uses victim's session</div>
+                  </div>
+                  <div class="sub-entry">
+                    <div class="sub-title">SSRF: Server-Side Request Forgery</div>
+                    <div class="sub-desc">Server fetches attacker-specified URL; accesses internal metadata services (AWS 169.254.169.254); validate and allowlist all URLs server-side</div>
+                  </div>
+                </div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Privilege Escalation</div>
+                <div class="entry-desc">Gaining higher access than authorised</div>
+                <div class="sub-entries">
+                  <div class="sub-entry">
+                    <div class="sub-title">Vertical: Standard → Admin</div>
+                    <div class="sub-desc">Low-privilege user gains admin/root; exploits kernel vuln, SUID binary, service misconfiguration; leads to full system compromise</div>
+                  </div>
+                  <div class="sub-entry">
+                    <div class="sub-title">Horizontal: User → User (IDOR)</div>
+                    <div class="sub-desc">Access another user's resources without privilege increase; Insecure Direct Object Reference; changing ID parameter in URL to access other users' data</div>
+                  </div>
+                </div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Directory Traversal (Path Traversal)</div>
+                <div class="entry-desc">Navigate outside intended web root using ../; read /etc/passwd, config files, private keys
+                <br><span class="def-tag">🛡 Canonicalise paths server-side · jail web server to document root</span></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Password & Cryptographic Attacks -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Password &amp; Cryptographic Attacks</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Password Spraying</div>
+                <div class="entry-desc">One common password (Password1!) tried against many accounts; deliberately slow to avoid lockout thresholds; detects by many accounts failing with same password at same time</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Brute Force</div>
+                <div class="entry-desc">Exhaustive character combination attempt; online: rate limited and detectable; offline: against stolen hash file at high GPU speed
+                <br><span class="def-tag">🛡 MFA · bcrypt/Argon2 hashing · account lockout · rate limiting</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Dictionary &amp; Hybrid Attacks</div>
+                <div class="entry-desc">Dictionary: tries known words/common passwords; Hybrid: dictionary + l33tspeak rules, appended numbers/symbols; covers typical password creation patterns</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Offline Hash Cracking &amp; Rainbow Tables</div>
+                <div class="entry-desc">Steal hash database; crack offline at GPU speed; Rainbow Tables: precomputed hash-to-plaintext lookups
+                <br><span class="def-tag">🛡 Salting (prevents rainbow tables) · bcrypt/Argon2 (slows cracking)</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Downgrade Attack</div>
+                <div class="entry-desc">Forces negotiation to weaker protocol (SSLv3, TLS 1.0, DES); POODLE attack exploited SSLv3 downgrade
+                <br><span class="def-tag">🛡 HSTS · enforce TLS min version · disable SSL/TLS &lt;1.2</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Collision &amp; Birthday Attacks</div>
+                <div class="entry-desc">Collision: find two inputs producing same hash; MD5 and SHA-1 proven vulnerable; enables digital signature forgery. Birthday: probability-based collision finding using birthday paradox — 50% collision at √(hash-space)
+                <br><span class="def-tag">🛡 Use SHA-256+ (256-bit output resists birthday attacks)</span></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Physical Attacks -->
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Physical Attacks</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Physical Brute Force</div>
+                <div class="entry-desc">Lock picking; forced entry; bypass electronic locks with power cycling; tailgating through access-controlled doors
+                <br><span class="def-tag">🛡 Mantraps · security guards · anti-tailgating controls · CCTV</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">RFID Cloning</div>
+                <div class="entry-desc">Read RFID badge from close proximity with concealed reader (works through clothing/bags); clone to blank card; attacker gains physical access using victim's credentials
+                <br><span class="def-tag">🛡 Faraday sleeve/wallet · challenge-response badges · MFA physical access</span></div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Environmental Attacks</div>
+                <div class="entry-desc">Power disruption; HVAC sabotage causing server overheating; fire suppression system activation; physical security must account for environmental threat vectors
+                <br><span class="def-tag">🛡 Redundant power (UPS/generators) · environmental monitoring · physical access controls to HVAC</span></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Indicators -->
+        <div class="cat-card span-full">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Universal Indicators of Compromise (IoCs)</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap:10px;">
+              <div class="entry"><div class="entry-title">Account Lockout</div><div class="entry-desc">Multiple failed authentications; may indicate password spraying or brute force; investigate source IPs and target account patterns</div></div>
+              <div class="entry"><div class="entry-title">Concurrent Session Usage</div><div class="entry-desc">Same account logged in from multiple geographic locations simultaneously; may indicate credential theft or shared account abuse</div></div>
+              <div class="entry"><div class="entry-title">Impossible Travel</div><div class="entry-desc">Account login from London then New York within 2 hours; physically impossible — indicates credential compromise or VPN/proxy use by attacker</div></div>
+              <div class="entry"><div class="entry-title">Blocked Content Alerts</div><div class="entry-desc">Repeated attempts to reach blocked categories (C2, malware, dark web); may indicate compromised endpoint or infected user device</div></div>
+              <div class="entry"><div class="entry-title">Resource Consumption Spike</div><div class="entry-desc">Unexpected CPU/memory/disk/network surge; may indicate cryptomining, ransomware encryption, worm activity, or DDoS participation</div></div>
+              <div class="entry"><div class="entry-title">Resource Inaccessibility</div><div class="entry-desc">Files/services suddenly unavailable; could indicate ransomware encryption, DoS, or sabotage from insider</div></div>
+              <div class="entry"><div class="entry-title">Out-of-Cycle Logging</div><div class="entry-desc">Logs generated at unusual times (3am admin activity); may indicate automated attack tool or attacker operating in different time zone</div></div>
+              <div class="entry"><div class="entry-title">Missing Logs</div><div class="entry-desc">Log gaps or deletions; attacker covering tracks; may also indicate logging infrastructure failure; treat as suspicious until proven otherwise</div></div>
+            </div>
+          </details>
+        </div>
+
+      </div>
+    </details>
+  </div>
+
+  <!-- ═══════════════════════════════ 2.5 ═══════════════════════════════ -->
+  <div class="section s25" id="s25">
+    <details open>
+      <summary class="section-header">
+        <span class="section-num">2.5</span>
+        <span class="section-title">Mitigation Techniques Used to Secure Enterprise Environment</span>
+        <span class="section-toggle">▶</span>
+      </summary>
+      <div class="section-body">
+
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Access &amp; Segmentation Controls</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Segmentation</div>
+                <div class="entry-desc">Divide network into zones (VLANs, DMZ, microsegments); limits lateral movement — attacker who breaches one segment cannot automatically reach others; critical for ICS/OT environments</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Access Control Lists (ACLs)</div>
+                <div class="entry-desc">Explicit permit/deny rules on network devices and file systems; define who/what can communicate with what; most specific rule wins; regular review to remove stale rules</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Application Allow List</div>
+                <div class="entry-desc">Only explicitly approved applications permitted to execute; strongest defence against unknown malware and zero-days; high admin overhead; ideal for high-security environments</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Isolation</div>
+                <div class="entry-desc">Air-gap critical systems; sandbox suspicious files/processes; isolate compromised hosts during incident response; prevents spread and C2 communication</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Least Privilege</div>
+                <div class="entry-desc">Users/processes get minimum access required for their function; reduces blast radius of any single compromise; applies to human accounts, service accounts, and applications</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Operational Controls</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Patching</div>
+                <div class="entry-desc">Timely application of vendor security patches; priority based on CVSS score and exploitability; test before deploying to production; patch management tooling (WSUS, SCCM, Ansible)</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Encryption</div>
+                <div class="entry-desc">Data at rest (FDE, file/database encryption); data in transit (TLS 1.2/1.3); protects confidentiality even if physical media stolen or network traffic intercepted</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Monitoring</div>
+                <div class="entry-desc">Continuous log collection and analysis (SIEM); endpoint monitoring (EDR); network flow analysis; without monitoring, attacks can persist undetected for months (average dwell time: 200+ days)</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Configuration Enforcement</div>
+                <div class="entry-desc">Security baselines (CIS Benchmarks); automated drift detection; configuration management tools (Ansible, Chef, Puppet); ensure secure configs persist after changes</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Decommissioning</div>
+                <div class="entry-desc">Formally retire and sanitise end-of-life systems; remove from network to eliminate attack surface; data destruction per NIST 800-88 guidelines before disposal</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <div class="cat-card">
+          <details open>
+            <summary class="cat-head">
+              <span class="cat-dot"></span>
+              <span class="cat-name">Hardening Techniques</span>
+              <span class="cat-toggle">▶</span>
+            </summary>
+            <div class="cat-body">
+              <div class="entry">
+                <div class="entry-title">Encryption at Host Level</div>
+                <div class="entry-desc">Full-disk encryption (BitLocker, FileVault); protects data if device stolen; TPM binding ensures encryption key only released to verified boot environment</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Endpoint Protection Installation</div>
+                <div class="entry-desc">AV/EDR deployment; real-time scanning; behavioural detection; threat hunting capability; EDR provides visibility and response (quarantine, kill process, forensic data collection)</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Host-Based Firewall</div>
+                <div class="entry-desc">Filters traffic at the individual host; blocks inbound connections to unused ports; complements network firewall — defence in depth; configured via GPO in Windows environments</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">HIPS (Host-Based Intrusion Prevention System)</div>
+                <div class="entry-desc">Monitors and blocks malicious activity on host in real time; detects exploit attempts, privilege escalation, suspicious process behaviour; complements AV with behaviour-based detection</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Disabling Unused Ports / Protocols</div>
+                <div class="entry-desc">Close all non-essential network ports; disable protocols not in use (Telnet, FTP, SMBv1); reduce attack surface — every open port is a potential entry point</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Default Password Changes</div>
+                <div class="entry-desc">First hardening step for any new device; default credentials publicly known (Shodan indexes millions of devices with defaults); change before connecting to network</div>
+              </div>
+              <div class="entry">
+                <div class="entry-title">Removal of Unnecessary Software</div>
+                <div class="entry-desc">Uninstall software not required for function (attack surface reduction); remove bloatware, development tools from production, unused services; minimise installed software inventory</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+      </div>
+    </details>
+  </div>
+
+</div>
+
+<script>
+  // Smooth scroll for nav
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const el = document.querySelector(a.getAttribute('href'));
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+</body>
+</html>
