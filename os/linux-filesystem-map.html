@@ -1,0 +1,1922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux Filesystem Hierarchy — Map</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2128;--bg4:#21262d;
+  --border:#30363d;--border2:#444c56;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --mono:'JetBrains Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);}
+header{
+  height:50px;border-bottom:1px solid var(--border);
+  padding:0 16px;display:flex;align-items:center;gap:10px;
+  background:var(--bg2);position:relative;z-index:10;flex-shrink:0;
+}
+header h1{font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.02em;white-space:nowrap;}
+.sub{font-size:10px;color:var(--text3);font-family:var(--mono);white-space:nowrap;}
+.legend{display:flex;gap:9px;flex-wrap:nowrap;align-items:center;margin-left:6px;}
+.leg{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text3);font-family:var(--mono);white-space:nowrap;}
+.legdot{width:7px;height:7px;border-radius:2px;flex-shrink:0;}
+.hdr-right{margin-left:auto;display:flex;gap:5px;align-items:center;}
+.btn{font-family:var(--mono);font-size:11px;padding:3px 8px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--text2);cursor:pointer;transition:all .12s;white-space:nowrap;}
+.btn:hover{background:var(--bg3);color:var(--text);}
+.btn.active{background:var(--bg3);border-color:var(--text2);color:var(--text);}
+.main{display:flex;height:calc(100vh - 50px);}
+.canvas{flex:1;overflow:hidden;position:relative;cursor:grab;}
+.canvas.panning{cursor:grabbing;}
+#tree-svg{display:block;position:absolute;top:0;left:0;}
+.zoom-controls{position:absolute;bottom:16px;left:16px;display:flex;flex-direction:column;gap:4px;z-index:5;}
+.zbtn{width:28px;height:28px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text2);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--mono);transition:all .12s;}
+.zbtn:hover{background:var(--bg3);color:var(--text);}
+.zoom-label{font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;}
+.hint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:10px;font-family:var(--mono);color:var(--text3);background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:3px 8px;pointer-events:none;opacity:.6;white-space:nowrap;}
+.detail{width:360px;flex-shrink:0;overflow-y:auto;background:var(--bg2);border-left:1px solid var(--border);transition:width .2s ease,opacity .2s ease;}
+.detail.hidden{width:0;opacity:0;overflow:hidden;border-left:none;}
+.detail-inner{padding:18px;min-width:320px;}
+.ph{color:var(--text3);font-family:var(--mono);font-size:12px;text-align:center;margin-top:60px;line-height:2;}
+.ph-icon{font-size:22px;opacity:.2;display:block;margin-bottom:8px;}
+.d-path{font-family:var(--mono);font-size:15px;font-weight:600;margin-bottom:5px;word-break:break-all;}
+.d-crumb{font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px;word-break:break-all;}
+.d-badge{display:inline-block;font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:3px;margin-bottom:8px;margin-right:3px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;}
+.d-role{font-size:12.5px;color:var(--text2);margin-bottom:8px;line-height:1.65;}
+.d-desc{font-size:11.5px;color:var(--text3);line-height:1.65;margin-bottom:10px;border-left:2px solid var(--border);padding-left:9px;}
+.d-label{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);font-family:var(--mono);margin-bottom:5px;font-weight:500;}
+.d-perms{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:7px 10px;margin-bottom:10px;}
+.d-perms code{font-family:var(--mono);font-size:10.5px;color:#e3b341;display:block;margin-top:2px;}
+.d-files{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;}
+.f-pill{font-family:var(--mono);font-size:10px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:3px;color:var(--text2);}
+.d-tip{background:var(--bg3);border:1px solid #2d2060;border-radius:4px;padding:8px 10px;font-size:11px;color:var(--text3);margin-top:8px;line-height:1.65;}
+.d-tip strong{color:#7c6af7;font-family:var(--mono);font-size:10px;}
+.d-tip code{font-family:var(--mono);font-size:10px;color:var(--text2);background:var(--bg4);padding:1px 3px;border-radius:3px;}
+.expand-hint{font-size:9px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:10px;letter-spacing:.05em;}
+.d-warn{background:#2d1210;border:1px solid #6b2d26;border-radius:4px;padding:7px 10px;font-size:11px;color:#F5C4B3;margin-top:8px;}
+.d-warn strong{color:#f78166;font-family:var(--mono);font-size:10px;}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>/ Linux Filesystem Hierarchy — Map</h1>
+    <div class="sub">FHS 3.0 + arch internals · scroll=zoom · drag=pan · click=expand/inspect</div>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="legdot" style="background:#534AB7"></div>system/kernel</div>
+    <div class="leg"><div class="legdot" style="background:#0F6E56"></div>variable data</div>
+    <div class="leg"><div class="legdot" style="background:#854F0B"></div>config</div>
+    <div class="leg"><div class="legdot" style="background:#185FA5"></div>user</div>
+    <div class="leg"><div class="legdot" style="background:#993C1D"></div>devices/virtual</div>
+    <div class="leg"><div class="legdot" style="background:#5F5E5A"></div>misc/runtime</div>
+  </div>
+  <div class="hdr-right">
+    <button class="btn" onclick="expandAll()">expand all</button>
+    <button class="btn" onclick="collapseAll()">collapse all</button>
+    <button class="btn" onclick="resetView()">reset</button>
+    <button class="btn active" id="panel-btn" onclick="togglePanel()">&#9654; panel</button>
+  </div>
+</header>
+<div class="main">
+  <div class="canvas" id="canvas">
+    <svg id="tree-svg" xmlns="http://www.w3.org/2000/svg"><g id="tree-g"></g></svg>
+    <div class="zoom-controls">
+      <div class="zbtn" onclick="zoomIn()">+</div>
+      <div class="zoom-label" id="zoom-label">100%</div>
+      <div class="zbtn" onclick="zoomOut()">&minus;</div>
+      <div class="zbtn" onclick="zoomFit()" title="fit to screen" style="font-size:11px;">&#9974;</div>
+    </div>
+    <div class="hint">scroll=zoom &nbsp;·&nbsp; drag=pan &nbsp;·&nbsp; dbl-click=reset</div>
+  </div>
+  <div class="detail" id="detail">
+    <div class="detail-inner">
+      <div class="ph"><span class="ph-icon">&#8984;</span>click any node<br>to inspect</div>
+    </div>
+  </div>
+</div>
+<script>
+const CAT={
+  kernel:{fill:'#1a1535',stroke:'#534AB7',text:'#CECBF6',bb:'#1a1535',bt:'#7c6af7',bbd:'#3d3070'},
+  var:   {fill:'#0d2116',stroke:'#0F6E56',text:'#9FE1CB',bb:'#0d2116',bt:'#3fb950',bbd:'#1e4d2b'},
+  config:{fill:'#271d08',stroke:'#854F0B',text:'#FAC775',bb:'#271d08',bt:'#e3b341',bbd:'#5a4312'},
+  user:  {fill:'#0c1e33',stroke:'#185FA5',text:'#B5D4F4',bb:'#0c1e33',bt:'#58a6ff',bbd:'#1a3d66'},
+  device:{fill:'#2d1210',stroke:'#993C1D',text:'#F5C4B3',bb:'#2d1210',bt:'#f78166',bbd:'#6b2d26'},
+  misc:  {fill:'#191e24',stroke:'#444c56',text:'#8b949e',bb:'#191e24',bt:'#79c0ff',bbd:'#2d3a47'},
+};
+
+const TREE={
+  id:'root',name:'/',cat:'kernel',label:'/',
+  type:'root filesystem',
+  role:'Root of the entire filesystem hierarchy. Every file, device, and directory on the system lives beneath this point.',
+  desc:'The kernel mounts the root filesystem first during boot. The Filesystem Hierarchy Standard (FHS 3.0) defines what goes where. On modern distros /bin, /sbin, /lib are symlinks into /usr.',
+  perms:'drwxr-xr-x  root root',
+  files:['bin/','sbin/','usr/','lib/','lib64/','boot/','etc/','var/','home/','root/','dev/','proc/','sys/','tmp/','run/','mnt/','media/','opt/','srv/'],
+  tip:'<code>ls -la /</code> reveals symlinks to /usr. <code>df -h /</code> shows root filesystem usage.',
+  children:[
+  //───────────── /bin ─────────────
+  {id:'bin',name:'/bin',cat:'kernel',label:'/bin',badge:'→ /usr/bin',
+   type:'essential user binaries',
+   role:'Essential user-space binaries needed before /usr is mounted. Core commands available to all users.',
+   desc:'On modern Ubuntu/Debian/Fedora/Arch, /bin is a symlink to /usr/bin. Historically a separate directory so the system could boot even with /usr on a separate partition.',
+   perms:'lrwxrwxrwx  root root → usr/bin',
+   files:['ls','cp','mv','rm','cat','echo','bash','sh','chmod','chown','ln','mkdir','rmdir','grep','find','ps','kill','mount','dd','df','du','date','pwd','touch','sort','head','tail','cut','awk','sed','xargs','tr','tee','wc','true','false','sleep'],
+   tip:'<code>which ls</code> resolves to /usr/bin/ls via the symlink. <code>file /bin</code> confirms it is a symlink.'},
+
+  //───────────── /sbin ─────────────
+  {id:'sbin',name:'/sbin',cat:'kernel',label:'/sbin',badge:'→ /usr/sbin',
+   type:'system admin binaries',
+   role:'System administration binaries. Typically only run by root or via sudo.',
+   desc:'Also symlinked to /usr/sbin on modern distros. Contains commands for booting, mounting filesystems, managing network interfaces, and system recovery.',
+   perms:'lrwxrwxrwx  root root → usr/sbin',
+   files:['init','systemd','ifconfig','ip','iptables','nftables','ip6tables','fdisk','fsck','mkfs','mkfs.ext4','mkfs.xfs','shutdown','reboot','halt','useradd','userdel','usermod','groupadd','modprobe','lsmod','rmmod','depmod','blkid','lsblk','sshd','logrotate','fail2ban','route','arp','ethtool','swapon','swapoff','losetup'],
+   tip:'<code>sudo fdisk -l</code> lists partition tables. <code>lsblk -f</code> shows all block devices with filesystems.'},
+
+  //───────────── /usr ─────────────
+  {id:'usr',name:'/usr',cat:'kernel',label:'/usr',
+   type:'unix system resources',
+   role:'The largest directory. Contains the majority of user utilities, applications, libraries, and documentation.',
+   desc:'Traditionally shareable and read-only — can be NFS-mounted. The equivalent of "Program Files" but for system-wide software. Subdivided into bin, sbin, lib, share, include, local.',
+   perms:'drwxr-xr-x  root root',
+   files:['bin/','sbin/','lib/','lib64/','local/','share/','include/','src/','games/'],
+   tip:'<code>du -sh /usr/*</code> shows which subsystem uses the most space.',
+   children:[
+     {id:'usr-bin',name:'/usr/bin',cat:'kernel',label:'bin',
+      type:'user binaries',
+      role:'Non-essential (for boot) user commands installed by packages. Primary location for user executables.',
+      desc:'Everything installed via apt/dnf/pacman lands binaries here. On modern systems /bin → /usr/bin.',
+      perms:'drwxr-xr-x  root root',
+      files:['python3','python3.12','git','vim','nano','curl','wget','ssh','scp','sftp','rsync','gcc','g++','make','cmake','gdb','strace','ltrace','apt','dpkg','snap','flatpak','zip','tar','gzip','bzip2','xz','unzip','man','diff','patch','awk','sed','perl','ruby','node','npm','jq','htop','top','tmux','screen','openssl','gpg','gpg2','nc','ncat','nmap','tcpdump','wireshark','tshark','ffmpeg','convert','ffprobe','docker','kubectl','ansible','terraform'],
+      tip:'<code>ls /usr/bin | wc -l</code> — a typical system has 1000–3000 binaries here.'},
+     {id:'usr-sbin',name:'/usr/sbin',cat:'kernel',label:'sbin',
+      type:'admin binaries',
+      role:'Non-essential system administration binaries not required at boot.',
+      desc:'Package-installed admin tools. Web server daemons (nginx, apache2), mail servers, DNS, and DHCP servers live here.',
+      perms:'drwxr-xr-x  root root',
+      files:['apache2','nginx','sshd','cron','rsyslogd','syslogd','named','dhcpd','ntpd','chronyd','postfix','sendmail','exim4','dovecot','adduser','deluser','visudo','chroot','update-grub','grub-install','useradd','userdel','usermod','logrotate','fail2ban-server','fail2ban-client','ufw','iptables-save','iptables-restore','ss','arp','tcpdump','netstat','nstat','brctl'],
+      tip:'<code>which nginx</code> shows it resolves to /usr/sbin/nginx.'},
+     {id:'usr-lib',name:'/usr/lib',cat:'kernel',label:'lib',
+      type:'shared libraries',
+      role:'Shared libraries (.so files) and internal program data. Not for direct user invocation.',
+      desc:'The dynamic linker searches paths from /etc/ld.so.conf. Contains .so files loaded at runtime, Python modules, systemd units, firmware, and udev rules.',
+      perms:'drwxr-xr-x  root root',
+      files:['x86_64-linux-gnu/','aarch64-linux-gnu/','python3/','python3.12/','systemd/','modules/','firmware/','locale/','fonts/','udev/','debug/','libc.so.6','libm.so.6','libpthread.so.0','libssl.so.3','libcrypto.so.3','libdl.so.2','librt.so.1','libcrypt.so.1','libresolv.so.2','libnss_dns.so','libnss_files.so','libpam.so.0'],
+      tip:'<code>ldd /usr/bin/bash</code> shows which .so files bash links against. <code>ldconfig -p | grep libssl</code> finds SSL library.',
+      children:[
+        {id:'usr-lib-x86',name:'/usr/lib/x86_64-linux-gnu',cat:'kernel',label:'x86_64-gnu/',
+         type:'arch-specific libraries',
+         role:'Architecture-specific shared libraries for the system\'s native ABI (x86-64 on amd64 systems).',
+         desc:'On multiarch Debian/Ubuntu systems, architecture-tagged library dirs coexist. This allows 32-bit (i386) and 64-bit (amd64) libs on the same system. Contains libc.so.6, libssl.so, libcrypto.so, and all major system libraries.',
+         perms:'drwxr-xr-x  root root',
+         files:['libc.so.6','libm.so.6','libpthread.so.0','libssl.so.3','libcrypto.so.3','libz.so.1','libpcre.so.3','libpcre2-8.so.0','liblzma.so.5','libudev.so.1','libsystemd.so.0','libpam.so.0','libaudit.so.1','libcap.so.2','libseccomp.so.2','libselinux.so.1','libapparmor.so.1'],
+         tip:'<code>ls /usr/lib/x86_64-linux-gnu/libssl*</code> shows all SSL library versions installed.'},
+        {id:'usr-lib-python',name:'/usr/lib/python3',cat:'kernel',label:'python3/',
+         type:'Python standard library',
+         role:'Python standard library modules installed system-wide.',
+         desc:'Contains all stdlib modules (os, sys, json, http, etc.) for the system Python. dist-packages/ holds packages installed by apt; site-packages/ for manually installed packages.',
+         perms:'drwxr-xr-x  root root',
+         files:['python3.12/','python3.12/lib-dynload/','python3.12/dist-packages/','python3.12/site-packages/','python3/dist-packages/'],
+         tip:'<code>python3 -c "import sys; print(sys.path)"</code> shows all Python search paths.'},
+        {id:'usr-lib-systemd',name:'/usr/lib/systemd',cat:'kernel',label:'systemd/',
+         type:'vendor systemd unit files',
+         role:'System-provided (vendor) unit files for all installed packages. Do not edit these directly.',
+         desc:'These are the defaults shipped by packages. To override, create drop-ins in /etc/systemd/system/<unit>.d/ — those survive package upgrades. Contains service, socket, timer, mount, target, path, and device units.',
+         perms:'drwxr-xr-x  root root',
+         files:['system/','system/nginx.service','system/ssh.service','system/sshd.service','system/cron.service','system/docker.service','system/NetworkManager.service','system/systemd-journald.service','system/systemd-logind.service','system/auditd.service','system/rsyslog.service','user/','system-preset/','systemd','systemd-journald','systemd-udevd','systemd-networkd','systemd-resolved','systemd-logind'],
+         tip:'<code>systemctl cat nginx</code> shows the vendor unit file plus any overrides applied.'},
+        {id:'usr-lib-udev',name:'/usr/lib/udev',cat:'kernel',label:'udev/',
+         type:'udev rules & helpers',
+         role:'udev rules shipped by packages and hardware detection helper programs.',
+         desc:'Rules files match device attributes and trigger actions (run a program, create a symlink, set permissions, rename interface). Processed in numerical filename order. 99-*.rules run last.',
+         perms:'drwxr-xr-x  root root',
+         files:['rules.d/','rules.d/50-udev-default.rules','rules.d/60-persistent-storage.rules','rules.d/60-persistent-input.rules','rules.d/60-persistent-v4l.rules','rules.d/70-snap.rules','rules.d/80-net-setup-link.rules','rules.d/99-systemd.rules','hwdb.d/','hwdb.bin','net/'],
+         tip:'<code>udevadm monitor</code> watches udev events live. <code>udevadm info -a -n /dev/sda</code> shows a device\'s attributes.'},
+        {id:'usr-lib-modules',name:'/usr/lib/modules',cat:'kernel',label:'modules/',
+         type:'kernel modules (usr)',
+         role:'On some distros (Fedora/RHEL), kernel modules are placed under /usr/lib/modules/ rather than /lib/modules/.',
+         desc:'Same structure as /lib/modules/ — kernel version subdirectory containing the full module tree. On Debian/Ubuntu, /lib/modules/ → /usr/lib/modules/ is a symlink.',
+         perms:'drwxr-xr-x  root root',
+         files:['6.8.0-51-generic/','kernel/','modules.dep','modules.alias','modules.builtin'],
+         tip:'<code>modinfo <module_name></code> shows a module\'s description, parameters, and dependencies.'},
+      ]},
+     {id:'usr-local',name:'/usr/local',cat:'kernel',label:'local',
+      type:'local installs',
+      role:'Software compiled and installed locally by the sysadmin, outside the package manager.',
+      desc:'FHS-mandated safe zone. /usr/local/bin takes precedence over /usr/bin in the default PATH. Common for custom-compiled software and manually managed tools.',
+      perms:'drwxr-xr-x  root root',
+      files:['bin/','lib/','share/','include/','etc/','sbin/','man/'],
+      tip:'<code>make install</code> defaults to /usr/local/. Use <code>./configure --prefix=/usr/local</code>.',
+      children:[
+        {id:'usr-local-bin',name:'/usr/local/bin',cat:'kernel',label:'bin/',
+         type:'local user binaries',
+         role:'Admin-installed executables that take precedence over /usr/bin.',
+         desc:'Anything installed via make install, cargo install --root /usr/local, pip install to system, or manually placed. First in default PATH over /usr/bin so local versions override distro packages.',
+         perms:'drwxr-xr-x  root root',
+         files:['custom-tool','compiled-app'],
+         tip:'<code>echo $PATH</code> — /usr/local/bin should appear before /usr/bin.'},
+      ]},
+     {id:'usr-share',name:'/usr/share',cat:'kernel',label:'share',
+      type:'arch-independent data',
+      role:'Read-only architecture-independent data: man pages, icons, themes, locale data, timezones.',
+      desc:'Shared across all CPU architectures. Man pages, documentation, fonts, timezone definitions (zoneinfo/), desktop entries and application data files all live here.',
+      perms:'drwxr-xr-x  root root',
+      files:['man/','doc/','info/','locale/','zoneinfo/','icons/','themes/','fonts/','applications/','bash-completion/','vim/','emacs/','dict/','pixmaps/','common-licenses/','ca-certificates/'],
+      tip:'<code>ls /usr/share/zoneinfo/</code> lists all timezone definitions. <code>manpath</code> shows where man looks.'},
+     {id:'usr-include',name:'/usr/include',cat:'kernel',label:'include',
+      type:'C/C++ header files',
+      role:'Standard C and C++ header files used by the compiler during software builds.',
+      desc:'When you #include <stdio.h> the compiler looks here. Contains headers for glibc, POSIX interfaces, and installed library APIs (OpenSSL, libcurl, etc.).',
+      perms:'drwxr-xr-x  root root',
+      files:['stdio.h','stdlib.h','string.h','unistd.h','sys/','linux/','bits/','openssl/','curl/','libxml2/','python3.12/','netinet/','arpa/','pthread.h','signal.h','errno.h','fcntl.h','math.h','asm/unistd_64.h'],
+      tip:'Install <code>build-essential</code> or <code>base-devel</code> to fully populate this directory.'},
+   ]},
+
+  //───────────── /lib ─────────────
+  {id:'lib',name:'/lib',cat:'kernel',label:'/lib',badge:'→ /usr/lib',
+   type:'boot-essential libraries',
+   role:'Essential shared libraries required by /bin and /sbin before /usr is mounted.',
+   desc:'Contains the C standard library, the dynamic linker itself, and kernel modules. On modern distros this is a symlink to /usr/lib.',
+   perms:'lrwxrwxrwx  root root → usr/lib',
+   files:['libc.so.6','libm.so.6','ld-linux.so.2','ld-linux-x86-64.so.2','modules/','firmware/','systemd/'],
+   tip:'<code>ls /lib/modules/$(uname -r)/</code> shows kernel modules for the running kernel.',
+   children:[
+     {id:'lib-modules',name:'/lib/modules',cat:'kernel',label:'modules/',
+      type:'kernel modules',
+      role:'Loadable kernel modules (.ko files) — drivers, filesystems, network protocols, crypto.',
+      desc:'Each subdirectory is named after a kernel version (uname -r). modprobe reads modules.dep to resolve dependencies. modules.alias maps hardware IDs (PCI, USB) to module names for udev autoloading.',
+      perms:'drwxr-xr-x  root root',
+      files:['6.8.0-51-generic/','kernel/','kernel/drivers/','kernel/net/','kernel/fs/','kernel/crypto/','kernel/sound/','kernel/security/','modules.dep','modules.alias','modules.builtin','modules.builtin.modinfo','modules.blacklist','modules.order','modules.symbols'],
+      tip:'<code>lsmod</code> shows loaded modules. <code>modinfo <module></code> shows metadata and parameters.',
+      children:[
+        {id:'lib-modules-drivers',name:'drivers/',cat:'kernel',label:'drivers/',
+         type:'hardware driver modules',
+         role:'Kernel modules for all hardware: NICs, GPUs, USB, storage controllers, input devices.',
+         desc:'Subdirectories by bus type or device class. The kernel loads these when udev detects matching hardware via the alias table. Built-in modules are compiled into vmlinuz; these are loadable (.ko.gz).',
+         perms:'drwxr-xr-x  root root',
+         files:['net/','net/ethernet/','net/wireless/','net/ethernet/intel/e1000e.ko','net/wireless/iwlwifi.ko','gpu/','gpu/drm/','gpu/drm/amd/','gpu/drm/i915.ko','gpu/drm/nouveau.ko','usb/','usb/storage/usb-storage.ko','usb/hid/usbhid.ko','block/','block/nvme.ko','block/virtio_blk.ko','input/','input/keyboard/atkbd.ko','ata/','ata/ahci.ko','ata/libata.ko','crypto/','char/','i2c/','platform/','virtio/','scsi/'],
+         tip:'<code>lspci -k</code> shows which kernel driver is bound to each PCI device.'},
+        {id:'lib-modules-net',name:'net/',cat:'kernel',label:'net/',
+         type:'network protocol modules',
+         role:'Kernel modules implementing network protocols and features.',
+         desc:'Loaded on demand as protocols are used. iptables rules trigger loading of netfilter modules. VPNs load tunnel modules. Bridge/bond/vlan modules needed for complex networking.',
+         perms:'drwxr-xr-x  root root',
+         files:['ipv6.ko','nf_conntrack.ko','nf_conntrack_ipv4.ko','iptable_filter.ko','iptable_nat.ko','ip_tables.ko','tun.ko','tap.ko','wireguard.ko','veth.ko','bridge.ko','bonding.ko','8021q.ko','dummy.ko','macvlan.ko','overlay.ko'],
+         tip:'<code>modprobe wireguard</code> loads WireGuard. <code>lsmod | grep nf_conntrack</code> checks netfilter.'},
+        {id:'lib-modules-fs',name:'fs/',cat:'kernel',label:'fs/',
+         type:'filesystem modules',
+         role:'Kernel modules for all supported filesystems.',
+         desc:'Loaded automatically on mount if not built-in. ext4 is usually built-in; btrfs, xfs, nfs, cifs, fuse, overlay are typically modules. overlay is critical for Docker container layers.',
+         perms:'drwxr-xr-x  root root',
+         files:['ext4.ko','btrfs.ko','xfs.ko','f2fs.ko','nfs.ko','nfs_common.ko','nfsd.ko','cifs.ko','fuse.ko','overlay.ko','aufs.ko','squashfs.ko','fat.ko','vfat.ko','exfat.ko','ntfs.ko','ntfs3.ko','isofs.ko','udf.ko'],
+         tip:'<code>cat /proc/filesystems</code> lists all registered filesystem types (built-in + loaded modules).'},
+        {id:'lib-modules-security',name:'security/',cat:'kernel',label:'security/',
+         type:'LSM modules',
+         role:'Linux Security Module implementations: SELinux, AppArmor, SMACK, Tomoyo.',
+         desc:'LSMs are loaded very early in boot, before the root filesystem is mounted. Only one major LSM can be enforcing at a time (stacked LSMs supported since 4.15 for minor ones). The active LSM is set via kernel cmdline (security=apparmor or security=selinux).',
+         perms:'drwxr-xr-x  root root',
+         files:['selinux/','apparmor/','smack/','tomoyo/','yama/','commoncap.ko','keys/'],
+         tip:'<code>cat /sys/kernel/security/lsm</code> shows which LSMs are active.'},
+      ]},
+     {id:'lib-firmware',name:'/lib/firmware',cat:'kernel',label:'firmware/',
+      type:'device firmware blobs',
+      role:'Binary firmware blobs uploaded to hardware devices during initialisation.',
+      desc:'WiFi cards (iwlwifi/), GPUs (amdgpu/, i915/, nvidia/), Bluetooth (brcm/, qca/), and NIC firmware (rtl_nic/) live here. Not CPU code — instructions for device microcontrollers. Missing firmware causes device failure.',
+      perms:'drwxr-xr-x  root root',
+      files:['rtl_nic/','rtl_nic/rtl8168e-3.fw','iwlwifi/','iwlwifi-8265-36.ucode','amdgpu/','amdgpu/vega10_ce.bin','i915/','i915/skl_dmc_ver1_27.bin','nvidia/','intel/','brcm/','brcm/BCM43430A1.hcd','ath10k/','ath11k/','ath12k/','bnx2/','qcom/','qca/','mrvl/','rtl_bt/'],
+      tip:'<code>dmesg | grep -i firmware</code> shows firmware load attempts and failures during boot.'},
+   ]},
+
+  //───────────── /lib64 ─────────────
+  {id:'lib64',name:'/lib64',cat:'kernel',label:'/lib64',badge:'→ /usr/lib',
+   type:'64-bit dynamic linker',
+   role:'On 64-bit x86 systems: the 64-bit version of the dynamic linker and ABI-specific libraries.',
+   desc:'On multilib systems /lib holds 32-bit and /lib64 holds 64-bit. On most modern 64-bit-only systems this is a symlink to /usr/lib. The dynamic linker ld-linux-x86-64.so.2 is the very first code executed in any dynamically-linked ELF binary.',
+   perms:'lrwxrwxrwx  root root → usr/lib',
+   files:['ld-linux-x86-64.so.2'],
+   tip:'<code>file /lib64/ld-linux-x86-64.so.2</code> confirms the 64-bit ELF dynamic linker. <code>ldd --version</code> shows glibc version.'},
+
+  //───────────── /boot ─────────────
+  {id:'boot',name:'/boot',cat:'kernel',label:'/boot',
+   type:'boot partition files',
+   role:'Files needed to boot the OS: kernel image, initial ramdisk, and bootloader config.',
+   desc:'Loaded by GRUB before the kernel takes over. Often on its own small partition (ext2/FAT32). The EFI System Partition may be mounted at /boot/efi.',
+   perms:'drwxr-xr-x  root root',
+   files:['vmlinuz','vmlinuz-6.8.0-51-generic','initrd.img','initrd.img-6.8.0-51-generic','System.map-6.8.0-51-generic','config-6.8.0-51-generic','grub/','efi/'],
+   tip:'<code>update-grub</code> regenerates /boot/grub/grub.cfg from installed kernels.',
+   children:[
+     {id:'boot-vmlinuz',name:'vmlinuz',cat:'kernel',label:'vmlinuz',
+      type:'compressed kernel image',
+      role:'The compressed Linux kernel binary. Loaded by the bootloader into RAM at boot.',
+      desc:'vmlinuz = virtual memory linux, z = zlib/lz4/zstd compressed. The actual kernel binary. Multiple versions coexist during upgrades. GRUB selects which one to load from grub.cfg. /boot/vmlinuz is often a symlink to the latest.',
+      perms:'-rw-r--r--  root root',
+      files:['vmlinuz-6.8.0-51-generic','vmlinuz-6.8.0-49-generic','System.map-6.8.0-51-generic','config-6.8.0-51-generic'],
+      tip:'<code>uname -r</code> shows the running kernel. <code>ls /boot/vmlinuz*</code> lists all installed kernels.'},
+     {id:'boot-initrd',name:'initrd.img',cat:'kernel',label:'initrd.img',
+      type:'initial ramdisk',
+      role:'Temporary filesystem loaded into RAM before the real root filesystem is mounted.',
+      desc:'Contains just enough drivers and tools to detect hardware, load storage drivers, and mount the real root. Essential for encrypted disks (LUKS/dm-crypt), RAID, LVM, and NFS root setups. Built by update-initramfs.',
+      perms:'-rw-r--r--  root root',
+      files:['initrd.img-6.8.0-51-generic'],
+      tip:'<code>lsinitramfs /boot/initrd.img | head -50</code> lists files inside the initrd. <code>update-initramfs -u</code> rebuilds it.'},
+     {id:'boot-grub',name:'grub/',cat:'kernel',label:'grub/',
+      type:'GRUB2 bootloader data',
+      role:'GRUB2 bootloader configuration, modules, and environment block.',
+      desc:'grub.cfg is the generated boot menu — never edit it directly. Modules (*.mod) implement filesystem drivers, crypto (for LUKS), and other GRUB features. grubenv persists state across boots.',
+      perms:'drwxr-xr-x  root root',
+      files:['grub.cfg','grubenv','fonts/','locale/','i386-pc/','x86_64-efi/','unicode.pf2','themes/'],
+      tip:'<code>cat /boot/grub/grub.cfg</code> shows all boot menu entries.',
+      children:[
+        {id:'boot-grub-cfg',name:'grub.cfg',cat:'kernel',label:'grub.cfg',
+         type:'generated boot menu',
+         role:'The GRUB2 boot menu. Lists all installed kernels and boot options.',
+         desc:'Auto-generated by update-grub/grub-mkconfig from scripts in /etc/grub.d/ and settings in /etc/default/grub. Contains menuentry blocks for each installed kernel, recovery entries, and other OS entries from os-prober.',
+         perms:'-r--r--r--  root root  (444)',
+         files:[],
+         tip:'<code>grep menuentry /boot/grub/grub.cfg</code> shows all boot entries. Never edit this directly — run update-grub instead.'},
+        {id:'boot-grub-env',name:'grubenv',cat:'kernel',label:'grubenv',
+         type:'GRUB environment block',
+         role:'1024-byte GRUB environment block. Persists variables across boots.',
+         desc:'Stores: boot_success (did last boot succeed?), next-boot (one-time boot override), and other saved state. Used by grub-reboot to set a temporary default. Edited with grub-editenv.',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'<code>grub-editenv list</code> shows current saved variables. <code>grub-reboot 2</code> reboots to entry 2 once.'},
+      ]},
+     {id:'boot-efi',name:'efi/',cat:'kernel',label:'efi/',
+      type:'EFI System Partition',
+      role:'Mount point for the EFI System Partition (ESP) on UEFI systems.',
+      desc:'The ESP is FAT32, readable by UEFI firmware before any OS loads. Contains bootloaders for all installed operating systems. efibootmgr manages boot entries stored in NVRAM. Secure Boot keys are stored here too.',
+      perms:'drwxr-xr-x  root root',
+      files:['EFI/','EFI/ubuntu/','EFI/ubuntu/grubx64.efi','EFI/ubuntu/shimx64.efi','EFI/ubuntu/mmx64.efi','EFI/BOOT/BOOTX64.EFI'],
+      tip:'<code>efibootmgr -v</code> shows all UEFI boot entries. <code>ls /boot/efi/EFI/</code> shows installed bootloaders.'},
+   ]},
+
+  //───────────── /etc ─────────────
+  {id:'etc',name:'/etc',cat:'config',label:'/etc',
+   type:'host configuration',
+   role:'System-wide configuration files. Host-specific configuration for all installed software.',
+   desc:'Originally "etcetera" — now the canonical place for all system-wide editable config. All plain text; only root can write. Applications read their configuration here at startup.',
+   perms:'drwxr-xr-x  root root',
+   files:['passwd','shadow','group','gshadow','hostname','hosts','fstab','sudoers','resolv.conf','nsswitch.conf','os-release','environment','profile','bash.bashrc','shells','skel/','apt/','systemd/','ssh/','ssl/','cron.d/','logrotate.d/','pam.d/','security/','sysctl.conf','sysctl.d/','netplan/','network/','NetworkManager/','nginx/','apache2/','mysql/','postgresql/','redis/','docker/','ufw/','nftables.conf','iptables/','apparmor/','apparmor.d/','modprobe.d/','modules-load.d/','ld.so.conf','ld.so.conf.d/','grub.d/','default/','audit/','fail2ban/'],
+   tip:'<code>grep -r "keyword" /etc/</code> searches all config files. <code>ls -la /etc/</code> shows all config files.',
+   children:[
+     {id:'etc-passwd',name:'/etc/passwd',cat:'config',label:'passwd',
+      type:'user account database',
+      role:'The local user account database. One line per user: username:x:UID:GID:GECOS:home:shell.',
+      desc:'"x" means the password hash is in /etc/shadow. UIDs 0–999 are system accounts; 1000+ are human users. World-readable so programs can look up usernames by UID.',
+      perms:'-rw-r--r--  root root  (644)',
+      files:[],
+      warn:'Check for unexpected UID=0 entries: <code>awk -F: "($3==0){print}" /etc/passwd</code>',
+      tip:'<code>getent passwd username</code> also queries LDAP/NIS. <code>id username</code> shows UID/GID.'},
+     {id:'etc-shadow',name:'/etc/shadow',cat:'config',label:'shadow',
+      type:'password hashes',
+      role:'Hashed passwords and password aging policy. Only root and shadow group can read.',
+      desc:'Contains salted SHA-512 hashes ($6$ prefix). Stores: last-changed date, min/max days between changes, warning days, expiry. Locked accounts have ! or * prefix. $1$=MD5 (insecure!), $5$=SHA-256, $6$=SHA-512.',
+      perms:'-rw-r-----  root shadow  (640)',
+      files:[],
+      tip:'<code>sudo passwd -S username</code> shows password status without revealing the hash. <code>chage -l username</code> shows aging info.'},
+     {id:'etc-group',name:'/etc/group',cat:'config',label:'group',
+      type:'group database',
+      role:'Group definitions: group name, password placeholder, GID, and member list.',
+      desc:'Format: groupname:x:gid:member1,member2. Critical groups: sudo/wheel (admin), docker (root-equivalent!), disk (raw disk access), shadow (read password hashes), adm (read most logs).',
+      perms:'-rw-r--r--  root root  (644)',
+      files:[],
+      tip:'<code>getent group sudo</code> shows sudo group members. <code>getent group docker</code> — docker group = root equivalent!'},
+     {id:'etc-fstab',name:'/etc/fstab',cat:'config',label:'fstab',
+      type:'filesystem mount table',
+      role:'Static table of filesystems to mount at boot.',
+      desc:'Columns: device (UUID=.../dev/...), mount point, filesystem type, options, dump, pass. UUID preferred over /dev/sdX (which can change). Pass 0=no fsck, 1=root first, 2=others. Options: noexec, nosuid, noatime, lazytime.',
+      perms:'-rw-r--r--  root root  (644)',
+      files:[],
+      tip:'<code>mount -a</code> mounts all fstab entries. <code>findmnt --fstab</code> shows them in a tree. <code>findmnt -D</code> shows disk usage.'},
+     {id:'etc-hosts',name:'/etc/hosts',cat:'config',label:'hosts',
+      type:'static hostname map',
+      role:'Static IP-to-hostname mappings consulted before DNS.',
+      desc:'Queried before DNS by default (controlled by /etc/nsswitch.conf). Standard entries: 127.0.0.1 localhost, ::1 localhost. Used for DNS blocking (point to 0.0.0.0), local dev aliases, and override DNS in containers.',
+      perms:'-rw-r--r--  root root  (644)',
+      files:[],
+      tip:'Add <code>127.0.0.1 myapp.local</code> for local dev — takes effect immediately. <code>getent hosts hostname</code> tests resolution.'},
+     {id:'etc-nsswitch',name:'/etc/nsswitch.conf',cat:'config',label:'nsswitch.conf',
+      type:'name service switch',
+      role:'Specifies the order and sources for name/identity lookups: passwd, groups, hosts, etc.',
+      desc:'Each line: database: source1 source2 [RESULT=action]... For hosts: files → check /etc/hosts first; dns → query DNS. For passwd: files systemd → check /etc/passwd then systemd-userd. Controls getpwnam(), getgrnam(), gethostbyname() resolution order.',
+      perms:'-rw-r--r--  root root  (644)',
+      files:[],
+      tip:'<code>getent passwd username</code> follows nsswitch.conf. <code>getent hosts hostname</code> tests host resolution order.'},
+     {id:'etc-sudoers',name:'/etc/sudoers',cat:'config',label:'sudoers',
+      type:'sudo privilege policy',
+      role:'Defines which users can run which commands as root (or other users) via sudo.',
+      desc:'ALWAYS edit with visudo — it validates syntax before saving, preventing lockouts. Format: user HOST=(runas:group) COMMANDS. %group notation. NOPASSWD: for passwordless sudo. Drop-ins in /etc/sudoers.d/ included via #includedir.',
+      perms:'-r--r-----  root root  (440)',
+      files:['sudoers','sudoers.d/','sudoers.d/90-cloud-init-users','sudoers.d/README'],
+      tip:'<code>sudo visudo</code> to edit safely. <code>sudo -l</code> shows what you can run. <code>sudo -l -U username</code> checks another user.'},
+     {id:'etc-resolv',name:'/etc/resolv.conf',cat:'config',label:'resolv.conf',
+      type:'DNS resolver config',
+      role:'DNS nameservers and search domains for libc resolver.',
+      desc:'Usually a symlink managed by systemd-resolved or NetworkManager. Contains nameserver lines (up to 3), search domain list, and options like ndots:5 (for Kubernetes). Regenerated on network changes.',
+      perms:'-rw-r--r--  root root',
+      files:[],
+      tip:'<code>resolvectl status</code> shows current DNS config per-interface. <code>resolvectl query hostname</code> tests resolution.'},
+     {id:'etc-ssh',name:'/etc/ssh',cat:'config',label:'ssh/',
+      type:'SSH server & client config',
+      role:'SSH daemon configuration, client defaults, and host identity keys.',
+      desc:'sshd_config controls the daemon: Port, PermitRootLogin, PasswordAuthentication, AllowUsers, MaxAuthTries, ClientAliveInterval. ssh_config provides client defaults for all users. Host keys identify the server — fingerprints stored in ~/.ssh/known_hosts.',
+      perms:'drwxr-xr-x  root root',
+      files:['sshd_config','sshd_config.d/','ssh_config','ssh_config.d/','ssh_host_rsa_key','ssh_host_rsa_key.pub','ssh_host_ed25519_key','ssh_host_ed25519_key.pub','ssh_host_ecdsa_key','ssh_host_ecdsa_key.pub','moduli','authorized_principals'],
+      tip:'<code>sshd -t</code> validates sshd_config syntax. <code>sshd -T</code> dumps the full effective config.',
+      children:[
+        {id:'etc-ssh-sshd',name:'sshd_config',cat:'config',label:'sshd_config',
+         type:'SSH daemon configuration',
+         role:'The main SSH server configuration file.',
+         desc:'Key hardening options: PermitRootLogin no, PasswordAuthentication no, PubkeyAuthentication yes, AllowUsers alice bob, MaxAuthTries 3, ClientAliveInterval 300, ClientAliveCountMax 2, X11Forwarding no, AllowTcpForwarding no. Port 22 (change to reduce scan noise).',
+         perms:'-rw-r--r--  root root  (644)',
+         files:['sshd_config.d/'],
+         tip:'<code>man sshd_config</code> for all options. After editing: <code>sshd -t && systemctl reload sshd</code>.'},
+        {id:'etc-ssh-hostkeys',name:'host keys',cat:'config',label:'host keys',
+         type:'SSH server identity keys',
+         role:'The server\'s identity keys — presented to clients on first connection (TOFU model).',
+         desc:'Generated during package install or via ssh-keygen -A. The fingerprint is what clients store in ~/.ssh/known_hosts. Lose or regenerate these and all clients will get "host key changed" warnings. Ed25519 preferred over RSA.',
+         perms:'-rw-------  root root  (600)',
+         files:['ssh_host_rsa_key','ssh_host_rsa_key.pub','ssh_host_ed25519_key','ssh_host_ed25519_key.pub','ssh_host_ecdsa_key','ssh_host_ecdsa_key.pub'],
+         tip:'<code>ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub</code> shows the server fingerprint. Publish via DNS SSHFP records.'},
+        {id:'etc-ssh-moduli',name:'moduli',cat:'config',label:'moduli',
+         type:'DH group parameters',
+         role:'Diffie-Hellman group parameters used for key exchange.',
+         desc:'Contains pre-computed DH groups of various sizes. Weak groups (< 3072 bits) should be removed to prevent downgrade attacks. Updated by ssh-keygen -G / -T.',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'Remove weak groups: <code>awk "$5 >= 3071" /etc/ssh/moduli > /etc/ssh/moduli.safe && mv /etc/ssh/moduli.safe /etc/ssh/moduli</code>'},
+      ]},
+     {id:'etc-systemd',name:'/etc/systemd',cat:'config',label:'systemd/',
+      type:'systemd override config',
+      role:'systemd unit overrides, journal settings, login manager config, and network config.',
+      desc:'Drop-in overrides in system/<unit>.d/ survive package updates (unlike editing /lib/systemd/system/ directly). Also contains journald.conf (logging), logind.conf (login sessions), resolved.conf (DNS stub), networkd.conf.',
+      perms:'drwxr-xr-x  root root',
+      files:['system/','system.conf','user/','user.conf','journald.conf','logind.conf','networkd.conf','resolved.conf','timesyncd.conf'],
+      tip:'<code>systemctl edit nginx</code> creates a drop-in at /etc/systemd/system/nginx.service.d/override.conf.',
+      children:[
+        {id:'etc-systemd-system',name:'system/',cat:'config',label:'system/',
+         type:'unit file overrides',
+         role:'Admin-created unit files and drop-in overrides that take precedence over /usr/lib/systemd/system/.',
+         desc:'Files here override vendor defaults without modifying package files. The *.wants/ and *.requires/ subdirs contain symlinks created by systemctl enable. default.target symlink defines the boot target.',
+         perms:'drwxr-xr-x  root root',
+         files:['nginx.service.d/','nginx.service.d/override.conf','docker.service.d/','sshd.service.d/','multi-user.target.wants/','timers.target.wants/','network-online.target.wants/','default.target','getty.target.wants/'],
+         tip:'<code>systemctl daemon-reload</code> after editing any unit file here. <code>ls /etc/systemd/system/*.wants/</code> shows enabled services.'},
+        {id:'etc-systemd-journald',name:'journald.conf',cat:'config',label:'journald.conf',
+         type:'journald logging config',
+         role:'systemd-journald configuration: storage, compression, rate limiting, and forwarding.',
+         desc:'Key options: Storage=persistent (write to /var/log/journal/, survives reboots), Compress=yes, SystemMaxUse=1G (max disk for system journal), RuntimeMaxUse=200M (max RAM for volatile journal), RateLimitBurst=1000, RateLimitIntervalSec=30s, ForwardToSyslog=yes (send to rsyslog), MaxLevelConsole=notice.',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'<code>journalctl --disk-usage</code> shows current journal disk usage. <code>journalctl --vacuum-size=500M</code> trims old entries.'},
+        {id:'etc-systemd-logind',name:'logind.conf',cat:'config',label:'logind.conf',
+         type:'login session config',
+         role:'systemd-logind configuration: session handling, lid/power button behavior, KillUserProcesses.',
+         desc:'Key options: KillUserProcesses=no (keep processes after logout), HandleLidSwitch=suspend, HandlePowerKey=poweroff, NAutoVTs=6 (number of virtual terminals), IdleAction=ignore (default; can suspend/hibernate), LoginGDMAutoLogin=.',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'<code>loginctl list-sessions</code> shows active sessions. <code>loginctl session-status SESSION_ID</code> shows session details.'},
+      ]},
+     {id:'etc-apt',name:'/etc/apt',cat:'config',label:'apt/',
+      type:'APT package manager config',
+      role:'APT configuration and repository sources for Debian/Ubuntu systems.',
+      desc:'sources.list defines package repositories. apt.conf.d/ holds configuration (proxy, auto-upgrades, dpkg options). preferences.d/ pins package versions. keyrings/ holds GPG signing keys.',
+      perms:'drwxr-xr-x  root root',
+      files:['sources.list','sources.list.d/','apt.conf','apt.conf.d/','apt.conf.d/01autoremove','apt.conf.d/20auto-upgrades','apt.conf.d/50unattended-upgrades','preferences','preferences.d/','trusted.gpg','trusted.gpg.d/','keyrings/'],
+      tip:'<code>apt-cache policy packagename</code> shows which repo a package comes from and version pinning.',
+      children:[
+        {id:'etc-apt-sources',name:'sources.list',cat:'config',label:'sources.list',
+         type:'package repository list',
+         role:'Defines which APT repositories to query for packages.',
+         desc:'Format: deb [options] URI suite component... deb = binary packages, deb-src = source packages. Suites: jammy, jammy-updates, jammy-security, jammy-backports. Components: main (free), restricted (proprietary drivers), universe (community), multiverse (non-free).',
+         perms:'-rw-r--r--  root root',
+         files:['sources.list','sources.list.d/'],
+         tip:'<code>add-apt-repository ppa:user/repo</code> adds a PPA to sources.list.d/. <code>apt-cache showpkg packagename</code> shows versions available.'},
+        {id:'etc-apt-keyrings',name:'keyrings/',cat:'config',label:'keyrings/',
+         type:'APT signing keys',
+         role:'GPG public keys for verifying downloaded package signatures.',
+         desc:'Modern replacement for the deprecated apt-key mechanism. Each .gpg (or .asc) file corresponds to a repository. APT verifies the digital signature of Release files before trusting any package from that repository. Specified in sources.list with signed-by= option.',
+         perms:'drwxr-xr-x  root root  (755)',
+         files:['docker.gpg','microsoft.gpg','nodesource.gpg','ubuntu-keyring-2018-archive.gpg','ubuntu-advantage-tools.gpg'],
+         tip:'<code>gpg --no-default-keyring --keyring /etc/apt/keyrings/docker.gpg --list-keys</code> shows key details.'},
+      ]},
+     {id:'etc-cron',name:'/etc/cron.d',cat:'config',label:'cron.d/',
+      type:'system cron jobs',
+      role:'System crontab files dropped in by packages. Each file defines scheduled tasks with a username field.',
+      desc:'cron daemon reads all files in cron.d/. Unlike /etc/crontab, each file specifies a username in column 6. cron.hourly/daily/weekly/monthly/ directories contain scripts run by run-parts. anacron handles missed jobs for systems not running 24/7.',
+      perms:'drwxr-xr-x  root root',
+      files:['cron.d/','cron.daily/','cron.weekly/','cron.monthly/','cron.hourly/','crontab','anacrontab'],
+      tip:'<code>run-parts --test /etc/cron.daily</code> lists scripts. <code>crontab -l</code> shows your user crontab.',
+      children:[
+        {id:'etc-cron-daily',name:'cron.daily/',cat:'config',label:'cron.daily/',
+         type:'daily cron scripts',
+         role:'Scripts run once per day by cron (typically via anacron at 6:25am).',
+         desc:'Each executable script in this directory is run once daily. Critical contents: logrotate (rotates all logs), apt-daily (updates package lists), man-db (rebuilds man cache), updatedb (updates locate database), dpkg (runs pending dpkg triggers).',
+         perms:'drwxr-xr-x  root root',
+         files:['logrotate','apt-compat','dpkg','man-db','mlocate','updatedb','bsdmainutils','ubuntu-advantage-tools','apport','samba'],
+         tip:'<code>run-parts /etc/cron.daily</code> runs all daily scripts immediately. Check logs in /var/log/syslog for output.'},
+        {id:'etc-cron-weekly',name:'cron.weekly/',cat:'config',label:'cron.weekly/',
+         type:'weekly cron scripts',
+         role:'Scripts run once per week by cron/anacron.',
+         desc:'Typically runs Sunday. Common: man-db full rebuild, apt-xapian-index (package search index), fwupd check.',
+         perms:'drwxr-xr-x  root root',
+         files:['man-db','apt-xapian-index','fwupd'],
+         tip:'<code>run-parts /etc/cron.weekly</code> runs all weekly scripts immediately.'},
+      ]},
+     {id:'etc-logrotate',name:'/etc/logrotate.d',cat:'config',label:'logrotate.d/',
+      type:'log rotation config',
+      role:'Configuration files telling logrotate how to rotate each application\'s logs.',
+      desc:'Defines: frequency (daily/weekly/monthly), retention count (rotate N), compression (compress, delaycompress), post-rotate scripts (to signal daemon to reopen log files — via kill -USR1 or systemctl reload). Run by /etc/cron.daily/logrotate.',
+      perms:'drwxr-xr-x  root root',
+      files:['rsyslog','nginx','apache2','mysql','mariadb','postgresql','redis','mongodb','dpkg','apt','syslog','wtmp','btmp','alternatives','cups','samba','exim4','postfix','fail2ban','openvpn','named','unattended-upgrades'],
+      tip:'<code>logrotate -d /etc/logrotate.conf</code> dry-runs rotation. <code>logrotate -f /etc/logrotate.conf</code> forces immediate rotation.'},
+     {id:'etc-pam',name:'/etc/pam.d',cat:'config',label:'pam.d/',
+      type:'PAM authentication stacks',
+      role:'Pluggable Authentication Modules configuration for every PAM-aware service.',
+      desc:'Each file is a PAM stack for a service. Lines specify: type (auth/account/password/session), control (required/requisite/sufficient/optional), module path, arguments. Processing order matters. required failures are accumulated and returned at end; requisite fails immediately.',
+      perms:'drwxr-xr-x  root root',
+      files:['common-auth','common-account','common-password','common-session','sshd','sudo','login','su','su-l','cron','gdm-autologin','gdm-launch-environment','chpasswd','newusers','passwd','useradd','runuser'],
+      tip:'<code>cat /etc/pam.d/sshd</code> shows exactly what authentication SSH uses. Changes take effect immediately.',
+      children:[
+        {id:'etc-pam-common-auth',name:'common-auth',cat:'config',label:'common-auth',
+         type:'shared authentication stack',
+         role:'The shared authentication PAM stack included by most services.',
+         desc:'Defines the authentication chain: pam_faillock.so (count failures), pam_unix.so (check /etc/shadow), pam_google_authenticator.so (TOTP if configured), etc. Services @include this file rather than duplicating logic.',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'<code>pam_tester.py</code> or <code>pamtester</code> can test PAM stacks without actually logging in.'},
+        {id:'etc-pam-sudo',name:'sudo (pam)',cat:'config',label:'sudo',
+         type:'sudo PAM stack',
+         role:'PAM authentication stack specifically for sudo commands.',
+         desc:'Typically includes common-auth and common-account. Can add pam_google_authenticator for sudo 2FA or pam_access for time-based restrictions. Processed before sudo checks /etc/sudoers.',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'Adding pam_google_authenticator.so here requires 2FA for every sudo use.'},
+      ]},
+     {id:'etc-security',name:'/etc/security',cat:'config',label:'security/',
+      type:'PAM security modules config',
+      role:'Configuration files for various PAM security modules: limits, access control, group restrictions.',
+      desc:'Used by PAM modules (pam_limits.so, pam_access.so, pam_time.so, pam_group.so). Controls resource limits (ulimits), login access rules, time-based access, and group assignments at login.',
+      perms:'drwxr-xr-x  root root',
+      files:['limits.conf','limits.d/','access.conf','time.conf','group.conf','namespace.conf','namespace.d/','faillock.conf','pwquality.conf','pwquality.conf.d/','opasswd'],
+      tip:'<code>ulimit -a</code> shows current limits. <code>cat /etc/security/limits.conf</code> shows configured limits.',
+      children:[
+        {id:'etc-security-limits',name:'limits.conf',cat:'config',label:'limits.conf',
+         type:'resource limits (ulimits)',
+         role:'Defines per-user and per-group resource limits applied at login via pam_limits.so.',
+         desc:'Format: domain type item value. domain: username, @group, *, %. type: soft (warning), hard (ceiling). items: nofile (open files), nproc (processes), memlock (locked memory), core (core dump size), stack, cpu (CPU seconds), data, fsize. Drop-ins in limits.d/.',
+         perms:'-rw-r--r--  root root',
+         files:['limits.conf','limits.d/','limits.d/90-nproc.conf'],
+         tip:'<code>ulimit -a</code> shows current session limits. To increase nofile: add <code>* soft nofile 65535</code> here.'},
+        {id:'etc-security-faillock',name:'faillock.conf',cat:'config',label:'faillock.conf',
+         type:'account lockout config',
+         role:'Configuration for pam_faillock.so: login failure counting and account lockout policy.',
+         desc:'Key settings: deny=5 (lock after 5 failures), unlock_time=900 (lockout duration in seconds), fail_interval=900 (window for counting failures), audit (log to audit subsystem), silent (no error message to user). Replaces deprecated pam_tally2.',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'<code>faillock --user username</code> shows failure count. <code>faillock --user username --reset</code> unlocks.'},
+        {id:'etc-security-pwquality',name:'pwquality.conf',cat:'config',label:'pwquality.conf',
+         type:'password quality policy',
+         role:'Password strength requirements enforced by pam_pwquality.so.',
+         desc:'Key settings: minlen=12 (minimum length), dcredit=-1 (require at least 1 digit), ucredit=-1 (uppercase), lcredit=-1 (lowercase), ocredit=-1 (special char), maxrepeat=3, maxsequence=4, gecoscheck=1 (no username in password), dictcheck=1 (cracklib dict check).',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'<code>pwscore</code> tests a password against the configured policy. Lower score = weaker password.'},
+      ]},
+     {id:'etc-sysctl',name:'/etc/sysctl.conf',cat:'config',label:'sysctl.conf',
+      type:'kernel runtime parameters',
+      role:'Persistent kernel parameters applied at boot via the /proc/sys interface.',
+      desc:'Key=value pairs mapping to /proc/sys/ paths. Drop-ins in /etc/sysctl.d/ (processed in alphabetical order before sysctl.conf). Common security settings, network performance tuning, and memory management options.',
+      perms:'-rw-r--r--  root root',
+      files:['sysctl.conf','sysctl.d/','sysctl.d/10-network-security.conf','sysctl.d/10-ptrace.conf','sysctl.d/10-kernel-hardening.conf'],
+      tip:'<code>sysctl -a</code> shows all current values. <code>sysctl -p</code> reloads without rebooting.',
+      children:[
+        {id:'etc-sysctl-kernel',name:'kernel.*',cat:'config',label:'kernel.*',
+         type:'kernel security tunables',
+         role:'Critical kernel security and behavior parameters.',
+         desc:'dmesg_restrict=1: only root reads dmesg. kptr_restrict=2: hides kernel addresses from /proc/kallsyms. randomize_va_space=2: full ASLR. yama/ptrace_scope=1: only parent can ptrace child (prevents injection). perf_event_paranoid=3: no unprivileged hardware counters. unprivileged_userns_clone=0: no unprivileged user namespaces.',
+         perms:'-rw-r--r--  root root',
+         files:['kernel/dmesg_restrict','kernel/kptr_restrict','kernel/randomize_va_space','kernel/yama/ptrace_scope','kernel/perf_event_paranoid','kernel/unprivileged_bpf_disabled','kernel/pid_max','kernel/core_pattern','kernel/core_uses_pid'],
+         tip:'<code>sysctl kernel.randomize_va_space</code> checks ASLR status. Value 2 = full ASLR required for security.'},
+        {id:'etc-sysctl-net',name:'net.*',cat:'config',label:'net.*',
+         type:'network stack tunables',
+         role:'Network performance and security parameters.',
+         desc:'net.ipv4.tcp_syncookies=1: SYN flood defense. net.ipv4.ip_forward=0/1: routing/NAT. net.ipv4.conf.all.rp_filter=1: strict reverse path filtering. net.core.somaxconn=65535: max connection backlog. net.ipv4.conf.all.log_martians=1: log packets with impossible source.',
+         perms:'-rw-r--r--  root root',
+         files:['net/ipv4/ip_forward','net/ipv4/tcp_syncookies','net/ipv4/conf/all/rp_filter','net/ipv4/conf/all/log_martians','net/core/somaxconn','net/core/rmem_max','net/core/wmem_max','net/ipv6/conf/all/disable_ipv6'],
+         tip:'<code>sysctl net.ipv4.tcp_syncookies</code> — should be 1 on any internet-facing system.'},
+      ]},
+     {id:'etc-ssl',name:'/etc/ssl',cat:'config',label:'ssl/',
+      type:'TLS certificates & keys',
+      role:'TLS/SSL certificates and private keys for system-wide and application use.',
+      desc:'certs/ holds the CA certificate bundle and individual certificates. private/ holds private keys (mode 700, root only). Applications like nginx, postfix, ldap reference certs here. update-ca-certificates rebuilds certs/ca-certificates.crt.',
+      perms:'drwxr-xr-x  root root',
+      files:['certs/','certs/ca-certificates.crt','private/','openssl.cnf','ca-certificates.conf'],
+      tip:'<code>update-ca-certificates</code> rebuilds the CA bundle. <code>openssl x509 -in cert.pem -text -noout</code> inspects a certificate.'},
+     {id:'etc-netplan',name:'/etc/netplan',cat:'config',label:'netplan/',
+      type:'network configuration (Ubuntu)',
+      role:'YAML network configuration for Ubuntu\'s Netplan abstraction layer.',
+      desc:'Netplan is Ubuntu 17.10+\'s network config layer. YAML files are rendered into either NetworkManager or systemd-networkd config. Supports: static IPs, DHCP, bonds, bridges, VLANs, WiFi, WireGuard.',
+      perms:'drwxr-xr-x  root root',
+      files:['00-installer-config.yaml','01-netcfg.yaml','50-cloud-init.yaml'],
+      tip:'<code>netplan apply</code> applies config live. <code>netplan try</code> applies with 120s auto-revert if you lose access.'},
+     {id:'etc-modprobe',name:'/etc/modprobe.d',cat:'config',label:'modprobe.d/',
+      type:'kernel module loading config',
+      role:'Module blacklisting, loading options, and aliases for the kernel module loader.',
+      desc:'Files in this directory are parsed by modprobe and depmod. Blacklisted modules won\'t autoload. Options set default parameters. Aliases can remap module names. Processed alphabetically; all *.conf files are read.',
+      perms:'drwxr-xr-x  root root',
+      files:['blacklist.conf','blacklist-framebuffer.conf','blacklist-watchdog.conf','blacklist-rare-network.conf','iwlwifi.conf','mdadm.conf','*.conf'],
+      tip:'<code>cat /etc/modprobe.d/blacklist.conf</code> shows blacklisted modules. <code>modprobe -n -v modulename</code> simulates loading.',
+      children:[
+        {id:'etc-modprobe-blacklist',name:'blacklist.conf',cat:'config',label:'blacklist.conf',
+         type:'module blacklist',
+         role:'Prevents specified kernel modules from being loaded automatically by udev/modprobe.',
+         desc:'Format: blacklist modulename (one per line). Common blacklisted: pcspkr (PC speaker beep), nouveau (if using NVIDIA proprietary), bluetooth (if unwanted), usb-storage (kiosk hardening), firewire modules (DMA attack vector). Override with softdep or explicit modprobe.',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'<code>modprobe -r modulename</code> unloads a module. Add to blacklist.conf to prevent reloading after reboot.'},
+      ]},
+     {id:'etc-modules-load',name:'/etc/modules-load.d',cat:'config',label:'modules-load.d/',
+      type:'modules to load at boot',
+      role:'Lists kernel modules to load unconditionally at boot via systemd-modules-load.service.',
+      desc:'Each *.conf file contains module names, one per line (comments with #). Used for modules that won\'t be autoloaded by udev but are always needed: tun (for OpenVPN), br_netfilter (for Kubernetes), ip_vs, overlay (for Docker swarm).',
+      perms:'drwxr-xr-x  root root',
+      files:['modules.conf','k8s.conf','docker.conf','*.conf'],
+      tip:'<code>systemctl status systemd-modules-load</code> shows which modules were loaded at boot and any failures.'},
+     {id:'etc-ldso',name:'/etc/ld.so.conf',cat:'config',label:'ld.so.conf',
+      type:'dynamic linker library paths',
+      role:'Specifies directories searched by the dynamic linker for shared libraries.',
+      desc:'Usually contains "include /etc/ld.so.conf.d/*.conf". The actual search path entries are in the .conf.d/ drop-in files. After adding a new directory, run ldconfig to rebuild the binary cache /etc/ld.so.cache.',
+      perms:'-rw-r--r--  root root',
+      files:['ld.so.conf','ld.so.conf.d/','ld.so.conf.d/x86_64-linux-gnu.conf','ld.so.conf.d/fakeroot-x86_64-linux-gnu.conf','ld.so.cache','ld.so.preload'],
+      tip:'<code>ldconfig -p | grep libssl</code> finds SSL library paths. <code>ldconfig -n /usr/local/lib</code> registers new library dir.',
+      children:[
+        {id:'etc-ldso-preload',name:'ld.so.preload',cat:'config',label:'ld.so.preload',
+         type:'force-preloaded libraries',
+         role:'Forces loading of specified .so files into every single process before all others.',
+         desc:'Loaded before libc itself — the ultimate hook point. Legitimate uses: preload debugging/profiling libraries, malloc replacement (jemalloc, tcmalloc), tracing tools. Major security risk if attackers can write here: root-planted library intercepts all function calls system-wide.',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'<code>cat /etc/ld.so.preload</code> — should normally be empty or absent. Any entry here is injected into EVERY process.'},
+      ]},
+     {id:'etc-grub-d',name:'/etc/grub.d',cat:'config',label:'grub.d/',
+      type:'GRUB config generator scripts',
+      role:'Scripts that generate the /boot/grub/grub.cfg boot menu when update-grub is run.',
+      desc:'Run in numerical order by grub-mkconfig. Each script outputs menu entries to stdout which are concatenated into grub.cfg. 40_custom is the canonical place for user-defined boot entries without being overwritten on updates.',
+      perms:'drwxr-xr-x  root root',
+      files:['00_header','05_debian_theme','10_linux','20_linux_xen','30_os-prober','40_custom','41_custom','README'],
+      tip:'<code>update-grub</code> (= grub-mkconfig -o /boot/grub/grub.cfg) regenerates the boot menu.',
+      children:[
+        {id:'etc-grub-default',name:'/etc/default/grub',cat:'config',label:'default/grub',
+         type:'GRUB defaults',
+         role:'User-editable GRUB settings: default entry, timeout, kernel cmdline, theme.',
+         desc:'Key variables: GRUB_DEFAULT=0 (which menu entry boots by default), GRUB_TIMEOUT=5 (seconds to wait), GRUB_CMDLINE_LINUX_DEFAULT="quiet splash" (kernel parameters), GRUB_CMDLINE_LINUX="" (always-added params), GRUB_DISABLE_RECOVERY=true, GRUB_GFXMODE=1920x1080.',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'After editing, run <code>update-grub</code> to apply. Add <code>ipv6.disable=1</code> to GRUB_CMDLINE_LINUX to disable IPv6 at kernel level.'},
+      ]},
+     {id:'etc-audit',name:'/etc/audit',cat:'config',label:'audit/',
+      type:'Linux audit daemon config',
+      role:'auditd configuration and audit rules for the Linux Audit Framework.',
+      desc:'auditd is the userspace component of the Linux Audit System. Rules define which system calls and file accesses to audit. Results go to /var/log/audit/audit.log. Required for CIS/STIG compliance.',
+      perms:'drwxr-xr-x  root root',
+      files:['auditd.conf','audit.rules','rules.d/','rules.d/10-base-config.rules','rules.d/20-dont-audit.rules','rules.d/30-stig.rules','rules.d/40-local.rules','rules.d/99-finalize.rules'],
+      tip:'<code>auditctl -l</code> lists active rules. <code>ausearch -k keyname</code> searches audit log by key.',
+      children:[
+        {id:'etc-audit-conf',name:'auditd.conf',cat:'config',label:'auditd.conf',
+         type:'audit daemon config',
+         role:'Controls auditd behavior: log file location, size, rotation, and disk-full action.',
+         desc:'Key settings: log_file=/var/log/audit/audit.log, max_log_file=50 (MB per file), num_logs=5 (files to keep), max_log_file_action=ROTATE, space_left_action=SYSLOG (warn when disk low), disk_full_action=HALT (stop system if disk full — prevents log loss), disk_error_action=SYSLOG.',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'<code>service auditd status</code> checks daemon. <code>auditctl -s</code> shows kernel audit subsystem status.'},
+        {id:'etc-audit-rules',name:'rules.d/',cat:'config',label:'rules.d/',
+         type:'audit rules',
+         role:'Drop-in audit rule files that define what to audit.',
+         desc:'Rule types: -w (watch a file/dir), -a (always/never audit a syscall), -e (enable/disable audit, set immutable). Common rules: watch /etc/passwd, /etc/shadow, /etc/sudoers. Log execve (all commands), setuid calls, network changes. -e 2 in 99-finalize.rules makes rules immutable until reboot.',
+         perms:'drwxr-xr-x  root root',
+         files:['10-base-config.rules','20-dont-audit.rules','30-stig.rules','40-local.rules','99-finalize.rules'],
+         tip:'<code>augenrules --load</code> compiles rules.d/ into audit.rules and loads them. <code>auditctl -l</code> verifies.'},
+      ]},
+     {id:'etc-fail2ban',name:'/etc/fail2ban',cat:'config',label:'fail2ban/',
+      type:'fail2ban intrusion prevention',
+      role:'fail2ban configuration: jails, filters, and actions for banning malicious IPs.',
+      desc:'fail2ban monitors log files for repeated failed authentication attempts and bans offending IPs via iptables/nftables. jail.conf defines monitoring rules; jail.local overrides them. Filters are regex patterns to detect failures. Actions define how to ban (iptables, firewalld, cloudflare).',
+      perms:'drwxr-xr-x  root root',
+      files:['fail2ban.conf','jail.conf','jail.local','jail.d/','filter.d/','filter.d/sshd.conf','filter.d/nginx-http-auth.conf','filter.d/apache-auth.conf','action.d/','action.d/iptables-multiport.conf','action.d/sendmail-whois.conf'],
+      tip:'<code>fail2ban-client status</code> shows all jails. <code>fail2ban-client status sshd</code> shows SSH ban details.'},
+     {id:'etc-apparmor',name:'/etc/apparmor.d',cat:'config',label:'apparmor.d/',
+      type:'AppArmor security profiles',
+      role:'AppArmor Mandatory Access Control profiles defining what each program can access.',
+      desc:'Each file is a profile for a specific executable. Profiles can be in enforce mode (denies + logs) or complain mode (logs only). Profiles define: file access rules, capability grants, network access, ptrace restrictions, signal permissions. Ubuntu ships profiles for nginx, sshd, cups, etc.',
+      perms:'drwxr-xr-x  root root',
+      files:['usr.sbin.nginx','usr.sbin.sshd','usr.sbin.cups','usr.bin.man','usr.lib.snapd.snap-confine','abstractions/','tunables/','local/'],
+      tip:'<code>aa-status</code> shows loaded profiles and their mode. <code>aa-logprof</code> generates new profile rules from denials.'},
+     {id:'etc-nginx',name:'/etc/nginx',cat:'config',label:'nginx/',
+      type:'nginx web server config',
+      role:'Nginx global configuration, virtual host definitions, and shared snippets.',
+      desc:'nginx.conf is the main config. sites-available/ holds all vhost configs; sites-enabled/ has symlinks to active ones (nginx-style enable/disable). conf.d/ holds additional config snippets. mime.types maps file extensions to Content-Type headers.',
+      perms:'drwxr-xr-x  root root',
+      files:['nginx.conf','sites-available/','sites-available/default','sites-enabled/','conf.d/','snippets/','snippets/fastcgi-php.conf','snippets/ssl-params.conf','modules-available/','modules-enabled/','mime.types','fastcgi.conf','fastcgi_params','scgi_params','uwsgi_params'],
+      tip:'<code>nginx -t</code> tests config. <code>nginx -T</code> dumps full resolved config. <code>nginx -s reload</code> graceful reload.',
+      children:[
+        {id:'etc-nginx-sites',name:'sites-available/',cat:'config',label:'sites-available/',
+         type:'nginx vhost definitions',
+         role:'All virtual host configuration files. Activate a site by symlinking into sites-enabled/.',
+         desc:'Each file typically defines one virtual host with server{} blocks. Contains: server_name (domain), listen (port/SSL), root (document root), SSL certificate paths, location blocks for routing, proxy_pass for reverse proxy, FastCGI config for PHP.',
+         perms:'drwxr-xr-x  root root',
+         files:['default','mysite.conf','api.conf'],
+         tip:'<code>ln -s /etc/nginx/sites-available/mysite /etc/nginx/sites-enabled/</code> enables a site. <code>nginx -t && nginx -s reload</code> to apply.'},
+      ]},
+   ]},
+
+  //───────────── /var ─────────────
+  {id:'var',name:'/var',cat:'var',label:'/var',
+   type:'variable data',
+   role:'Variable data — files that change continuously during normal system operation.',
+   desc:'Unlike /usr (mostly static), /var grows over time. Put on its own partition to prevent log overflow from filling the root filesystem. Contains logs, spools, caches, library data, and runtime state.',
+   perms:'drwxr-xr-x  root root',
+   files:['log/','spool/','cache/','lib/','run/','mail/','www/','tmp/','lock/','opt/','local/','backups/'],
+   tip:'<code>du -sh /var/*</code> shows which subdirectory consumes the most space.',
+   children:[
+
+   // ── /var/log ──
+   {id:'var-log',name:'/var/log',cat:'var',label:'log/',
+    type:'system & application logs',
+    role:'Primary location for all system and application log files.',
+    desc:'Most logs use rotating text files (.1/.2.gz suffixes) managed by logrotate. systemd-journald stores structured binary logs under journal/. Critical for debugging, security auditing, and forensic investigation.',
+    perms:'drwxr-xr-x  root root  (755)',
+    files:['syslog','auth.log','kern.log','daemon.log','user.log','debug','messages','mail.log','mail.err','mail.info','mail.warn','dpkg.log','apt/','apt/history.log','apt/term.log','nginx/','apache2/','mysql/','mariadb/','postgresql/','redis/','mongodb/','elasticsearch/','audit/','audit/audit.log','journal/','fail2ban.log','ufw.log','cloud-init.log','cloud-init-output.log','dmesg','boot.log','wtmp','btmp','lastlog','faillog','tallylog','Xorg.0.log','cups/','samba/','openvpn/','lpr.log','cron.log','landscape/','unattended-upgrades/'],
+    tip:'<code>tail -f /var/log/syslog</code> follows live. <code>journalctl -f</code> follows journal. <code>ls -lht /var/log/</code> shows newest logs.',
+    children:[
+
+    {id:'log-syslog',name:'syslog',cat:'var',label:'syslog',
+     type:'general system log',
+     role:'Central log receiving messages from nearly all daemons via the syslog protocol (RFC 5424).',
+     desc:'Produced by rsyslog or syslog-ng. Contains timestamped entries from kernel, cron, network services, and any application calling syslog(3). Fields: timestamp, hostname, program[PID], message. Rotated daily, 7 compressed archives kept. On RHEL/CentOS/Fedora the equivalent is /var/log/messages.',
+     perms:'-rw-r--r--  syslog adm  (644)',
+     files:['syslog','syslog.1','syslog.2.gz','syslog.3.gz','syslog.4.gz','syslog.5.gz','syslog.6.gz','syslog.7.gz'],
+     tip:'<code>grep "error\\|Error\\|ERROR" /var/log/syslog | tail -50</code> finds recent errors. <code>journalctl --since "1 hour ago"</code> for journal.'},
+
+    {id:'log-auth',name:'auth.log',cat:'var',label:'auth.log',
+     type:'authentication & authorization log',
+     role:'All authentication and authorisation events: logins, sudo uses, SSH attempts, su commands, PAM events.',
+     desc:'Critical for security auditing. Logged by PAM, sshd, sudo, login, su. Contains: "Failed password for user from IP", "Accepted publickey for user", "session opened for user by (uid=0)", "COMMAND=/bin/bash". RHEL/CentOS equivalent: /var/log/secure.',
+     perms:'-rw-r-----  root adm  (640)',
+     files:['auth.log','auth.log.1','auth.log.2.gz'],
+     tip:'<code>grep "Failed password" /var/log/auth.log | awk \'{print $11}\' | sort | uniq -c | sort -rn | head -20</code> — top attacking IPs.',
+     children:[
+       {id:'log-auth-ssh',name:'SSH events',cat:'var',label:'SSH in auth.log',
+        type:'SSH authentication records',
+        role:'SSH daemon login attempts, successes, key fingerprints, and disconnects.',
+        desc:'Key patterns: "Accepted publickey for USERNAME from IP port PORT ssh2: RSA/ED25519 SHA256:FINGERPRINT" (success), "Failed password for USERNAME from IP" (brute force), "Invalid user USERNAME from IP" (nonexistent user), "Disconnected from authenticating user root IP" (rejected), "Received disconnect from IP: 11: Normal Shutdown" (clean disconnect). Check for "Did not receive identification string" (scanners).',
+        perms:'-rw-r-----  root adm',
+        files:[],
+        tip:'<code>grep "Accepted" /var/log/auth.log | awk \'{print $1,$2,$3,$9,$11}\' </code> shows successful SSH logins with time, user, IP.'},
+       {id:'log-auth-sudo',name:'sudo events',cat:'var',label:'sudo in auth.log',
+        type:'sudo command audit trail',
+        role:'Every sudo command execution including the command run, user, and TTY.',
+        desc:'Format: "username : TTY=pts/0 ; PWD=/home/user ; USER=root ; COMMAND=/bin/bash". Captures: successful sudo uses, failed attempts (wrong password), sudo -i/sudo su escalations, sudo policy violations ("is not in the sudoers file"). Also: sudo session open/close via PAM.',
+        perms:'-rw-r-----  root adm',
+        files:[],
+        tip:'<code>grep sudo /var/log/auth.log | grep COMMAND</code> shows all commands run with sudo.'},
+     ]},
+
+    {id:'log-kern',name:'kern.log',cat:'var',label:'kern.log',
+     type:'kernel message log',
+     role:'Kernel ring buffer messages: hardware events, driver loading/failures, OOM kills, filesystem errors.',
+     desc:'Similar to dmesg but persisted across reboots. Key events: OOM Killer ("Killed process PID (name) total-vm:NkB, anon-rss:NkB"), hardware errors ("ECC memory error"), driver issues ("pcieport: AER: Corrected error received"), filesystem errors ("EXT4-fs error"). Also: USB device detection, network interface state changes.',
+     perms:'-rw-r-----  root adm  (640)',
+     files:['kern.log','kern.log.1','kern.log.2.gz'],
+     tip:'<code>grep "OOM\\|Out of memory\\|Killed process" /var/log/kern.log</code> finds OOM events. <code>dmesg -T</code> shows with human-readable timestamps.'},
+
+    {id:'log-daemon',name:'daemon.log',cat:'var',label:'daemon.log',
+     type:'daemon process log',
+     role:'Log messages from background system daemons not covered by other log files.',
+     desc:'Receives messages from daemons that log via syslog with the "daemon" facility. Common sources: NetworkManager, bluetoothd, avahi-daemon, acpid, atd. Useful for diagnosing: network manager events, service startup failures, background service errors. Often overlooked but valuable for daemon troubleshooting.',
+     perms:'-rw-r--r--  root adm  (640)',
+     files:['daemon.log','daemon.log.1','daemon.log.2.gz'],
+     tip:'<code>tail -f /var/log/daemon.log</code> to watch daemon activity. <code>grep NetworkManager /var/log/daemon.log</code> for network events.'},
+
+    {id:'log-user',name:'user.log',cat:'var',label:'user.log',
+     type:'user-level message log',
+     role:'Log messages from user-level processes (syslog "user" facility). Desktop apps, cron jobs, user scripts.',
+     desc:'Catches syslog(LOG_USER, ...) calls from non-daemon processes. Common sources: user-started scripts, cron job output (if cron directs to syslog), desktop session managers, CUPS user-level events. Less critical than auth.log but useful for debugging user application issues.',
+     perms:'-rw-r--r--  syslog adm  (644)',
+     files:['user.log','user.log.1','user.log.2.gz'],
+     tip:'<code>grep "$(date +%b %e)" /var/log/user.log | head -30</code> shows today\'s user log entries.'},
+
+    {id:'log-debug',name:'debug',cat:'var',label:'debug',
+     type:'verbose debug log',
+     role:'Verbose debug-level syslog messages. Very noisy — disabled on many systems. LOG_DEBUG facility messages.',
+     desc:'Contains all LOG_DEBUG level syslog messages. Extremely verbose. Usually disabled in /etc/rsyslog.conf on production systems to avoid disk exhaustion. Useful for temporary debugging by uncommenting the debug line in rsyslog.conf.',
+     perms:'-rw-r--r--  root adm',
+     files:['debug','debug.1','debug.2.gz'],
+     tip:'Enable debug logging: uncomment <code>*.debug\t\t/var/log/debug</code> in /etc/rsyslog.conf. Disable after debugging!'},
+
+    {id:'log-messages',name:'messages',cat:'var',label:'messages',
+     type:'general messages log (RHEL/Fedora)',
+     role:'RHEL/CentOS/Fedora equivalent of syslog. General system activity log including informational messages.',
+     desc:'On Red Hat-based systems this is the primary general-purpose log (equivalent to /var/log/syslog on Debian/Ubuntu). Receives: kernel messages, service start/stop, authentication events (on RHEL, auth events may go here rather than /var/log/secure), cron job output.',
+     perms:'-rw-r--r--  root root  (644)',
+     files:['messages','messages-20240101','messages-20240108'],
+     tip:'On RHEL/CentOS/Fedora: <code>tail -f /var/log/messages</code> replaces <code>tail -f /var/log/syslog</code>.'},
+
+    {id:'log-dmesg',name:'dmesg',cat:'var',label:'dmesg',
+     type:'kernel boot messages',
+     role:'Kernel ring buffer snapshot from the most recent boot. Not rotated — overwritten each boot.',
+     desc:'Contains everything the kernel printed during and after boot: hardware detection, driver initialisation, filesystem mounts, module loading. On systemd systems also available via <code>journalctl -k</code>. The live ring buffer is accessible via <code>dmesg</code> command (reads /dev/kmsg).',
+     perms:'-rw-r--r--  root adm',
+     files:['dmesg'],
+     tip:'<code>dmesg -T --level=err,crit,alert,emerg</code> shows only kernel errors with timestamps. <code>dmesg -w</code> follows live.'},
+
+    {id:'log-boot',name:'boot.log',cat:'var',label:'boot.log',
+     type:'boot sequence log',
+     role:'Service startup messages during system boot. Shows systemd unit start/stop status.',
+     desc:'On systems using sysvinit/upstart or on RHEL with rsyslog boot logging enabled. On systemd systems, boot messages go to the journal: <code>journalctl -b</code> is the modern equivalent. May capture: "Starting ...", "Started ...", "[  OK  ]" / "[ FAIL ]" status lines from rc scripts.',
+     perms:'-rw-r--r--  root root  (644)',
+     files:['boot.log','boot.log.1'],
+     tip:'<code>journalctl -b</code> shows this boot\'s journal. <code>journalctl -b -1</code> shows previous boot. <code>systemd-analyze blame</code> shows boot time per unit.'},
+
+    {id:'log-dpkg',name:'dpkg.log',cat:'var',label:'dpkg.log',
+     type:'package manager history',
+     role:'Complete audit trail of all dpkg/APT package operations: installs, upgrades, purges, configurations.',
+     desc:'Every apt install/remove/upgrade/autoremove/purge is recorded with timestamps, package names, and versions. Fields: date time status package version. Statuses: install, upgrade, remove, purge, half-installed, config-files, unpacked, installed. apt/history.log has a higher-level apt-specific summary including full command lines.',
+     perms:'-rw-r--r--  root root  (644)',
+     files:['dpkg.log','dpkg.log.1','dpkg.log.2.gz','apt/history.log','apt/term.log'],
+     tip:'<code>grep "install " /var/log/dpkg.log | grep "$(date +%Y-%m-%d)"</code> shows today\'s installs. Useful for forensic auditing.'},
+
+    {id:'log-apt',name:'apt/',cat:'var',label:'apt/',
+     type:'APT operation logs',
+     role:'APT package manager detailed logs: command history and terminal output.',
+     desc:'history.log: one entry per apt invocation with: Start-Date, Commandline (the exact apt command run), Install/Upgrade/Remove lists, End-Date. term.log: raw terminal output including interactive prompts and progress bars. Essential for auditing what was installed and when.',
+     perms:'drwxr-xr-x  root root',
+     files:['history.log','history.log.1.gz','term.log','term.log.1.gz'],
+     tip:'<code>cat /var/log/apt/history.log | grep -A5 "Commandline: apt install"</code> shows install sessions.'},
+
+    {id:'log-nginx-dir',name:'nginx/',cat:'var',label:'nginx/',
+     type:'nginx web server logs',
+     role:'Nginx HTTP access records (one per request) and error messages.',
+     desc:'access.log: Combined Log Format — client IP, ident, auth user, [timestamp], "METHOD /path HTTP/1.x", status_code, bytes_sent, "Referer", "User-Agent". error.log: upstream failures, SSL errors, config reload issues, permission denied, 502/504 responses. Each vhost can have separate log files.',
+     perms:'drwxr-x---  www-data adm  (750)',
+     files:['access.log','error.log','access.log.1','error.log.1','access.log.2.gz','error.log.2.gz'],
+     tip:'<code>awk \'{print $9}\' /var/log/nginx/access.log | sort | uniq -c | sort -rn</code> counts HTTP status codes.',
+     children:[
+       {id:'log-nginx-access',name:'access.log',cat:'var',label:'access.log',
+        type:'HTTP request log',
+        role:'One line per HTTP request to nginx. The primary record of all web traffic.',
+        desc:'Standard Combined Log Format fields: %h (client IP) %l (ident, always -) %u (auth user) [%t] (time) "%r" (request line: METHOD URL HTTP/ver) %>s (status code) %b (bytes) "%{Referer}i" "%{User-Agent}i". Useful for: traffic analysis, attack detection (SQLi/XSS patterns in URLs), rate limiting, bot detection, CDN debugging.',
+        perms:'-rw-r-----  www-data adm',
+        files:[],
+        tip:'<code>awk \'{print $1}\' /var/log/nginx/access.log | sort | uniq -c | sort -rn | head -20</code> shows top client IPs by request count.'},
+       {id:'log-nginx-error',name:'error.log',cat:'var',label:'error.log',
+        type:'nginx error log',
+        role:'Nginx errors: startup failures, upstream connection problems, SSL issues, permission denials.',
+        desc:'Log format: YYYY/MM/DD HH:MM:SS [level] PID#TID: *CONNECTION_ID message. Levels: debug, info, notice, warn, error (default), crit, alert, emerg. Common entries: connect() to upstream failed (502), SSL_do_handshake() failed, open() "/path" failed (permission denied), no space left on device.',
+        perms:'-rw-r-----  www-data adm',
+        files:[],
+        tip:'Set <code>error_log /var/log/nginx/error.log debug;</code> in nginx.conf for verbose debugging (very noisy, disable in prod).'},
+     ]},
+
+    {id:'log-apache',name:'apache2/',cat:'var',label:'apache2/',
+     type:'Apache HTTP Server logs',
+     role:'Apache web server access logs, error log, and optional mod_security audit log.',
+     desc:'access.log / other_vhosts_access.log: HTTP requests in Combined Log Format. error.log: server errors, PHP fatal errors, module errors, SSL issues. modsec_audit.log: mod_security WAF events if installed. Each VirtualHost can define CustomLog and ErrorLog directives for per-site logs.',
+     perms:'drwxr-x---  root adm  (750)',
+     files:['access.log','error.log','other_vhosts_access.log','modsec_audit.log','access.log.1','error.log.1'],
+     tip:'<code>grep " 5[0-9][0-9] " /var/log/apache2/access.log | tail -20</code> shows recent 5xx server errors.'},
+
+    {id:'log-mysql-dir',name:'mysql/',cat:'var',label:'mysql/',
+     type:'MySQL/MariaDB database logs',
+     role:'Database server logs: startup errors, slow queries, replication, and general query log.',
+     desc:'error.log: startup/shutdown events, InnoDB status, replication errors, fatal server errors. mysql-slow.log / mariadb-slow.log: queries exceeding long_query_time seconds (controlled in my.cnf). general.log: EVERY query (very verbose — use only for debugging, disable in production). Binary logs (in /var/lib/mysql/): row-based or statement-based replication log.',
+     perms:'drwxrwx---  mysql mysql  (770)',
+     files:['error.log','mysql-slow.log','mariadb.log','mariadb-slow.log','mysql.log'],
+     tip:'<code>mysqladmin -u root -p flush-logs</code> rotates logs. <code>mysqldumpslow /var/log/mysql/mysql-slow.log</code> analyzes slow queries.'},
+
+    {id:'log-postgresql-dir',name:'postgresql/',cat:'var',label:'postgresql/',
+     type:'PostgreSQL database logs',
+     role:'PostgreSQL server logs: connections, queries, errors, autovacuum, replication.',
+     desc:'postgresql-<version>-main.log: All server activity. Controlled by postgresql.conf: log_connections, log_disconnections, log_duration (slow query threshold), log_statement (none/ddl/mod/all), log_autovacuum_min_duration, log_line_prefix (format). Very configurable — can log all queries or just slow ones.',
+     perms:'drwxr-xr-x  postgres postgres',
+     files:['postgresql-16-main.log','postgresql-16-main.log.1'],
+     tip:'<code>tail -f /var/log/postgresql/postgresql-*-main.log</code> follows the DB log. Check for "FATAL: role does not exist" authentication errors.'},
+
+    {id:'log-redis-dir',name:'redis/',cat:'var',label:'redis/',
+     type:'Redis in-memory data store log',
+     role:'Redis server log: startup, connections, memory warnings, persistence events, and cluster info.',
+     desc:'redis-server.log: Redis startup config, listening address, RDB/AOF persistence status, memory usage warnings (when approaching maxmemory), connection events, slow queries (slowlog). Format: PID:role timestamp loglevel message. Roles: M=master, S=slave/replica, C=child (saving), X=sentinel.',
+     perms:'drwxr-xr-x  redis redis',
+     files:['redis-server.log','redis-server.log.1'],
+     tip:'<code>redis-cli SLOWLOG GET 10</code> shows slowest recent commands. <code>redis-cli INFO all</code> shows complete server status.'},
+
+    {id:'log-mongodb-dir',name:'mongodb/',cat:'var',label:'mongodb/',
+     type:'MongoDB database log',
+     role:'MongoDB server log: connections, queries, indexes, replication, and authentication events.',
+     desc:'mongod.log: JSON-structured (since 4.4) log entries. Contains: connection establishment/termination, authentication attempts (failed/succeeded), slow operations (exceeding slowOpThresholdMs), index creation/drops, replication state changes, storage engine events. Log levels: F(atal), E(rror), W(arning), I(nformational), D(ebug).',
+     perms:'drwxr-xr-x  mongodb mongodb',
+     files:['mongod.log','mongod.log.1'],
+     tip:'<code>mongosh --eval "db.adminCommand({getLog: \'global\'})"</code> reads log from MongoDB shell.'},
+
+    {id:'log-journal-dir',name:'journal/',cat:'var',label:'journal/',
+     type:'systemd binary journal',
+     role:'systemd-journald structured binary log store. Indexed, searchable, persistent across reboots.',
+     desc:'Binary format with rich per-entry metadata: _SYSTEMD_UNIT, _PID, _UID, _GID, _BOOT_ID, PRIORITY (0=emerg to 7=debug), _HOSTNAME, _COMM, _EXE, _CMDLINE, MESSAGE_ID (UUID for categorized messages). Supports: instant field-based filtering, regex, rate limiting, field cardinality. journalctl queries this database.',
+     perms:'drwxr-sr-x  root systemd-journal  (2755)',
+     files:['<machine-id>/system.journal','<machine-id>/system@<id>.journal','<machine-id>/user-1000.journal','<machine-id>/user-1000@<id>.journal'],
+     tip:'<code>journalctl -u nginx -n 100 -f</code> follows nginx journal. <code>journalctl -b -1</code> shows previous boot. <code>journalctl -p err -b</code> shows errors from this boot.',
+     children:[
+       {id:'log-journal-system',name:'system.journal',cat:'var',label:'system.journal',
+        type:'system-wide journal file',
+        role:'Binary journal file for all system-level log entries from kernel and all system services.',
+        desc:'Structured binary format. Each entry contains: timestamp (microsecond precision), priority, facility, unit name, PID, UID, message text, and any custom fields added by the logging application via sd_journal_send(). Indexed by field for fast queries. Multiple files per machine-id with rotation based on size.',
+        perms:'-rw-r-----  root systemd-journal',
+        files:[],
+        tip:'<code>journalctl --file=/var/log/journal/*/system.journal</code> reads a specific journal file. <code>journalctl --verify</code> checks journal integrity.'},
+       {id:'log-journal-user',name:'user-*.journal',cat:'var',label:'user-*.journal',
+        type:'per-user journal file',
+        role:'Per-user journal for user systemd session services.',
+        desc:'Stores log entries from user systemd session units (running in the user\'s systemd --user instance). Contains: user application logs, user timer outputs, user socket activation events. Only the user owning the file (and root/systemd-journal group) can read it.',
+        perms:'-rw-r-----  user systemd-journal',
+        files:[],
+        tip:'<code>journalctl --user -u user-service-name</code> reads a user\'s service journal.'},
+     ]},
+
+    {id:'log-audit-dir',name:'audit/',cat:'var',label:'audit/',
+     type:'Linux Audit Framework logs',
+     role:'auditd log files containing syscall audits, file access records, and SELinux AVC denials.',
+     desc:'audit.log: Binary records from the Linux Audit Subsystem. Record types: SYSCALL (syscall invocation with all args), PATH (file referenced by syscall), EXECVE (exec with args), USER_AUTH (authentication), USER_CMD (sudo commands), AVC (SELinux access denial), NETFILTER_PKT (network packet). Key tool: aureport for summaries, ausearch for queries, audit2allow for SELinux.',
+     perms:'drwxr-x---  root root  (750)',
+     files:['audit.log','audit.log.1','audit.log.2'],
+     tip:'<code>aureport -au</code> authentication summary. <code>ausearch --start today -k ssh_login</code> searches by audit key.',
+     children:[
+       {id:'log-audit-log',name:'audit.log',cat:'var',label:'audit.log',
+        type:'audit framework log',
+        role:'The primary audit log. Captures syscall activity, file accesses, auth events, and LSM denials.',
+        desc:'Fields in each record: type= (record type), msg=audit(TIMESTAMP:SERIAL): (event ID), then type-specific fields. SYSCALL records: syscall= arch= success= exit= pid= ppid= uid= gid= euid= egid= comm= exe= key=. PATH records: name= (file path) nametype= (CREATE/DELETE/NORMAL/PARENT/UNKNOWN). AVC records: avc: denied { operation } for pid= comm= path= scontext= tcontext= tclass=.',
+        perms:'-rw-r-----  root root  (600)',
+        files:['audit.log','audit.log.1','audit.log.2'],
+        tip:'<code>ausearch -x /usr/bin/sudo -ts today</code> shows all sudo executions today. <code>aureport -x</code> shows executable summary.'},
+     ]},
+
+    {id:'log-fail2ban',name:'fail2ban.log',cat:'var',label:'fail2ban.log',
+     type:'fail2ban intrusion prevention log',
+     role:'fail2ban actions: ban/unban events, jail status, and monitored log scan activity.',
+     desc:'Records: when an IP is banned (which jail, which log triggered it, the ban duration), unban events (after ban time expires), warning about misconfigured jails, start/stop of the fail2ban service. Format: YYYY-MM-DD HH:MM:SS,mmm fail2ban.COMPONENT [LEVEL] [jail]: MESSAGE IP. Critical for: verifying fail2ban is working, investigating why a legitimate IP was banned, monitoring attack intensity.',
+     perms:'-rw-r--r--  root root  (644)',
+     files:['fail2ban.log','fail2ban.log.1','fail2ban.log.2.gz'],
+     tip:'<code>grep "Ban " /var/log/fail2ban.log | awk \'{print $NF}\' | sort | uniq -c | sort -rn | head -20</code> shows most-banned IPs.'},
+
+    {id:'log-ufw',name:'ufw.log',cat:'var',label:'ufw.log',
+     type:'UFW firewall log',
+     role:'UFW (Uncomplicated Firewall) log of blocked and allowed connections per firewall rules.',
+     desc:'Blocked connections show [UFW BLOCK] prefix; allowed show [UFW ALLOW]. Fields: IN (ingress interface), OUT (egress interface), MAC (layer 2 if available), SRC (source IP), DST (dest IP), LEN, TOS, PREC, TTL, ID, PROTO, SPT (source port), DPT (dest port), WINDOW, RES, SYN/ACK/FIN flags, URGP. Populated by iptables LOG target.',
+     perms:'-rw-r-----  root adm  (640)',
+     files:['ufw.log','ufw.log.1'],
+     tip:'<code>grep "UFW BLOCK" /var/log/ufw.log | awk \'{print $12}\' | sed "s/SRC=//" | sort | uniq -c | sort -rn | head</code> shows top blocked sources.'},
+
+    {id:'log-wtmp',name:'wtmp / btmp / lastlog',cat:'var',label:'wtmp/btmp',
+     type:'binary login records',
+     role:'Binary records of all login/logout events (wtmp), failed logins (btmp), and last login per user (lastlog).',
+     desc:'wtmp (utmp format): every login, logout, reboot, runlevel change. btmp: every failed login attempt. lastlog: per-UID last login time, tty, and source host (mmap indexed by UID). faillog: per-UID failure count for lockout. tallylog: pam_tally2 data. All are binary — use last, lastb, lastlog, faillog commands to read.',
+     perms:'-rw-rw-r--  root utmp  (664)',
+     files:['wtmp','btmp','lastlog','faillog','tallylog'],
+     tip:'<code>last -F</code> reads wtmp with full dates. <code>lastb</code> reads btmp (shows brute force). <code>last reboot</code> shows all reboots.'},
+
+    {id:'log-mail',name:'mail.log',cat:'var',label:'mail.log',
+     type:'mail server log',
+     role:'Mail transfer agent (postfix/sendmail/exim) activity: received, sent, bounced, rejected messages.',
+     desc:'mail.log: all mail events. mail.err: errors and rejections. mail.info: informational (connection events). mail.warn: warnings. Common entries: postfix/smtpd accepting/rejecting connections, postfix/smtp delivery attempts, postfix/local delivery, RBL (DNS blocklist) rejections, SPAM filter decisions, TLS handshake status. Rotated separately from syslog.',
+     perms:'-rw-r--r--  root adm  (640)',
+     files:['mail.log','mail.log.1','mail.err','mail.err.1','mail.info','mail.warn'],
+     tip:'<code>grep "status=sent" /var/log/mail.log | tail -20</code> shows recently sent mail. <code>grep "rejected" /var/log/mail.log</code> shows rejected messages.'},
+
+    {id:'log-cron-log',name:'cron.log',cat:'var',label:'cron.log',
+     type:'cron scheduler log',
+     role:'Cron daemon log: job executions, output, timing, and scheduling errors.',
+     desc:'Records: cron daemon start/stop, every cron job execution (user, command, PID), job completion, and scheduling errors. On Debian/Ubuntu, cron output also goes to syslog unless /etc/cron.d/ jobs redirect to /dev/null. On RHEL, cron logs to /var/log/cron. Critical for: verifying scheduled jobs ran, diagnosing missed or failed jobs.',
+     perms:'-rw-r--r--  root adm',
+     files:['cron.log','cron.log.1'],
+     tip:'<code>grep CRON /var/log/syslog | tail -20</code> on Ubuntu. <code>grep "CMD" /var/log/cron.log</code> shows executed commands.'},
+
+    {id:'log-cloud-init',name:'cloud-init.log',cat:'var',label:'cloud-init.log',
+     type:'cloud-init provisioning log',
+     role:'Cloud-init execution log for cloud and VM instances (AWS EC2, Azure, GCP, OpenStack, etc.).',
+     desc:'Records every stage of cloud-init: datasource detection (which cloud platform), network configuration, package installs, user creation, SSH key injection, user-data script execution. cloud-init-output.log contains raw stdout/stderr from user-data scripts. Essential for debugging failed instance provisioning.',
+     perms:'-rw-r--r--  root root',
+     files:['cloud-init.log','cloud-init-output.log'],
+     tip:'<code>cloud-init status --long</code> shows current state. <code>cloud-init analyze</code> shows timing breakdown. <code>cloud-init clean --logs</code> resets for re-run.'},
+
+    {id:'log-xorg',name:'Xorg.0.log',cat:'var',label:'Xorg.0.log',
+     type:'X11 display server log',
+     role:'Xorg/X11 display server log: driver loading, display configuration, input device detection, errors.',
+     desc:'Contains: GPU driver loading (NVIDIA/AMD/Intel), screen resolution detection, monitor EDID data, input device enumeration (keyboard, mouse, touchpad), GPU memory info, GLX/OpenGL initialization, error messages for driver failures. (:0) = first display. ~/.local/share/xorg/Xorg.0.log also written for rootless Xorg.',
+     perms:'-rw-r--r--  root root',
+     files:['Xorg.0.log','Xorg.0.log.old','Xorg.1.log'],
+     tip:'<code>grep "(EE)" /var/log/Xorg.0.log</code> shows errors. <code>grep "(WW)" /var/log/Xorg.0.log</code> shows warnings.'},
+
+    {id:'log-cups-dir',name:'cups/',cat:'var',label:'cups/',
+     type:'CUPS print service logs',
+     role:'CUPS printer subsystem logs: print jobs, printer errors, and web interface access.',
+     desc:'error_log: CUPS daemon errors and system-level events, printer driver issues, IPP protocol errors, authentication failures for the CUPS web interface. access_log: All HTTP requests to the CUPS web interface (http://localhost:631). page_log: Every printed page with job ID, printer name, user, document, page count, billing info. Log level controlled by LogLevel in /etc/cups/cupsd.conf.',
+     perms:'drwxr-xr-x  root root',
+     files:['access_log','error_log','page_log'],
+     tip:'<code>lpstat -W completed -l</code> shows completed print jobs. <code>grep " 5[0-9][0-9] " /var/log/cups/access_log</code> shows CUPS errors.'},
+
+    {id:'log-samba-dir',name:'samba/',cat:'var',label:'samba/',
+     type:'Samba Windows file sharing logs',
+     role:'Samba (SMB/CIFS) server logs: authentication events, file access, share connections.',
+     desc:'log.smbd: SMB daemon events — client connections, authentication (including Kerberos and NTLM), file access errors, share enumeration. log.nmbd: NetBIOS name service events — name registration, browse list. log.<ip>: Per-client log files. log.winbindd: Domain authentication via winbind. Verbosity controlled by log level in smb.conf.',
+     perms:'drwxr-xr-x  root root',
+     files:['log.smbd','log.nmbd','log.winbindd','log.<client-ip>'],
+     tip:'<code>grep "authentication for" /var/log/samba/log.smbd</code> shows authentication attempts. Increase log level in smb.conf for more detail.'},
+
+    {id:'log-openvpn',name:'openvpn/',cat:'var',label:'openvpn/',
+     type:'OpenVPN logs',
+     role:'OpenVPN VPN server/client logs: tunnel establishment, authentication, routing, errors.',
+     desc:'Records: TLS handshake with client certificates, successful/failed authentication (using tls-auth or certificates), IP address assigned from VPN pool, routes pushed to clients, reconnection events, channel errors. Log verbosity controlled by verb directive in openvpn.conf (0=silent, 3=medium, 9=debug).',
+     perms:'drwxr-xr-x  root root',
+     files:['openvpn.log','openvpn-status.log','server.log'],
+     tip:'<code>tail -f /var/log/openvpn/openvpn.log</code> monitors connections. <code>cat /var/log/openvpn/openvpn-status.log</code> shows currently connected clients.'},
+
+    {id:'log-unattended',name:'unattended-upgrades/',cat:'var',label:'unattended-upgrades/',
+     type:'automatic security updates log',
+     role:'Log of automatic security package updates performed by unattended-upgrades.',
+     desc:'unattended-upgrades.log: which packages were automatically upgraded, any packages that were held back, dpkg errors during upgrade, timestamps. upgrade-output.log: full apt-get output from each unattended upgrade run. Important for: knowing when security patches were applied, debugging auto-upgrade failures.',
+     perms:'drwxr-xr-x  root root',
+     files:['unattended-upgrades.log','unattended-upgrades-dpkg.log','upgrade-output.log'],
+     tip:'<code>cat /var/log/unattended-upgrades/unattended-upgrades.log | grep "Packages that will be upgraded"</code> shows auto-upgraded packages.'},
+
+    ]},// end var-log children
+
+   // ── /var/spool ──
+   {id:'var-spool',name:'/var/spool',cat:'var',label:'spool/',
+    type:'application queue directories',
+    role:'Queued data awaiting processing: print jobs, outgoing mail, cron tasks.',
+    desc:'SPOOL = Simultaneous Peripheral Operation OnLine. Data persists until a daemon consumes it. Queues survive daemon restarts ensuring jobs are not lost.',
+    perms:'drwxr-xr-x  root root',
+    files:['cron/','mail/','cups/','mqueue/','lpd/','at/','anacron/','rsyslog/'],
+    tip:'<code>lpq</code> shows print queue. <code>mailq</code> shows queued outgoing mail. <code>atq</code> shows scheduled at jobs.',
+    children:[
+      {id:'var-spool-cron',name:'cron/',cat:'var',label:'cron/',
+       type:'user crontab files',
+       role:'Per-user crontab files managed by crontab(1). One file per user, named by username.',
+       desc:'Never edit these directly — always use crontab -e which validates syntax and signals cron to reload. Root\'s crontab is here too. Files are owned by root but mode-protected; crontab command runs setuid to write them safely.',
+       perms:'drwx------  root crontab  (1730)',
+       files:['root','ubuntu','alice','bob','www-data','deploy'],
+       tip:'<code>crontab -l</code> lists your cron jobs. <code>for user in $(cut -f1 -d: /etc/passwd); do crontab -l -u $user 2>/dev/null && echo "=== $user"; done</code> lists all users\' crontabs.'},
+      {id:'var-spool-mail',name:'mail/',cat:'var',label:'mail/',
+       type:'local user mailboxes (mbox)',
+       role:'Local mbox format mailboxes for system mail delivery. One file per user.',
+       desc:'System daemons and cron jobs deliver mail here via sendmail/postfix local delivery. Each file is an mbox file with multiple messages separated by "From " lines. Common recipients: root (system alerts), www-data (web app errors), cron output if not redirected.',
+       perms:'drwxrwsr-x  root mail  (2775)',
+       files:['root','ubuntu','alice'],
+       tip:'<code>sudo mail -u root</code> reads root\'s system mail. <code>cat /var/spool/mail/root</code> reads it directly.'},
+      {id:'var-spool-cups',name:'cups/',cat:'var',label:'cups/',
+       type:'CUPS print queue',
+       role:'CUPS printer subsystem spool: queued print jobs, per-job data files, and PPD cache.',
+       desc:'Each print job consists of paired files: c00001 (job control/metadata: printer, user, title, copies, options) and d00001-001 (job data in PostScript/PDF). The CUPS scheduler processes them in order, sending to the printer driver backend.',
+       perms:'drwx--x---  root lp',
+       files:['cache/','ppd/','tmp/','c00001','d00001-001'],
+       tip:'<code>lpstat -W not-completed</code> shows pending jobs. <code>cancel -a</code> cancels all jobs. <code>cupsenable printername</code> re-enables.'},
+    ]},
+
+   // ── /var/cache ──
+   {id:'var-cache',name:'/var/cache',cat:'var',label:'cache/',
+    type:'persistent application cache',
+    role:'Cached data from applications. Safe to delete — will be regenerated at cost of performance.',
+    desc:'apt stores downloaded .deb packages here. Man page cache (catman), font cache (fontconfig), and ldconfig cache (ld.so.cache) also live here. Regular cache cleanup can recover significant disk space.',
+    perms:'drwxr-xr-x  root root',
+    files:['apt/','apt/archives/','apt/archives/partial/','apt/pkgcache.bin','apt/srcpkgcache.bin','man/','fontconfig/','debconf/','ldconfig/','snapd/','apparmor/','bind/'],
+    tip:'<code>apt clean</code> removes all downloaded .deb files. <code>apt autoclean</code> removes only outdated ones.',
+    children:[
+      {id:'var-cache-apt',name:'apt/archives/',cat:'var',label:'apt/archives/',
+       type:'downloaded .deb packages',
+       role:'Downloaded .deb package files — cached locally after installation.',
+       desc:'apt download stores packages here before installing. After installation they remain as local cache — useful for reinstalling without re-downloading or for offline deployment. partial/ holds incomplete downloads. lock file prevents concurrent apt runs.',
+       perms:'drwxr-xr-x  root root',
+       files:['*.deb','partial/','lock'],
+       tip:'<code>apt clean</code> clears all cached debs. <code>du -sh /var/cache/apt/archives/</code> shows cache size. <code>apt-get download packagename</code> downloads without installing.'},
+    ]},
+
+   // ── /var/lib ──
+   {id:'var-lib',name:'/var/lib',cat:'var',label:'lib/',
+    type:'persistent application state',
+    role:'Persistent application state data that must survive reboots but is not user config.',
+    desc:'Database files, package manager state, container data, and application runtime data. Applications create their own subdirectory here. Unlike /etc, this is machine-generated data not meant for hand-editing.',
+    perms:'drwxr-xr-x  root root',
+    files:['dpkg/','apt/','apt/lists/','mysql/','postgresql/','redis/','mongodb/','elasticsearch/','docker/','containerd/','lxc/','lxd/','snapd/','flatpak/','systemd/','NetworkManager/','cloud/','cloud-init/','ufw/','fail2ban/','sudo/'],
+    tip:'<code>du -sh /var/lib/*/ | sort -rh | head -20</code> shows which apps use most persistent state.',
+    children:[
+      {id:'var-lib-dpkg',name:'dpkg/',cat:'var',label:'dpkg/',
+       type:'dpkg package manager state',
+       role:'dpkg\'s database of all installed packages, their file lists, and maintainer scripts.',
+       desc:'status: one stanza per installed/removed/purged package (Name, Version, Architecture, Status, Depends, etc.). info/: per-package files — <pkg>.list (all installed files), <pkg>.md5sums, <pkg>.conffiles, <pkg>.preinst/.postinst/.prerm/.postrm (maintainer scripts). alternatives/: update-alternatives symlink config.',
+       perms:'drwxr-xr-x  root root',
+       files:['status','status-old','available','lock','lock-frontend','info/','updates/','triggers/','alternatives/'],
+       tip:'<code>dpkg -L packagename</code> lists all files installed by a package. <code>dpkg -S /path/to/file</code> finds which package owns a file.'},
+      {id:'var-lib-systemd',name:'systemd/',cat:'var',label:'systemd/',
+       type:'systemd persistent state',
+       role:'systemd persistent state: random seed, machine ID, coredump metadata, timer last-run times.',
+       desc:'random-seed: written at shutdown to fast-initialize the PRNG at next boot. timers/: last-run timestamps for systemd timers (prevents missed runs on restart). coredump/: metadata for coredumps (actual cores in /var/lib/systemd/coredump/ or /var/coredump/). catalog/: message ID to human description mappings.',
+       perms:'drwxr-xr-x  root root',
+       files:['random-seed','timers/','coredump/','catalog/','rfkill/','backlight/','linger/','pstore/'],
+       tip:'<code>coredumpctl list</code> shows coredumps. <code>coredumpctl info</code> shows most recent coredump info. <code>coredumpctl gdb</code> opens in gdb.'},
+      {id:'var-lib-docker',name:'docker/',cat:'var',label:'docker/',
+       type:'Docker runtime data',
+       role:'All Docker runtime data: image layers, container filesystems, volumes, and network configs.',
+       desc:'overlay2/: image layers and container filesystems using OverlayFS storage driver. volumes/: named Docker volume data. image/: content-addressable image metadata and layer digests. containers/: per-container config, logs, and state. network/: Docker network configs. buildkit/: BuildKit build cache.',
+       perms:'drwx--x--x  root root',
+       files:['overlay2/','volumes/','image/','containers/','network/','swarm/','buildkit/','tmp/','plugins/','runtimes/','containerd/'],
+       tip:'<code>docker system df</code> shows disk usage breakdown. <code>docker system prune -a</code> cleans up unused images, containers, networks, volumes.'},
+      {id:'var-lib-mysql-data',name:'mysql/',cat:'var',label:'mysql/',
+       type:'MySQL/MariaDB data directory',
+       role:'MySQL database files: table data, InnoDB tablespace, binary logs, and InnoDB redo logs.',
+       desc:'Each database is a subdirectory (except InnoDB shared tablespace). InnoDB: ibdata1 (shared tablespace, undo logs), ib_logfile0/1 (redo log files), *.ibd (per-table tablespaces with innodb_file_per_table). MyISAM: .frm (table structure), .MYD (data), .MYI (index). Binary logs (mysql-bin.000001+): row or statement replication logs.',
+       perms:'drwxr-xr-x  mysql mysql  (700)',
+       files:['mysql/','performance_schema/','information_schema/','sys/','ibdata1','ib_logfile0','ib_logfile1','ib_buffer_pool','mysql.err','mysql-bin.000001','mysql-bin.index','aria_log_control'],
+       tip:'<code>mysqlcheck -A -u root -p</code> checks all databases. <code>innochecksum</code> verifies InnoDB tablespace integrity.'},
+      {id:'var-lib-sudo',name:'sudo/',cat:'var',label:'sudo/',
+       type:'sudo state files',
+       role:'sudo authentication cache timestamps and lecture tracking.',
+       desc:'lectured/: empty files per-username marking that the user has seen the sudo security lecture. ts/: timestamp files that cache successful sudo authentication (default 5 minutes). The timestamp mechanism is what lets you run sudo multiple times without re-entering your password.',
+       perms:'drwxr-xr-x  root root',
+       files:['lectured/','lectured/alice','ts/','ts/alice'],
+       tip:'<code>sudo -K</code> immediately invalidates your sudo timestamp. <code>sudo -k</code> marks it as expired (re-prompts next time).'},
+    ]},
+
+   // ── /var/www ──
+   {id:'var-www',name:'/var/www',cat:'var',label:'www/',
+    type:'web server document root',
+    role:'Default document root for web servers (nginx/apache). Served files live here.',
+    desc:'html/ is the default root served by nginx/apache default vhosts. Production deployments typically point virtual hosts to subdirectories here. The web server user (www-data on Debian/Ubuntu, nginx on RHEL) needs read access.',
+    perms:'drwxr-xr-x  root root',
+    files:['html/','html/index.html','html/index.nginx-debian.html'],
+    tip:'<code>chown -R www-data:www-data /var/www/mysite/</code> sets web server ownership. Use setfacl for more granular control.'},
+
+   // ── /var/mail ──
+   {id:'var-mail',name:'/var/mail',cat:'var',label:'mail/',
+    type:'local user mailboxes',
+    role:'Local mbox mailboxes for system mail delivery. One file per user.',
+    desc:'Receives mail from cron (job output), system daemons, logwatch, and local postfix/sendmail. Sysadmins should forward root\'s mail to a real address via /etc/aliases then run newaliases.',
+    perms:'drwxrwsr-x  root mail  (2775)',
+    files:['root','ubuntu','alice'],
+    tip:'<code>sudo mail -u root</code> reads root\'s system mail. Set up forwarding: add "root: admin@example.com" to /etc/aliases then run <code>newaliases</code>.'},
+
+   ]},// end /var children
+
+  //───────────── /home ─────────────
+  {id:'home',name:'/home',cat:'user',label:'/home',
+   type:'user home directories',
+   role:'Personal directories for regular users.',
+   desc:'Typically on its own partition so user data survives an OS reinstallation. Contains dotfiles (hidden config files), documents, downloads, and personal data. The $HOME variable points here.',
+   perms:'drwxr-xr-x  root root  (755)',
+   files:['alice/','bob/','ubuntu/'],
+   tip:'<code>ls -la ~</code> shows all dotfiles. <code>du -sh ~/*</code> shows space usage by directory.',
+   children:[
+     {id:'home-bashrc',name:'~/.bashrc',cat:'user',label:'~/.bashrc',
+      type:'shell configuration',
+      role:'Per-user shell configuration sourced on every interactive non-login shell.',
+      desc:'.bashrc: runs for interactive non-login shells (terminal emulator tabs). .bash_profile / .profile: run for login shells (SSH, TTY logins). .profile is POSIX sh compatible (dash/sh also sources it). .bash_logout: runs when a bash login shell exits — rarely used.',
+      perms:'-rw-r--r--  user user  (644)',
+      files:['.bashrc','.bash_profile','.profile','.zshrc','.zshenv','.zsh_history','.bash_history','.bash_logout','.inputrc','.vimrc','.vim/','.nanorc','.tmux.conf','.screenrc','.gitconfig','.gitignore_global','.editorconfig','.curlrc','.wgetrc','.npmrc','.gemrc','.Xresources','.xinitrc'],
+      tip:'<code>source ~/.bashrc</code> reloads without opening a new shell. HISTFILESIZE=0 disables history (check for this as attacker evasion).'},
+     {id:'home-ssh',name:'~/.ssh',cat:'user',label:'~/.ssh/',
+      type:'SSH keys & client config',
+      role:'Per-user SSH private keys, authorized public keys, known_hosts, and client configuration.',
+      desc:'Mode 700 (directory) and 600 (private keys) required — SSH refuses keys with wrong permissions. authorized_keys: public keys permitted to authenticate as this user. known_hosts: cached server fingerprints (TOFU trust model). config: per-host settings.',
+      perms:'drwx------  user user  (700)',
+      files:['id_rsa','id_rsa.pub','id_ed25519','id_ed25519.pub','id_ecdsa','id_ecdsa.pub','authorized_keys','known_hosts','known_hosts.old','config','environment'],
+      tip:'<code>ssh-keygen -t ed25519 -C "user@host"</code> generates a modern keypair. <code>ssh-copy-id -i ~/.ssh/id_ed25519.pub user@server</code> installs your key.',
+      children:[
+        {id:'home-ssh-config',name:'~/.ssh/config',cat:'user',label:'config',
+         type:'SSH client config',
+         role:'Per-user SSH client configuration: per-host connection settings, aliases, proxies.',
+         desc:'Host blocks set per-host defaults. Options: HostName (real hostname/IP), User (login username), Port, IdentityFile (~/.ssh/mykey), ForwardAgent yes, StrictHostKeyChecking no (DANGEROUS), ProxyJump bastion-host (for multi-hop SSH), ServerAliveInterval 60, Compression yes, ControlMaster auto (connection multiplexing).',
+         perms:'-rw-------  user user  (600)',
+         files:[],
+         tip:'Add a Host block to alias <code>ssh myserver</code> instead of typing the full command every time. Host blocks with wildcards (* or ?) set defaults for multiple hosts.'},
+        {id:'home-ssh-authorized',name:'authorized_keys',cat:'user',label:'authorized_keys',
+         type:'authorised SSH public keys',
+         role:'Public keys allowed to authenticate as this user over SSH without a password.',
+         desc:'One public key per line. Options prefix (before keytype): from="ip/hostname" (restrict source), command="cmd" (force command execution), no-port-forwarding, no-agent-forwarding, no-X11-forwarding, restrict (deny all forwarding). The SSH daemon checks this file for public key authentication.',
+         perms:'-rw-------  user user  (600)',
+         files:[],
+         tip:'<code>ssh-keygen -lf ~/.ssh/authorized_keys</code> shows key fingerprints. Check regularly for unauthorized keys added by attackers.'},
+        {id:'home-ssh-known',name:'known_hosts',cat:'user',label:'known_hosts',
+         type:'SSH host fingerprint cache',
+         role:'Fingerprints of every SSH server this user has connected to. TOFU trust model.',
+         desc:'One line per known host: hostname[,IP] keytype base64-fingerprint. With HashKnownHosts=yes (recommended): hostname is hashed to |1|SALT|HASH format for privacy. If a server\'s key changes (upgrade, compromise, MITM), SSH warns "REMOTE HOST IDENTIFICATION HAS CHANGED".',
+         perms:'-rw-------  user user  (600)',
+         files:[],
+         tip:'<code>ssh-keygen -R hostname</code> removes a stale host key. <code>ssh-keygen -H</code> hashes all plain-text hostnames in known_hosts.'},
+      ]},
+     {id:'home-config',name:'~/.config',cat:'user',label:'~/.config/',
+      type:'XDG application config',
+      role:'XDG Base Directory spec: standardised per-user application configuration directory.',
+      desc:'The XDG Base Directory spec moved away from scattered ~/.appname dotfiles. Applications store config here in their own named subdirectory. $XDG_CONFIG_HOME defaults to ~/.config. Complements ~/.local/share (data) and ~/.cache (cache).',
+      perms:'drwx------  user user',
+      files:['git/','git/config','htop/','htop/htoprc','systemd/user/','dconf/','gtk-3.0/','gtk-4.0/','fish/','alacritty/','kitty/','nvim/','Code/','chromium/','google-chrome/','firefox/','pulse/','pipewire/','autostart/'],
+      tip:'<code>ls ~/.config/</code> shows all XDG-compliant app configs. <code>$XDG_CONFIG_HOME</code> env var can override the path.',
+      children:[
+        {id:'home-config-autostart',name:'autostart/',cat:'user',label:'autostart/',
+         type:'XDG autostart entries',
+         role:'Desktop entry files (.desktop) for applications that start automatically when the user logs in.',
+         desc:'Each .desktop file defines: Exec= (command to run), Name= (display name), Hidden=false (enabled), OnlyShowIn= / NotShowIn= (DE-specific). Processed by GNOME, KDE, XFCE, and other XDG-compliant desktop environments at session start. System-wide autostart is in /etc/xdg/autostart/.',
+         perms:'drwxr-xr-x  user user',
+         files:['*.desktop','dropbox.desktop','nm-applet.desktop','blueman-applet.desktop'],
+         tip:'Common persistence vector: attackers drop a .desktop file here for persistent execution at every user login. <code>ls ~/.config/autostart/</code> to audit.'},
+        {id:'home-config-systemd-user',name:'systemd/user/',cat:'user',label:'systemd/user/',
+         type:'user systemd services',
+         role:'Per-user systemd unit files for the user\'s systemd session manager.',
+         desc:'Users can run their own systemd service manager (systemd --user) without root. Units here are started/stopped with systemctl --user. Common uses: persistent user processes (syncthing, ssh-agent), scheduled user tasks (systemd timers), auto-restarting user services.',
+         perms:'drwxr-xr-x  user user',
+         files:['*.service','*.timer','*.socket','syncthing.service','default.target.wants/'],
+         tip:'<code>systemctl --user status</code> shows user services. <code>systemctl --user enable --now syncthing.service</code> starts a user service.'},
+      ]},
+     {id:'home-local',name:'~/.local',cat:'user',label:'~/.local/',
+      type:'XDG user data & local installs',
+      role:'User-local application data, executables, and state (XDG Base Directory Specification).',
+      desc:'bin/: user-installed executables (pip --user, pipx, cargo install, npm -g). share/: application data (desktop entries, fonts, icons, themes). lib/: language package trees (Python site-packages). state/: persistent state that isn\'t important enough for share/ (nvim shada, bash session state).',
+      perms:'drwxr-xr-x  user user',
+      files:['bin/','share/','share/applications/','share/fonts/','share/icons/','share/themes/','lib/','lib/python3.12/','lib/python3.12/site-packages/','state/'],
+      tip:'Add <code>export PATH="$HOME/.local/bin:$PATH"</code> to ~/.bashrc to use user-installed tools.',
+      children:[
+        {id:'home-local-bin',name:'~/.local/bin',cat:'user',label:'bin/',
+         type:'user-installed executables',
+         role:'Executables installed by user-level package managers: pipx, cargo, npm -g, go install.',
+         desc:'pipx installs Python CLI tools here in isolated venvs. cargo install --root ~/.local installs Rust binaries. go install installs Go binaries. Scripts placed here manually. Takes precedence over /usr/local/bin and /usr/bin if added to PATH first.',
+         perms:'drwxr-xr-x  user user',
+         files:['pipx-managed/','black','ruff','pre-commit','httpie','youtube-dl','yt-dlp','bat','fd','ripgrep','exa','delta','gh'],
+         tip:'<code>pipx list</code> shows pipx-managed tools. <code>cargo install --list</code> shows cargo-installed binaries.'},
+        {id:'home-local-share',name:'~/.local/share',cat:'user',label:'share/',
+         type:'XDG user application data',
+         role:'User-specific application data: desktop entries, fonts, icons, recently-used files.',
+         desc:'.desktop files in applications/ appear in application launchers. Fonts in fonts/: installed per-user, no root needed. recently-used.xbel: XML file tracking recently opened files (used by file pickers). Trash/: user\'s trash bin (files/ and info/ subdirs). flatpak/: Flatpak app data and runtimes.',
+         perms:'drwxr-xr-x  user user',
+         files:['applications/','fonts/','icons/','themes/','recently-used.xbel','Trash/','Trash/files/','Trash/info/','gnome-shell/','flatpak/','pipx/','jupyter/'],
+         tip:'<code>fc-cache -fv ~/.local/share/fonts/</code> registers user-installed fonts. <code>gio trash --list</code> shows trash contents.'},
+      ]},
+   ]},
+
+  //───────────── /root ─────────────
+  {id:'root-home',name:'/root',cat:'user',label:'/root',
+   type:'root home directory',
+   role:'The home directory of the root superuser. Deliberately not inside /home.',
+   desc:'Kept outside /home so root can always access it even if /home is on a separate unmounted partition. Mode 700 — only root can read it. Contains root\'s SSH keys, shell config, and admin scripts.',
+   perms:'drwx------  root root  (700)',
+   files:['.bashrc','.bash_history','.profile','.bash_profile','.ssh/','.vimrc','.selected_editor','snap/','.ansible/'],
+   tip:'<code>sudo -i</code> opens a root shell with root\'s full environment from /root. <code>sudo cat /root/.bash_history</code> shows root\'s command history.'},
+
+  //───────────── /dev ─────────────
+  {id:'dev',name:'/dev',cat:'device',label:'/dev',badge:'devtmpfs',
+   type:'device file tree',
+   role:'Device files — the kernel\'s interface to hardware and pseudo-devices. Everything in Linux is a file.',
+   desc:'Managed by udev (hotplug) and devtmpfs (created by kernel at boot). Files created/removed dynamically. Block devices (b): transfer fixed-size blocks (disks). Character devices (c): transfer bytes (terminals, serial). udev runs rules from /usr/lib/udev/rules.d/ and /etc/udev/rules.d/ on each device event.',
+   perms:'drwxr-xr-x  root root  (devtmpfs)',
+   files:['null','zero','random','urandom','full','mem','kmem','port','stdin','stdout','stderr','tty','console','tty0-63','ttyS0-3','ttyUSB0','sda','sda1','sda2','sdb','nvme0n1','nvme0n1p1','vda','loop0-7','mapper/','disk/','input/','pts/','shm/','dri/','net/','mqueue/','hugepages/','tpm0','tpmrm0'],
+   tip:'<code>ls -la /dev/sd*</code> shows disks. <code>lsblk -f</code> shows filesystem types. <code>udevadm monitor</code> watches device events.',
+   children:[
+     {id:'dev-null-zero',name:'/dev/null',cat:'device',label:'null/zero/mem',
+      type:'pseudo character devices',
+      role:'/dev/null: bit bucket. /dev/zero: infinite null bytes. /dev/urandom: CSPRNG. /dev/mem: physical RAM access.',
+      desc:'/dev/null: discards all writes, returns EOF on read. /dev/zero: returns infinite zero bytes on read — used to create blank files or wipe. /dev/urandom: CSPRNG output, non-blocking (safe for cryptographic use). /dev/random: same entropy pool as urandom on Linux 5.6+. /dev/full: returns ENOSPC on write (testing error handling). /dev/mem: physical RAM — requires CAP_SYS_RAWIO, rootkit attack vector.',
+      perms:'crw-rw-rw-  root root  1,3',
+      files:['null','zero','full','urandom','random','mem','kmem','port'],
+      tip:'<code>cmd > /dev/null 2>&1</code> silences all output. <code>dd if=/dev/urandom bs=16 count=1 | xxd</code> generates random hex.'},
+     {id:'dev-disk-nodes',name:'/dev/sdX',cat:'device',label:'sdX/nvme/md',
+      type:'block device files',
+      role:'Block device files for physical storage, NVMe drives, partitions, MD RAID arrays, and LVM.',
+      desc:'SATA/SCSI: sda, sdb... (alphabetical order of detection). NVMe: nvme0n1 (drive 0, namespace 1). Partitions append number: sda1, nvme0n1p1. Virtio (VM): vda, vdb. MMC/SD: mmcblk0, mmcblk0p1. MD RAID: md0, md1. Device mapper (LVM/LUKS): in /dev/mapper/. loop devices mount image files (.img, .iso).',
+      perms:'brw-rw----  root disk  8,0',
+      files:['sda','sda1','sda2','sdb','nvme0n1','nvme0n1p1','nvme0n1p2','vda','vda1','mmcblk0','mmcblk0p1','md0','md1','loop0','loop1','loop2'],
+      tip:'<code>lsblk -f</code> shows all block devices with filesystem types, UUIDs, and mount points.',
+      children:[
+        {id:'dev-mapper',name:'/dev/mapper',cat:'device',label:'mapper/',
+         type:'device mapper virtual devices',
+         role:'Device mapper virtual block devices: LVM logical volumes, LUKS encrypted disks, dm-multipath.',
+         desc:'LVM creates entries named <vg>-<lv> (e.g. ubuntu--vg-ubuntu--lv). LUKS dm-crypt creates the decrypted block device here after unlocking with cryptsetup open. Docker uses thin-pool targets. multipath creates redundant path devices.',
+         perms:'drwxr-xr-x  root root',
+         files:['ubuntu--vg-ubuntu--lv','control','cryptroot','docker-thinpool','docker-thinpool-tdata','docker-thinpool-tmeta'],
+         tip:'<code>dmsetup ls --tree</code> shows the full device mapper topology. <code>lvdisplay</code> shows LVM logical volumes.'},
+        {id:'dev-disk-by',name:'/dev/disk/by-*',cat:'device',label:'disk/by-*',
+         type:'stable device symlinks',
+         role:'Stable persistent symlinks to disks and partitions: by UUID, label, hardware ID, and path.',
+         desc:'by-uuid/: UUIDs (ext4/xfs/btrfs filesystem UUID) — stable even if disk is moved. by-partuuid/: GPT partition UUIDs. by-label/: filesystem labels. by-id/: hardware serial number + partition (wwn-xxx, ata-xxx). by-path/: hardware bus path. Use UUID= in /etc/fstab for stability.',
+         perms:'drwxr-xr-x  root root',
+         files:['by-uuid/','by-label/','by-id/','by-path/','by-partlabel/','by-partuuid/'],
+         tip:'<code>ls -la /dev/disk/by-uuid/</code> maps UUIDs to device files. <code>blkid /dev/sda1</code> shows all identifiers for a partition.'},
+      ]},
+     {id:'dev-tty-pts',name:'/dev/tty',cat:'device',label:'tty/pts',
+      type:'terminal character devices',
+      role:'Terminal devices (physical/virtual) and pseudo-terminals (one per SSH session/terminal window).',
+      desc:'/dev/tty: the controlling terminal of the current process. /dev/tty0-N: virtual terminal devices (Ctrl+Alt+F1 etc.). /dev/ttyS0-N: serial ports (RS-232). /dev/ttyUSB0: USB serial adapters. /dev/pts/: pseudo-terminal slave devices — one per SSH session, terminal emulator, tmux/screen pane. /dev/pts/ptmx: master side.',
+      perms:'crw-rw-rw-  root tty  5,0',
+      files:['tty','console','tty0','tty1','tty2','ttyS0','ttyS1','ttyUSB0','pts/','pts/0','pts/1','pts/2','pts/ptmx'],
+      tip:'<code>tty</code> shows your current terminal device. <code>who</code> shows all users and their terminals. <code>w</code> shows activity too.'},
+     {id:'dev-shm-node',name:'/dev/shm',cat:'device',label:'shm/',badge:'tmpfs',
+      type:'POSIX shared memory',
+      role:'POSIX shared memory objects backed by RAM. Fast zero-copy IPC between processes.',
+      desc:'A tmpfs mount at /dev/shm. Processes create named shared memory segments via shm_open(3). Much faster than file-based IPC (no disk I/O). Heavy users: PostgreSQL (shared_buffers), Redis, Chromium/browsers, libdbus. Default size is usually 50% of RAM. Can be mounted with specific size limit.',
+      perms:'drwxrwxrwt  root root  (sticky, tmpfs)',
+      files:[],
+      tip:'<code>ls -la /dev/shm/</code> shows active shared memory objects. <code>df -h /dev/shm</code> shows usage. Postgres creates many small segments.'},
+     {id:'dev-input',name:'/dev/input',cat:'device',label:'input/',
+      type:'input event devices',
+      role:'Character device files for keyboard, mouse, touchpad, joystick, and touchscreen events.',
+      desc:'Each input device gets an eventN file. The evdev subsystem provides a generic event interface. X11/Wayland/libinput read from these. by-id/ and by-path/ provide stable names. /dev/input/mice: virtual merged mouse device (all mice). Readable by members of the "input" group.',
+      perms:'drwxr-xr-x  root root',
+      files:['event0','event1','event2','event3','event4','mouse0','mouse1','mice','js0','by-id/','by-path/'],
+      tip:'<code>evtest /dev/input/event0</code> shows raw input events. <code>udevadm info -a -n /dev/input/event0</code> identifies the device.'},
+     {id:'dev-dri',name:'/dev/dri',cat:'device',label:'dri/',
+      type:'DRM/GPU device files',
+      role:'Direct Rendering Manager device files for GPU access.',
+      desc:'cardN: privileged DRM device — modesetting, display configuration. Writable only by root and video group. renderDN: render-only device for GPU compute/rendering without display access. Accessible by render group (no display privilege required). Used by Vulkan, OpenGL via Mesa, Wayland compositors.',
+      perms:'drwxr-xr-x  root root',
+      files:['card0','card1','renderD128','renderD129','by-path/'],
+      tip:'<code>ls -la /dev/dri/</code> shows GPU devices. <code>groups</code> shows if you\'re in the video/render groups for GPU access.'},
+     {id:'dev-tpm',name:'/dev/tpm0',cat:'device',label:'tpm0/tpmrm0',
+      type:'TPM security module',
+      role:'Trusted Platform Module device for hardware-based cryptography and Secure Boot attestation.',
+      desc:'/dev/tpm0: Direct TPM access via ioctl — requires root or tss group membership. /dev/tpmrm0: TPM Resource Manager — multiplexes concurrent access (preferred). Used for: Secure Boot chain of trust measurement (PCR banks), disk encryption key sealing (BitLocker-style), SSH key storage, attestation.',
+      perms:'crw-rw----  root tss',
+      files:['tpm0','tpmrm0'],
+      tip:'<code>tpm2_getcap properties-fixed</code> shows TPM capabilities. <code>tpm2_pcrread sha256:0</code> reads PCR 0 (firmware measurement).'},
+   ]},
+
+  //───────────── /proc ─────────────
+  {id:'proc',name:'/proc',cat:'device',label:'/proc',badge:'procfs (virtual)',
+   type:'kernel/process information fs',
+   role:'Virtual filesystem — a real-time window into the running kernel and every live process.',
+   desc:'Nothing stored on disk. The kernel generates file content on-the-fly when read. Writable files allow runtime kernel tuning via sysctl. ps, top, free, df, lsmod, strace, ss all read /proc. Also the basis for all Linux system monitoring tools.',
+   perms:'dr-xr-xr-x  root root  (procfs)',
+   files:['cpuinfo','meminfo','version','uptime','loadavg','filesystems','mounts','partitions','diskstats','net/','sys/','kallsyms','kcore','modules','cmdline','stat','swaps','vmstat','interrupts','iomem','ioports','crypto','locks','misc','buddyinfo','slabinfo','mdstat','scsi/'],
+   tip:'<code>ls /proc/</code> shows PIDs as numbered dirs plus named virtual files. <code>cat /proc/version</code> shows kernel version and build info.',
+   children:[
+     {id:'proc-cpuinfo',name:'/proc/cpuinfo',cat:'device',label:'cpuinfo',
+      type:'live CPU information',
+      role:'Live CPU details: model, core count, current clock speed, feature flags per logical CPU.',
+      desc:'Each block is one logical CPU (processor: N). Key fields: model name (CPU model string), cpu MHz (current frequency — may vary with frequency scaling), cpu cores (physical cores), siblings (logical CPUs including hyperthreads), flags (feature bits — critical for security: pti=Meltdown mitigation, ssbd=Spectre v4, ibrs/ibpb=Spectre v2, md_clear=MDS).',
+      perms:'-r--r--r--  root root',
+      files:[],
+      tip:'<code>grep "model name" /proc/cpuinfo | uniq</code> shows CPU model. <code>grep "flags" /proc/cpuinfo | tr " " "\n" | grep "pti\|ibrs\|ssbd"</code> checks CPU mitigations.'},
+     {id:'proc-meminfo',name:'/proc/meminfo',cat:'device',label:'meminfo',
+      type:'live memory statistics',
+      role:'Live memory statistics: total, free, available, cached, buffers, swap, huge pages.',
+      desc:'Key fields: MemTotal (total physical RAM), MemFree (genuinely unused), MemAvailable (free + reclaimable cache — what programs can actually use without swapping), Buffers (kernel I/O buffer cache), Cached (page cache), SwapTotal/SwapFree, HugePages_Total/Free (hugepage allocation), Dirty (pages awaiting writeback), Mapped (memory-mapped files). free, htop, vmstat, top all read from here.',
+      perms:'-r--r--r--  root root',
+      files:[],
+      tip:'<code>grep "MemAvailable" /proc/meminfo</code> shows truly available memory. <code>vmstat -s</code> provides a formatted summary.'},
+     {id:'proc-loadavg',name:'/proc/loadavg',cat:'device',label:'loadavg',
+      type:'system load averages',
+      role:'1, 5, and 15-minute load averages plus current running/total processes and last PID.',
+      desc:'Format: 1min 5min 15min running_processes/total_processes last_new_pid. Load = average number of runnable (R state) + uninterruptible sleeping (D state) processes. Values above CPU count = saturation. D state processes (blocked on I/O) inflate load even without CPU pressure. uptime, top, w read from here.',
+      perms:'-r--r--r--  root root',
+      files:[],
+      tip:'<code>cat /proc/loadavg</code> — value > number of CPUs means overloaded. <code>nproc</code> shows CPU count for comparison.'},
+     {id:'proc-pid-dir',name:'/proc/[PID]',cat:'device',label:'[PID]/',
+      type:'per-process state directory',
+      role:'A directory for every running process named by PID. Contains the entire process state.',
+      desc:'Exists for every process including kernel threads. Contains: cmdline (command and arguments), environ (environment variables), fd/ (open file descriptors), maps (virtual memory map), status (human-readable state and resource usage), stat (machine-readable stats for top), cwd (working directory), exe (executable path), net/ (namespace-specific network state).',
+      perms:'dr-xr-xr-x  owner owner',
+      files:['cmdline','comm','environ','exe','cwd','fd/','fdinfo/','maps','smaps','smaps_rollup','status','stat','statm','net/','ns/','oom_adj','oom_score','oom_score_adj','limits','loginuid','sessionid','task/','wchan','io','mem','pagemap','attr/','coredump_filter','cgroup','syscall','mountinfo'],
+      tip:'<code>ls -la /proc/$$/fd/</code> shows your shell\'s open file descriptors. <code>cat /proc/$$/status</code> shows your shell\'s state.',
+      children:[
+        {id:'proc-pid-fd',name:'fd/',cat:'device',label:'fd/',
+         type:'open file descriptors',
+         role:'Symlinks to every file, socket, pipe, or device currently open by this process.',
+         desc:'0 → stdin, 1 → stdout, 2 → stderr. Then numbered from 3+. Symlink targets: real file paths, "socket:[inode]" for network sockets, "pipe:[inode]" for pipes, "anon_inode:[eventfd]" for special kernel objects. lsof and fuser read from here. FD leak check: count open FDs and watch for growth.',
+         perms:'dr-x------  owner owner',
+         files:['0 → /dev/pts/0','1 → /dev/pts/0','2 → /dev/pts/0','3 → socket:[12345]','4 → pipe:[67890]','5 → /var/log/app.log'],
+         tip:'<code>ls /proc/$$/fd | wc -l</code> counts open FDs. <code>ls -la /proc/<pid>/fd/ | grep socket</code> shows open network connections.'},
+        {id:'proc-pid-maps',name:'maps',cat:'device',label:'maps',
+         type:'virtual memory area map',
+         role:'Virtual address space layout: every memory region the process has mapped.',
+         desc:'Columns: start-end address, permissions (r/w/x/p-private or s-shared), offset, device (major:minor), inode, pathname (or [heap], [stack], [vdso], [vsyscall], anonymous). Shows: executable code (.text r-xp), data (.data rw-p), heap ([heap] rw-p), stack ([stack] rw-p), shared libraries, memory-mapped files, ASLR layout.',
+         perms:'-r--r--r--  owner owner',
+         files:[],
+         tip:'<code>cat /proc/$$/maps</code> shows your shell\'s memory layout. <code>pmap -x <pid></code> provides a formatted view with sizes.'},
+        {id:'proc-pid-status',name:'status',cat:'device',label:'status',
+         type:'process status summary',
+         role:'Human-readable process state: name, PID, memory usage, UIDs/GIDs, capabilities, threads.',
+         desc:'Key fields: State (R=running, S=sleeping, D=uninterruptible, Z=zombie, T=stopped), VmRSS (resident memory), VmPeak (peak virtual memory), VmSwap (swapped memory), Threads, Uid/Gid (real/effective/saved/filesystem UID and GID), CapInh/CapPrm/CapEff/CapBnd/CapAmb (capability bitmasks).',
+         perms:'-r--r--r--  owner owner',
+         files:[],
+         tip:'<code>grep "Vm\|Cap\|State\|Pid" /proc/<pid>/status</code> shows memory and capabilities. Decode caps: <code>capsh --decode=$(grep CapEff /proc/$$/status | awk \'{print $2}\')</code>'},
+        {id:'proc-pid-ns',name:'ns/',cat:'device',label:'ns/',
+         type:'namespace symlinks',
+         role:'Symlinks to the namespace instances this process belongs to.',
+         desc:'Symlinks: cgroup, ipc, mnt (mount), net (network), pid, pid_for_children, time, time_for_children, user (user namespace), uts (hostname/domain). Two processes sharing a namespace have symlinks pointing to the same inode number. Used to detect container isolation (compare ns/net inode with PID 1\'s).',
+         perms:'dr-x--x--x  owner owner',
+         files:['cgroup','ipc','mnt','net','pid','pid_for_children','time','time_for_children','user','uts'],
+         tip:'<code>ls -la /proc/$$/ns/</code> shows your namespaces. <code>ls -la /proc/1/ns/</code> shows init\'s. Compare inode numbers to see if in same namespace.'},
+        {id:'proc-pid-loginuid',name:'loginuid',cat:'device',label:'loginuid',
+         type:'audit login UID',
+         role:'The original login UID of the process chain. Immutable once set — survives privilege escalation.',
+         desc:'Set once by PAM at login and cannot be changed by the process itself (even root). If a user logs in as alice (UID 1000) and then sudo su to root (UID 0), the loginuid still shows 1000. Used by the audit subsystem to attribute privileged actions back to the original human user. Forensic goldmine.',
+         perms:'-rw-r--r--  root root',
+         files:[],
+         tip:'<code>cat /proc/$$/loginuid</code> shows your session\'s login UID. <code>ausearch --loginuid 1000</code> finds all audit events for that user.'},
+        {id:'proc-pid-cgroup',name:'cgroup',cat:'device',label:'cgroup',
+         type:'cgroup membership',
+         role:'Shows which cgroup hierarchy entries this process belongs to.',
+         desc:'Format: hierarchy-ID:controller-list:cgroup-path. Example: 0::/system.slice/nginx.service (cgroup v2 unified hierarchy). Shows which systemd service/scope/slice owns the process, which Docker container it\'s in, and resource control group membership. Used by: systemd, Docker, Kubernetes, LXC.',
+         perms:'-r--r--r--  owner owner',
+         files:[],
+         tip:'<code>cat /proc/$$/cgroup</code> shows your shell\'s cgroup. <code>cat /proc/1/cgroup</code> shows init\'s. Compare to identify container vs host processes.'},
+        {id:'proc-pid-io',name:'io',cat:'device',label:'io',
+         type:'process I/O statistics',
+         role:'Per-process I/O accounting: bytes read/written to storage and the kernel I/O layer.',
+         desc:'Fields: rchar (bytes read — includes pagecache), wchar (bytes written), syscr (read syscall count), syscw (write syscall count), read_bytes (bytes actually read from storage), write_bytes (bytes actually written), cancelled_write_bytes (writes cancelled by truncation). iotop reads from here.',
+         perms:'-r--------  owner owner (requires root for other processes)',
+         files:[],
+         tip:'<code>sudo cat /proc/<pid>/io</code> shows I/O stats (root needed for other processes). <code>iotop -p <pid></code> monitors live.'},
+        {id:'proc-pid-oom',name:'oom_score',cat:'device',label:'oom_score',
+         type:'OOM killer score',
+         role:'The process\'s OOM killer score (0–1000). Higher = more likely to be killed under memory pressure.',
+         desc:'oom_score: computed dynamically by kernel (based on memory usage, runtime, nice value). oom_score_adj: -1000 (never kill) to +1000 (kill first). Set by processes themselves or by systemd OOMScoreAdjust= in unit files. Docker sets containers\' oom_score_adj to protect the host. Protect critical processes: echo -1000 > /proc/<pid>/oom_score_adj.',
+         perms:'-r--r--r--  root root (oom_score) / -rw-r--r-- (oom_score_adj)',
+         files:['oom_score','oom_score_adj'],
+         tip:'<code>grep -r "" /proc/*/oom_score_adj 2>/dev/null | sort -t: -k2 -n | head -20</code> shows processes most protected from OOM.'},
+      ]},
+     {id:'proc-net-dir',name:'/proc/net',cat:'device',label:'net/',
+      type:'network subsystem statistics',
+      role:'Live network protocol statistics, routing table, ARP table, and socket inventory.',
+      desc:'Virtual directory (actually a symlink to /proc/self/net/). Key files: tcp/tcp6/udp/udp6 (socket table with state, addresses, UIDs), arp (ARP cache), route (routing table), dev (per-interface RX/TX counters, errors, drops), nf_conntrack (netfilter connection tracking if loaded), wireless (WiFi interface stats), snmp (SNMP MIB counters).',
+      perms:'dr-xr-xr-x  root root',
+      files:['tcp','tcp6','udp','udp6','unix','arp','route','dev','dev_mcast','dev_snmp6','if_inet6','ipv6_route','nf_conntrack','netstat','snmp','sockstat','protocols','wireless','fib_trie','fib_triestat','rt_cache'],
+      tip:'<code>ss -tulpn</code> is the modern human-friendly version. <code>cat /proc/net/nf_conntrack | wc -l</code> counts tracked connections.',
+      children:[
+        {id:'proc-net-tcp',name:'tcp/udp',cat:'device',label:'tcp/udp',
+         type:'socket state table',
+         role:'Raw kernel socket table: all TCP and UDP sockets with local/remote addresses and state.',
+         desc:'Columns: sl (slot), local_address (hex IP:port), rem_address, st (state: 01=ESTABLISHED, 0A=LISTEN, 06=TIME_WAIT...), tx_queue:rx_queue (bytes in kernel buffers), uid (owning UID), inode (socket inode). ss and netstat parse these files. nf_conntrack shows NAT connection tracking state.',
+         perms:'-r--r--r--  root root',
+         files:['tcp','tcp6','udp','udp6'],
+         tip:'<code>awk \'/[0-9A-F]{8}:0016 / {print $2}\' /proc/net/tcp</code> finds port 22 (SSH) listeners.'},
+        {id:'proc-net-conntrack',name:'nf_conntrack',cat:'device',label:'nf_conntrack',
+         type:'netfilter connection tracker',
+         role:'Netfilter connection tracking table: all tracked network connections with NAT state.',
+         desc:'One line per tracked connection. Fields: protocol, timeout, state (ESTABLISHED/SYN_SENT/etc.), source/destination IP and port for original and reply directions, NAT transformation (if applicable), [ASSURED] (bidirectional traffic seen). Used by iptables NAT, Docker networking, and firewall stateful inspection. Maximum tracked connections: /proc/sys/net/netfilter/nf_conntrack_max.',
+         perms:'-r--r--r--  root root',
+         files:[],
+         tip:'<code>cat /proc/net/nf_conntrack | wc -l</code> counts tracked connections. <code>conntrack -L</code> is the human-friendly command.'},
+      ]},
+     {id:'proc-sys-dir',name:'/proc/sys',cat:'device',label:'sys/',
+      type:'kernel runtime tunables (writable)',
+      role:'Writable kernel parameters. Writing to these files changes kernel behavior immediately without rebooting.',
+      desc:'Hierarchical — path components map to sysctl key: /proc/sys/net/ipv4/ip_forward = net.ipv4.ip_forward. Read with cat, write with echo (root) or sysctl. /etc/sysctl.conf makes changes persistent. Categories: kernel/ (general + security), net/ (networking), vm/ (virtual memory), fs/ (filesystems).',
+      perms:'dr-xr-xr-x  root root  (some files writable by root)',
+      files:['kernel/','kernel/hostname','kernel/dmesg_restrict','kernel/kptr_restrict','kernel/randomize_va_space','kernel/panic','kernel/sysrq','kernel/pid_max','kernel/core_pattern','kernel/yama/','kernel/yama/ptrace_scope','net/','net/ipv4/','net/ipv4/ip_forward','net/ipv4/tcp_syncookies','vm/','vm/swappiness','vm/overcommit_memory','vm/drop_caches','fs/','fs/file-max','fs/inotify/'],
+      tip:'<code>sysctl -a 2>/dev/null | grep randomize_va_space</code> checks ASLR setting.',
+      children:[
+        {id:'proc-sys-kernel',name:'kernel/',cat:'device',label:'kernel/',
+         type:'kernel security & behavior params',
+         role:'Core kernel behavior and security parameters.',
+         desc:'dmesg_restrict=1: only root reads kernel log (prevents info leaks). kptr_restrict=2: hide kernel pointer addresses (defeats KASLR bypass). randomize_va_space=2: full ASLR. yama/ptrace_scope=1: only parent can ptrace child (prevents injection). perf_event_paranoid=3: no unprivileged hardware counters. unprivileged_bpf_disabled=1: root-only BPF. core_pattern: defines where/how core dumps are written. pid_max: maximum PID value.',
+         perms:'dr-xr-xr-x  root root',
+         files:['hostname','dmesg_restrict','kptr_restrict','randomize_va_space','panic','panic_on_oops','sysrq','pid_max','core_pattern','core_uses_pid','yama/ptrace_scope','perf_event_paranoid','unprivileged_bpf_disabled','unprivileged_userns_clone','modules_disabled','ngroups_max','msgmax'],
+         tip:'<code>sysctl kernel.kptr_restrict kernel.randomize_va_space kernel.yama.ptrace_scope</code> checks key security settings.'},
+        {id:'proc-sys-net',name:'net/',cat:'device',label:'net/',
+         type:'network stack tunables',
+         role:'Network performance and security kernel parameters.',
+         desc:'ipv4/tcp_syncookies=1: SYN flood defense (required). ipv4/ip_forward=0: routing/NAT disabled by default. ipv4/conf/all/rp_filter=1: strict reverse path filtering (anti-spoofing). ipv4/conf/all/log_martians=1: log impossible source addresses. core/somaxconn: max backlog for listen(). net/netfilter/nf_conntrack_max: connection tracking table size.',
+         perms:'dr-xr-xr-x  root root',
+         files:['ipv4/ip_forward','ipv4/tcp_syncookies','ipv4/tcp_fin_timeout','ipv4/tcp_keepalive_time','ipv4/conf/all/rp_filter','ipv4/conf/all/log_martians','ipv4/conf/all/accept_redirects','ipv4/conf/all/send_redirects','core/somaxconn','core/rmem_max','core/wmem_max','core/netdev_max_backlog','ipv6/conf/all/disable_ipv6'],
+         tip:'<code>sysctl -a | grep "tcp_syncookies\|rp_filter\|log_martians"</code> checks key network security settings.'},
+        {id:'proc-sys-vm',name:'vm/',cat:'device',label:'vm/',
+         type:'virtual memory manager tunables',
+         role:'Memory management kernel parameters: swap preference, dirty page policy, overcommit.',
+         desc:'swappiness (0–200): how aggressively to use swap (default 60; 10 for desktops; 1 for databases). overcommit_memory: 0=heuristic, 1=always allow, 2=strict (refuse over-allocation). dirty_ratio: % of RAM dirty before writes block. drop_caches: write 1(page), 2(dentries/inodes), 3(all) to reclaim cache. mmap_min_addr: NULL pointer exploit mitigation.',
+         perms:'dr-xr-xr-x  root root',
+         files:['swappiness','dirty_ratio','dirty_background_ratio','overcommit_memory','overcommit_ratio','drop_caches','mmap_min_addr','min_free_kbytes','vfs_cache_pressure','nr_hugepages'],
+         tip:'<code>echo 3 > /proc/sys/vm/drop_caches</code> drops all page cache (safe on live system). <code>sysctl vm.swappiness</code> checks swap preference.'},
+      ]},
+     {id:'proc-kallsyms',name:'/proc/kallsyms',cat:'device',label:'kallsyms',
+      type:'kernel symbol table',
+      role:'All kernel function and variable symbols with their virtual addresses.',
+      desc:'One line per symbol: address type name [module]. With kptr_restrict=2 (recommended), non-root users see all-zero addresses — preventing KASLR bypass. Root sees real addresses. Used by: klogd (resolving addresses in kernel messages), crash analysis tools, rootkit detection (check for missing/modified symbols). Same as /boot/System.map but live.',
+      perms:'-r--r--r--  root root',
+      files:[],
+      tip:'<code>grep " T tcp_connect$" /proc/kallsyms</code> finds a specific kernel function address (root only with kptr_restrict=0).'},
+     {id:'proc-interrupts',name:'/proc/interrupts',cat:'device',label:'interrupts',
+      type:'IRQ statistics table',
+      role:'Per-CPU hardware interrupt counter table since boot. Shows IRQ distribution across CPUs.',
+      desc:'Rows: IRQ number or named IRQ. Columns: count per CPU, plus IRQ type (IO-APIC, MSI, etc.) and device name. High IRQ counts on one CPU (typically CPU0) indicates IRQ imbalance — configure irqbalance or set IRQ affinity. "LOC" = local timer interrupt (scheduler tick), "TLB" = TLB shootdown.',
+      perms:'-r--r--r--  root root',
+      files:[],
+      tip:'<code>watch -d cat /proc/interrupts</code> highlights changing interrupt counts. <code>cat /proc/irq/<N>/smp_affinity</code> shows IRQ CPU affinity.'},
+   ]},
+
+  //───────────── /sys ─────────────
+  {id:'sys',name:'/sys',cat:'device',label:'/sys',badge:'sysfs (virtual)',
+   type:'kernel object model (sysfs)',
+   role:'sysfs — the kernel device model and hardware topology exposed as a navigable filesystem.',
+   desc:'Introduced in Linux 2.6 to replace /proc for device info. Provides structured view of all kernel objects: devices, buses, drivers, classes, power management. Used by udev to populate /dev and manage hotplug. Everything is a kobject with attributes as files.',
+   perms:'dr-xr-xr-x  root root  (sysfs)',
+   files:['block/','bus/','class/','devices/','firmware/','fs/','kernel/','module/','power/'],
+   tip:'<code>cat /sys/class/power_supply/BAT0/capacity</code> shows battery %. <code>udevadm info -a -n /dev/sda</code> walks sysfs for a device.',
+   children:[
+     {id:'sys-class',name:'/sys/class',cat:'device',label:'class/',
+      type:'device class directory',
+      role:'Devices organised by class/type: net, block, input, backlight, power_supply, leds, etc.',
+      desc:'Each subdirectory is a class of devices with symlinks to the actual device in /sys/devices/. Read/write attribute files to inspect and control hardware without ioctl. Many values are writable by root (or members of specific groups) for live hardware control.',
+      perms:'dr-xr-xr-x  root root',
+      files:['net/','block/','input/','tty/','usb_device/','power_supply/','backlight/','leds/','thermal/','hwmon/','rtc/','drm/','nvme/','scsi_device/','scsi_disk/','scsi_host/','sound/','video4linux/','mem/'],
+      tip:'<code>ls /sys/class/</code> lists all device classes. <code>cat /sys/class/net/eth0/speed</code> shows NIC link speed.',
+      children:[
+        {id:'sys-class-net',name:'/sys/class/net',cat:'device',label:'net/',
+         type:'network interface sysfs',
+         role:'sysfs entries for every network interface: Ethernet, WiFi, loopback, bridges, VLANs, VPNs.',
+         desc:'Each directory is an interface. Attribute files: address (MAC), mtu, speed, duplex, operstate (up/down/unknown), carrier (link detected), tx_queue_len, statistics/ (rx_bytes, rx_errors, tx_bytes, tx_dropped, etc.), queues/ (tx queue config). Symlink to bus device for hardware interfaces.',
+         perms:'dr-xr-xr-x  root root',
+         files:['lo/','eth0/','ens3/','ens160/','wlan0/','docker0/','virbr0/','tun0/','flannel.1/','cni0/'],
+         tip:'<code>cat /sys/class/net/eth0/statistics/rx_bytes</code> shows bytes received. <code>cat /sys/class/net/eth0/operstate</code> shows up/down status.'},
+        {id:'sys-class-block',name:'/sys/class/block',cat:'device',label:'block/',
+         type:'block device sysfs',
+         role:'sysfs entries for every block device: disks, partitions, loop devices, DM targets.',
+         desc:'Attribute files: size (in 512-byte sectors), ro (read-only flag), stat (I/O stats: reads/writes/sectors/ticks/in_flight), queue/ (I/O scheduler settings — scheduler, nr_requests, rotational, optimal_io_size). Parent device info via device/ symlink. Rotational=0 for SSDs.',
+         perms:'dr-xr-xr-x  root root',
+         files:['sda/','sda1/','nvme0n1/','nvme0n1p1/','loop0/','dm-0/','dm-1/'],
+         tip:'<code>cat /sys/class/block/sda/queue/rotational</code> — 0 = SSD, 1 = HDD. <code>cat /sys/class/block/sda/size</code> gives size in 512-byte sectors.'},
+        {id:'sys-class-power',name:'/sys/class/power_supply',cat:'device',label:'power_supply/',
+         type:'battery & power supply sysfs',
+         role:'Battery and AC adapter real-time status: charge level, voltage, current, health, cycle count.',
+         desc:'BAT0/ (or BAT1, etc.): capacity (0–100%), status (Charging/Discharging/Full/Unknown), energy_now, energy_full, energy_full_design, voltage_now, current_now, charge_cycles, manufacturer, model_name, serial_number, technology (Li-ion/NiMH), health (Good/Dead/Overvoltage). AC0/: online (1=on AC, 0=on battery).',
+         perms:'dr-xr-xr-x  root root',
+         files:['BAT0/','BAT0/capacity','BAT0/status','BAT0/energy_now','BAT0/energy_full','BAT0/energy_full_design','BAT0/voltage_now','BAT0/charge_cycles','BAT0/manufacturer','BAT0/model_name','BAT0/technology','AC0/','AC0/online'],
+         tip:'<code>upower -i $(upower -e | grep BAT)</code> shows detailed battery info. <code>cat /sys/class/power_supply/BAT0/capacity</code> for quick check.'},
+        {id:'sys-class-hwmon',name:'/sys/class/hwmon',cat:'device',label:'hwmon/',
+         type:'hardware monitoring sensors',
+         role:'Hardware sensor readings: CPU temperature, fan speeds, voltages, power consumption.',
+         desc:'Each hwmonN/ directory is one sensor chip. Files: name (chip name), temp1_input (millidegrees Celsius), temp1_max, temp1_crit, fan1_input (RPM), in0_input (millivolts), power1_input (microwatts). The sensors command reads all these files and formats them. lm-sensors kernel modules provide the data.',
+         perms:'dr-xr-xr-x  root root',
+         files:['hwmon0/','hwmon0/name','hwmon0/temp1_input','hwmon0/temp1_max','hwmon0/fan1_input','hwmon0/in0_input','hwmon1/'],
+         tip:'<code>sensors</code> command reads all hwmon data (install lm-sensors first). <code>cat /sys/class/hwmon/hwmon0/temp1_input</code> divides by 1000 for Celsius.'},
+      ]},
+     {id:'sys-fs-cgroup',name:'/sys/fs/cgroup',cat:'device',label:'fs/cgroup/',
+      type:'cgroup v2 unified hierarchy',
+      role:'cgroups v2: resource control groups for CPU, memory, I/O, and PID limits for all processes.',
+      desc:'cgroup v2 uses a unified hierarchy (one tree, all controllers). Every systemd service, Docker container, and user session has its own cgroup. Resource controllers: cpu (CPU bandwidth), memory (RSS/swap limits), io (block I/O throttling), pids (process count limits), cpuset (NUMA node/CPU pinning), freezer (pause all processes in group).',
+      perms:'drwxr-xr-x  root root',
+      files:['cgroup.controllers','cgroup.procs','cgroup.stat','cgroup.subtree_control','memory.stat','memory.current','cpu.stat','user.slice/','system.slice/','init.scope/'],
+      tip:'<code>systemd-cgls</code> shows the cgroup tree with processes. <code>cat /sys/fs/cgroup/memory.stat</code> shows root-level memory stats.',
+      children:[
+        {id:'sys-fs-cgroup-service',name:'system.slice/',cat:'device',label:'system.slice/',
+         type:'systemd system service cgroups',
+         role:'cgroup subtree for all systemd system services. Each service is a sub-cgroup.',
+         desc:'Each .service, .scope, and .slice unit managed by systemd has its own sub-cgroup here. Provides per-service resource isolation and accounting. Key files per service: cgroup.procs (PIDs), memory.current (current memory), memory.max (OOM kill threshold), memory.high (soft throttle limit), cpu.stat (CPU usage), io.stat (block I/O stats).',
+         perms:'drwxr-xr-x  root root',
+         files:['nginx.service/','docker.service/','sshd.service/','postgresql.service/','mysql.service/'],
+         tip:'<code>systemctl status nginx</code> shows the service\'s cgroup. <code>cat /sys/fs/cgroup/system.slice/nginx.service/memory.current</code> shows live memory usage.'},
+        {id:'sys-fs-cgroup-user',name:'user.slice/',cat:'device',label:'user.slice/',
+         type:'user session cgroups',
+         role:'cgroup subtree for all user sessions. Each UID gets a sub-slice.',
+         desc:'Each logged-in user gets user-<UID>.slice/ subdirectory. Within it: session-N.scope (per-login session — SSH, TTY), user@<UID>.service (systemd user instance). Resource limits per user can be set here. KillUserProcesses in logind.conf controls whether the cgroup is cleaned up on logout.',
+         perms:'drwxr-xr-x  root root',
+         files:['user-1000.slice/','user-1000.slice/session-1.scope/','user-1000.slice/user@1000.service/'],
+         tip:'<code>loginctl user-status 1000</code> shows a user\'s cgroup and resource usage. <code>systemctl --user list-units</code> shows user\'s services.'},
+      ]},
+     {id:'sys-kernel',name:'/sys/kernel',cat:'device',label:'kernel/',
+      type:'kernel internals via sysfs',
+      role:'Kernel internal subsystem interfaces: debug filesystem, LSM, IMA, memory, tracing.',
+      desc:'debug/ (debugfs): kernel debugging interfaces — eBPF program list, kprobes, tracing, KASAN output. security/: LSM interfaces — AppArmor policy, IMA measurement log, SELinux policy load. mm/: memory management tunables (transparent_hugepage, ksm, mmap_min_addr). tracing/: ftrace interface for kernel function tracing.',
+      perms:'dr-xr-xr-x  root root',
+      files:['debug/','tracing/','security/','security/lsm','security/apparmor/','security/ima/','mm/','profiling/','config/','notes/','uevent_helper','fscaps'],
+      tip:'<code>cat /sys/kernel/security/lsm</code> shows active LSMs. <code>mount -t debugfs none /sys/kernel/debug/</code> mounts the debug filesystem.',
+      children:[
+        {id:'sys-kernel-security',name:'security/',cat:'device',label:'security/',
+         type:'Linux Security Module interfaces',
+         role:'sysfs interfaces for Linux Security Modules: AppArmor, SELinux, IMA, EVM.',
+         desc:'lsm: lists active LSMs (apparmor, lockdown, etc.). apparmor/: AppArmor policy loading interface (/.enforce, /.remove, /.load for runtime policy management). ima/: IMA (Integrity Measurement Architecture) — ascii_runtime_measurements (TPM PCR log), binary_bios_measurements (UEFI event log), policy (write new IMA policy rules).',
+         perms:'dr-xr-xr-x  root root',
+         files:['lsm','apparmor/','apparmor/.enforce','apparmor/.remove','apparmor/.load','ima/','ima/ascii_runtime_measurements','ima/binary_bios_measurements','ima/policy','evm/','lockdown'],
+         tip:'<code>cat /sys/kernel/security/lsm</code> lists active LSMs. <code>cat /sys/kernel/security/apparmor/profiles</code> lists AppArmor profiles.'},
+      ]},
+     {id:'sys-firmware',name:'/sys/firmware',cat:'device',label:'firmware/',
+      type:'firmware & UEFI interfaces',
+      role:'Access to UEFI/ACPI firmware data: NVRAM variables, ACPI tables, EFI runtime services.',
+      desc:'efi/: UEFI EFI variable filesystem (efivarfs) — read/write NVRAM variables (boot order, Secure Boot keys, custom UEFI vars). efi/efivars/: individual EFI variables as files (name-GUID format). acpi/: ACPI tables (DSDT, SSDT). memmap/: EFI memory map. Used by efibootmgr, mokutil (Secure Boot key enrollment).',
+      perms:'dr-xr-xr-x  root root',
+      files:['efi/','efi/efivars/','efi/efivars/BootOrder-<GUID>','efi/efivars/SecureBoot-<GUID>','efi/efivars/SetupMode-<GUID>','efi/runtime-map','acpi/','acpi/tables/','acpi/tables/DSDT','memmap/'],
+      tip:'<code>efibootmgr -v</code> reads EFI boot entries from NVRAM. <code>mokutil --sb-state</code> checks Secure Boot status.'},
+   ]},
+
+  //───────────── /tmp ─────────────
+  {id:'tmp',name:'/tmp',cat:'misc',label:'/tmp',badge:'tmpfs (RAM)',
+   type:'temporary files',
+   role:'Temporary files. World-writable with sticky bit. Cleared on reboot (or sooner).',
+   desc:'On modern distros /tmp is a tmpfs mount in RAM — fast, no disk writes, no persistence. Sticky bit (mode 1777) prevents users from deleting each other\'s files. Size typically limited to 50% of RAM. Applications use it for scratch space, IPC sockets, and lock files.',
+   perms:'drwxrwxrwt  root root  (1777, sticky)',
+   files:[],
+   tip:'<code>df -h /tmp</code> shows RAM used. <code>mount | grep /tmp</code> confirms tmpfs. Sticky bit: only file owner or root can delete a file in /tmp.'},
+
+  //───────────── /run ─────────────
+  {id:'run',name:'/run',cat:'misc',label:'/run',badge:'tmpfs (RAM)',
+   type:'runtime state (cleared at boot)',
+   role:'Runtime state for the current boot: PID files, Unix sockets, lock files. Cleared on reboot.',
+   desc:'Replaced /var/run on modern systems. tmpfs-backed (RAM). Daemons write PID files here so init systems can track and signal them. Unix domain sockets (/run/docker.sock, /run/dbus/system_bus_socket) enable fast local IPC. Per-user runtime dirs under /run/user/.',
+   perms:'drwxr-xr-x  root root  (tmpfs)',
+   files:['systemd/','user/','dbus/','lock/','sshd.pid','docker.sock','containerd/','snapd/','snapd.socket','udev/','NetworkManager/','cloud-init/','motd.dynamic','samba/','cups.sock','cron.reboot'],
+   tip:'<code>ls /run/*.pid</code> shows PID files. <code>ss -lx</code> shows Unix sockets including in /run.',
+   children:[
+     {id:'run-systemd',name:'/run/systemd',cat:'misc',label:'systemd/',
+      type:'systemd runtime state',
+      role:'systemd runtime state: unit states, login sessions, inhibitor locks, socket activation data.',
+      desc:'units/: per-unit runtime state files (.state, .dropin, .stamp). seats/: logind seat objects (seat0). sessions/: per-login session files (contains: UID, seat, leader PID, class, remote status). users/: per-UID runtime data. private/: per-service private directories (PrivateTmp, PrivateNetwork runtime data). generator/: auto-generated unit files (from fstab, etc.).',
+      perms:'drwxr-xr-x  root root',
+      files:['units/','seats/','sessions/','users/','private/','generator/','generator.early/','generator.late/','journal/','resolve/','timesync/','system.conf.d/','coredump/'],
+      tip:'<code>loginctl list-sessions</code> shows active sessions. <code>systemd-inhibit --list</code> shows what is preventing sleep/shutdown.'},
+     {id:'run-user',name:'/run/user',cat:'misc',label:'user/',
+      type:'per-user XDG runtime dirs',
+      role:'Per-user XDG_RUNTIME_DIR: Wayland sockets, D-Bus session sockets, user service sockets.',
+      desc:'/run/user/<UID>/: mode 700, owned by user. Created by pam_systemd.so at login, removed on last logout. Key contents: wayland-0 (Wayland compositor socket), bus (D-Bus session socket), pipewire-0 (audio), pulse/ (PulseAudio socket), systemd/ (user systemd socket), gnupg/ (GPG agent socket). Provides ephemeral per-session IPC infrastructure.',
+      perms:'drwx------  user user  (700)',
+      files:['1000/','1000/bus','1000/wayland-0','1000/pulse/','1000/pulse/native','1000/systemd/','1000/pipewire-0','1000/gnupg/'],
+      tip:'<code>echo $XDG_RUNTIME_DIR</code> shows your runtime dir. <code>ls $XDG_RUNTIME_DIR</code> shows your active sockets.'},
+     {id:'run-docker-sock',name:'/run/docker.sock',cat:'misc',label:'docker.sock',
+      type:'Docker API Unix socket',
+      role:'Unix domain socket for all Docker CLI communication with the Docker daemon.',
+      desc:'All docker commands send JSON over this socket to dockerd. Members of the docker group can use this socket without sudo — granting effective root on the host (can mount / into a container). In Kubernetes/container environments, mounting this into a container = full host control. Monitor for unexpected access.',
+      perms:'srw-rw----  root docker',
+      files:[],
+      tip:'<code>curl --unix-socket /run/docker.sock http://localhost/v1.41/info | jq .Containers</code> queries Docker API directly. Being in the docker group = root.'},
+     {id:'run-sudo',name:'/run/sudo',cat:'misc',label:'sudo/ts/',
+      type:'sudo timestamp cache',
+      role:'sudo authentication timestamp files that cache successful authentication for N minutes.',
+      desc:'/run/sudo/ts/<username>: timestamp file written after successful sudo auth. sudo checks this before prompting for a password — if timestamp is fresh (default 5 minutes), skips re-authentication. Attack vector: /proc/<sudo_pid>/mem write can forge a timestamp. <code>sudo -K</code> deletes your timestamp immediately.',
+      perms:'drwx------  root root',
+      files:['ts/','ts/alice','ts/bob'],
+      tip:'<code>sudo -K</code> immediately invalidates your sudo timestamp. <code>sudo -v</code> refreshes it without running a command.'},
+   ]},
+
+  //───────────── /mnt ─────────────
+  {id:'mnt',name:'/mnt',cat:'misc',label:'/mnt',
+   type:'temporary mount point',
+   role:'Conventional temporary mount point for manually-mounted filesystems.',
+   desc:'Convention: mount a USB drive, NFS share, loop device, or disk image here temporarily for inspection or data transfer. Long-term mounts belong in /etc/fstab pointing to proper permanent mount points. /media is for removable media auto-mounted by udev/udisks.',
+   perms:'drwxr-xr-x  root root',
+   files:[],
+   tip:'<code>mount /dev/sdb1 /mnt && ls /mnt</code> mounts temporarily. <code>umount /mnt</code> to unmount. Use <code>mount -o loop file.iso /mnt</code> to mount ISO images.'},
+
+  //───────────── /media ─────────────
+  {id:'media',name:'/media',cat:'misc',label:'/media',
+   type:'auto-mounted removable media',
+   role:'Auto-mount point for removable media: USB drives, optical discs, SD cards.',
+   desc:'Desktop distros auto-mount removable devices here under /media/<username>/<device-label> via udev + udisksd/udev rules. Always unmount before physically removing hardware. The device label or UUID becomes the subdirectory name.',
+   perms:'drwxr-xr-x  root root',
+   files:['username/','username/USB-DRIVE/','cdrom/','username/DISK-LABEL/'],
+   tip:'<code>udisksctl unmount -b /dev/sdb1</code> safely unmounts. <code>udisksctl power-off -b /dev/sdb</code> safely powers off USB drive before removal.'},
+
+  //───────────── /opt ─────────────
+  {id:'opt',name:'/opt',cat:'misc',label:'/opt',
+   type:'optional third-party software',
+   role:'Self-contained third-party software packages not managed by the distro package manager.',
+   desc:'Commercial software (Google Chrome, Zoom, JetBrains IDEs, Oracle JDK) and manually installed packages. Each package gets its own /opt/<packagename>/ with its complete directory tree. Packages here don\'t interfere with package-manager-installed software. /opt/<vendor>/ or /opt/<package>/ convention.',
+   perms:'drwxr-xr-x  root root',
+   files:['google/','google/chrome/','sublime_text/','zoom/','jetbrains/','teamviewer/','containerd/','gitlab/','oracle/','java/'],
+   tip:'Add /opt/packagename/bin to $PATH to use binaries. <code>ls /opt/</code> shows third-party installed software.'},
+
+  //───────────── /srv ─────────────
+  {id:'srv',name:'/srv',cat:'misc',label:'/srv',
+   type:'service data directory',
+   role:'Data served by this system to external clients: web content, FTP files, Git repos.',
+   desc:'FHS-correct location for data served to clients. More semantically clear than /var/www for multi-service systems (e.g. /srv/http/ for web, /srv/ftp/ for FTP, /srv/git/ for Git). Less commonly used than /var/www in practice but correct by the standard.',
+   perms:'drwxr-xr-x  root root',
+   files:['http/','http/mysite/','ftp/','ftp/pub/','www/','git/','svn/','nfs/','tftp/'],
+   tip:'Set nginx/apache document root to /srv/http/mysite for FHS compliance. <code>ls /srv/</code> shows hosted services.'},
+
+  ]// end root children
+};// end TREE
+
+
+// ─── Layout constants ───────────────────────────────────────────────────
+const NW=90,NH=28,HG=10,VG=58,PAD=20;
+const expanded=new Set(['root']);
+let selectedId=null;
+let tx=40,ty=40,scale=1;
+let dragging=false,dragStartX=0,dragStartY=0,dragStartTx=0,dragStartTy=0;
+let panelVisible=true;
+
+function getVis(n){return(expanded.has(n.id)&&n.children)?n.children:[];}
+
+let leafX=0;
+function computeLayout(n,depth){
+  n._d=depth;
+  const ch=getVis(n);
+  if(!ch.length){n._cx=PAD+leafX*(NW+HG)+NW/2;leafX++;return;}
+  ch.forEach(c=>computeLayout(c,depth+1));
+  n._cx=(ch[0]._cx+ch[ch.length-1]._cx)/2;
+}
+function maxDepth(n){const ch=getVis(n);if(!ch.length)return n._d;return Math.max(...ch.map(maxDepth));}
+function layout(){leafX=0;computeLayout(TREE,0);}
+function allNodes(n,a=[]){a.push(n);(n.children||[]).forEach(c=>allNodes(c,a));return a;}
+
+// ─── Render ──────────────────────────────────────────────────────────────
+const NS='http://www.w3.org/2000/svg';
+const svgEl=document.getElementById('tree-svg');
+const treeG=document.getElementById('tree-g');
+const canvas=document.getElementById('canvas');
+
+function mkEl(tag,attrs){
+  const e=document.createElementNS(NS,tag);
+  Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));
+  return e;
+}
+
+function applyTransform(){
+  treeG.setAttribute('transform',`translate(${tx},${ty}) scale(${scale})`);
+  document.getElementById('zoom-label').textContent=Math.round(scale*100)+'%';
+}
+
+function render(){
+  layout();
+  treeG.innerHTML='';
+  const edgeG=mkEl('g',{});
+  const nodeG=mkEl('g',{});
+  treeG.appendChild(edgeG);
+  treeG.appendChild(nodeG);
+
+  function drawTree(n){
+    const c=CAT[n.cat];
+    const nx=n._cx-NW/2;
+    const ny=PAD+n._d*(NH+VG);
+    const isSel=n.id===selectedId;
+    const hasKids=!!(n.children&&n.children.length);
+    const isExp=hasKids&&expanded.has(n.id);
+
+    const g=document.createElementNS(NS,'g');
+    g.style.cursor='pointer';
+
+    if(isSel){
+      const glow=mkEl('rect',{x:nx-2,y:ny-2,width:NW+4,height:NH+4,rx:8,fill:'#ffffff14'});
+      g.appendChild(glow);
+    }
+
+    const rect=mkEl('rect',{x:nx,y:ny,width:NW,height:NH,rx:5,
+      fill:c.fill,stroke:isSel?'#ffffffcc':c.stroke,'stroke-width':isSel?1.5:0.75});
+    g.appendChild(rect);
+
+    let lbl=n.label||n.name;
+    if(lbl.length>11)lbl=lbl.slice(0,10)+'\u2026';
+
+    const txt=mkEl('text',{x:n._cx-(hasKids?7:0),y:ny+NH/2,
+      'text-anchor':'middle','dominant-baseline':'central',fill:c.text,
+      'font-family':"'JetBrains Mono', monospace",'font-size':'11',
+      'font-weight':isSel?'600':'400'});
+    txt.textContent=lbl;
+    g.appendChild(txt);
+
+    if(hasKids){
+      const ic=mkEl('circle',{cx:nx+NW-9,cy:ny+NH/2,r:5,
+        fill:isExp?c.stroke:'transparent',stroke:c.stroke,'stroke-width':'1'});
+      g.appendChild(ic);
+      const is=mkEl('text',{x:nx+NW-9,y:ny+NH/2,
+        'text-anchor':'middle','dominant-baseline':'central',
+        fill:isExp?c.fill:c.stroke,'font-size':'9','font-family':'monospace','font-weight':'700'});
+      is.textContent=isExp?'\u2212':'+';
+      g.appendChild(is);
+    }
+
+    g.addEventListener('click',e=>{
+      e.stopPropagation();
+      selectedId=n.id;
+      if(hasKids){if(expanded.has(n.id))expanded.delete(n.id);else expanded.add(n.id);}
+      showDetail(n);
+      render();
+    });
+
+    nodeG.appendChild(g);
+
+    const ch=getVis(n);
+    ch.forEach(child=>{
+      const x1=n._cx,y1=ny+NH;
+      const cy2=PAD+child._d*(NH+VG),x2=child._cx;
+      const my=(y1+cy2)/2;
+      const path=mkEl('path',{d:`M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${cy2}`,
+        fill:'none',stroke:CAT[child.cat].stroke,'stroke-width':'0.8',opacity:'0.4'});
+      edgeG.appendChild(path);
+      drawTree(child);
+    });
+  }
+
+  drawTree(TREE);
+  const md=maxDepth(TREE);
+  const svgW=PAD*2+leafX*(NW+HG);
+  const svgH=PAD*2+(md+1)*(NH+VG);
+  svgEl.setAttribute('width',svgW);
+  svgEl.setAttribute('height',svgH);
+  applyTransform();
+}
+
+// ─── Detail panel ─────────────────────────────────────────────────────────
+function findPath(target,node,path=[]){
+  path.push(node);
+  if(node.id===target.id)return path;
+  for(const ch of(node.children||[])){
+    const f=findPath(target,ch,[...path]);
+    if(f)return f;
+  }
+  return null;
+}
+
+function showDetail(n){
+  const panel=document.getElementById('detail');
+  const c=CAT[n.cat];
+  const pills=(n.files||[]).map(f=>`<span class="f-pill">${f}</span>`).join('');
+  const pathNodes=findPath(n,TREE);
+  const crumb=pathNodes?pathNodes.map(x=>x.label||x.name).join(' / '):'';
+
+  let html=`<div class="detail-inner">`;
+  if(crumb)html+=`<div class="d-crumb">${crumb}</div>`;
+  html+=`<div class="d-path">${n.name}</div>`;
+  html+=`<span class="d-badge" style="background:${c.bb};color:${c.bt};border:1px solid ${c.bbd}">${n.type}</span>`;
+  if(n.badge)html+=`<span class="d-badge" style="background:#191e24;color:#8b949e;border:1px solid #444c56">${n.badge}</span>`;
+  html+=`<div class="d-role">${n.role}</div>`;
+  html+=`<div class="d-desc">${n.desc}</div>`;
+  if(n.perms)html+=`<div class="d-perms"><div style="font-size:9px;color:var(--text3)">permissions</div><code>${n.perms}</code></div>`;
+  if(pills)html+=`<div class="d-label">common contents</div><div class="d-files">${pills}</div>`;
+  if(n.warn)html+=`<div class="d-warn"><strong>&#9888; security note &nbsp;</strong>${n.warn}</div>`;
+  if(n.tip)html+=`<div class="d-tip"><strong>tip &nbsp;</strong>${n.tip}</div>`;
+  if(n.children)html+=`<div class="expand-hint">${expanded.has(n.id)?'&#9650; click node to collapse':'&#9660; click node to expand children'}</div>`;
+  html+=`</div>`;
+  panel.innerHTML=html;
+}
+
+// ─── Pan/Zoom ─────────────────────────────────────────────────────────────
+canvas.addEventListener('mousedown',e=>{
+  if(e.button!==0)return;
+  dragging=true;dragStartX=e.clientX;dragStartY=e.clientY;
+  dragStartTx=tx;dragStartTy=ty;canvas.classList.add('panning');
+});
+window.addEventListener('mousemove',e=>{
+  if(!dragging)return;
+  tx=dragStartTx+(e.clientX-dragStartX);ty=dragStartTy+(e.clientY-dragStartY);
+  applyTransform();
+});
+window.addEventListener('mouseup',()=>{dragging=false;canvas.classList.remove('panning');});
+
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  const delta=e.deltaY>0?0.9:1.1;
+  const ns=Math.max(0.08,Math.min(5,scale*delta));
+  tx=mx-(mx-tx)*(ns/scale);ty=my-(my-ty)*(ns/scale);
+  scale=ns;applyTransform();
+},{passive:false});
+
+canvas.addEventListener('dblclick',()=>resetView());
+
+let lastTouchDist=0;
+canvas.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){dragging=true;dragStartX=e.touches[0].clientX;dragStartY=e.touches[0].clientY;dragStartTx=tx;dragStartTy=ty;}
+  else if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;lastTouchDist=Math.sqrt(dx*dx+dy*dy);}
+  e.preventDefault();
+},{passive:false});
+canvas.addEventListener('touchmove',e=>{
+  if(e.touches.length===1&&dragging){tx=dragStartTx+(e.touches[0].clientX-dragStartX);ty=dragStartTy+(e.touches[0].clientY-dragStartY);applyTransform();}
+  else if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;const dist=Math.sqrt(dx*dx+dy*dy);scale=Math.max(0.08,Math.min(5,scale*(dist/lastTouchDist)));lastTouchDist=dist;applyTransform();}
+  e.preventDefault();
+},{passive:false});
+canvas.addEventListener('touchend',()=>{dragging=false;});
+
+function zoomIn(){scale=Math.min(5,scale*1.2);applyTransform();}
+function zoomOut(){scale=Math.max(0.08,scale/1.2);applyTransform();}
+
+function zoomFit(){
+  layout();
+  const md=maxDepth(TREE);
+  const cW=PAD*2+leafX*(NW+HG);
+  const cH=PAD*2+(md+1)*(NH+VG);
+  const aw=canvas.clientWidth,ah=canvas.clientHeight;
+  scale=Math.min(aw/cW,ah/cH)*0.95;
+  tx=(aw-cW*scale)/2;ty=(ah-cH*scale)/2;
+  applyTransform();
+}
+
+// ─── Controls ─────────────────────────────────────────────────────────────
+function expandAll(){allNodes(TREE).forEach(n=>{if(n.children)expanded.add(n.id);});render();}
+function collapseAll(){expanded.clear();expanded.add('root');render();}
+function resetView(){
+  expanded.clear();expanded.add('root');selectedId=null;
+  document.getElementById('detail').innerHTML='<div class="detail-inner"><div class="ph"><span class="ph-icon">&#8984;</span>click any node<br>to inspect</div></div>';
+  render();tx=40;ty=40;scale=1;applyTransform();
+  setTimeout(zoomFit,50);
+}
+function togglePanel(){
+  panelVisible=!panelVisible;
+  const p=document.getElementById('detail'),btn=document.getElementById('panel-btn');
+  if(panelVisible){p.classList.remove('hidden');btn.classList.add('active');btn.textContent='\u25B6 panel';}
+  else{p.classList.add('hidden');btn.classList.remove('active');btn.textContent='\u25C0 panel';}
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+svgEl.style.width='200000px';svgEl.style.height='200000px';
+render();
+setTimeout(zoomFit,50);
+</script>
+</body>
+</html>
