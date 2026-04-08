@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Stack — Interactive Map</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #080c10;
+    --bg2: #0d1117;
+    --grid: rgba(0,200,255,0.04);
+    --border: rgba(0,200,255,0.15);
+    --accent: #00c8ff;
+    --accent2: #00ff9d;
+    --accent3: #ff6b35;
+    --accent4: #c77dff;
+    --text: #c9d8e8;
+    --dim: #4a6278;
+    --panel: rgba(8,14,22,0.97);
+
+    --c-perimeter: #ff6b35;
+    --c-network:   #00c8ff;
+    --c-endpoint:  #00ff9d;
+    --c-central:   #c77dff;
+    --c-access:    #ffd60a;
+    --c-data:      #ff4d6d;
+    --c-arch:      #74c0fc;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── grid background ── */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none;
+  }
+
+  /* ── header ── */
+  header {
+    position:relative;
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--border);
+    display:flex; align-items:center; gap:20px;
+  }
+  header::after {
+    content:'';
+    position:absolute; bottom:-1px; left:40px;
+    width:200px; height:2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+  .logo {
+    font-family:'Share Tech Mono', monospace;
+    font-size:11px; color:var(--accent);
+    letter-spacing:3px; text-transform:uppercase;
+    line-height:1.8;
+  }
+  .logo span { color:var(--dim); }
+  h1 {
+    font-size:clamp(20px, 3vw, 32px);
+    font-weight:700; letter-spacing:2px;
+    text-transform:uppercase; color:#fff;
+  }
+  h1 em { color:var(--accent); font-style:normal; }
+  .subtitle {
+    font-size:13px; color:var(--dim); letter-spacing:1px;
+    margin-top:2px;
+  }
+
+  /* ── layer legend ── */
+  .legend {
+    display:flex; flex-wrap:wrap; gap:12px;
+    padding: 14px 40px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,200,255,0.02);
+  }
+  .legend-item {
+    display:flex; align-items:center; gap:7px;
+    font-size:12px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--dim); cursor:pointer;
+    transition: color .2s;
+  }
+  .legend-item:hover { color:#fff; }
+  .legend-dot {
+    width:10px; height:10px; border-radius:50%;
+    flex-shrink:0;
+  }
+
+  /* ── main layout ── */
+  .layout {
+    display:flex;
+    min-height: calc(100vh - 120px);
+  }
+
+  /* ── map canvas ── */
+  .map-wrap {
+    flex:1; position:relative;
+    padding: 30px 20px;
+    overflow: auto;
+  }
+
+  .map-inner {
+    position:relative;
+    width: 860px; min-height: 580px;
+    margin: 0 auto;
+  }
+
+  svg.connections {
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    pointer-events:none;
+    overflow:visible;
+  }
+
+  /* ── layer bands ── */
+  .layer-band {
+    position:absolute; left:0; right:0;
+    border-left: 3px solid;
+    padding-left: 14px;
+    pointer-events:none;
+  }
+  .layer-band span {
+    font-family:'Share Tech Mono', monospace;
+    font-size:10px; letter-spacing:2px; text-transform:uppercase;
+    opacity:.45;
+  }
+
+  /* ── node cards ── */
+  .node {
+    position:absolute;
+    width:110px;
+    cursor:pointer;
+    transition: transform .2s, z-index 0s;
+    z-index:2;
+  }
+  .node:hover { transform: scale(1.07); z-index:10; }
+  .node.active { z-index:10; }
+
+  .node-inner {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius:6px;
+    padding: 10px 10px 8px;
+    position:relative;
+    overflow:hidden;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .node:hover .node-inner,
+  .node.active .node-inner {
+    box-shadow: 0 0 20px -4px var(--node-color, var(--accent));
+  }
+  .node.active .node-inner { border-color: var(--node-color, var(--accent)); }
+  .node-inner::before {
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:2px;
+    background: var(--node-color, var(--accent));
+  }
+  .node-tag {
+    font-family:'Share Tech Mono', monospace;
+    font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+    color: var(--node-color, var(--accent));
+    margin-bottom:5px;
+  }
+  .node-title {
+    font-size:13px; font-weight:700; line-height:1.2;
+    color:#fff; letter-spacing:.5px;
+  }
+  .node-abbr {
+    font-size:11px; color:var(--dim); margin-top:2px;
+    font-family:'Share Tech Mono', monospace;
+  }
+  .node-icon {
+    position:absolute; bottom:7px; right:9px;
+    font-size:16px; opacity:.55;
+  }
+
+  .node-pulse {
+    position:absolute; inset:-1px;
+    border-radius:6px;
+    border: 1px solid var(--node-color, var(--accent));
+    opacity:0;
+    animation: pulse-ring 2.5s ease-out infinite;
+    pointer-events:none;
+  }
+  .node.active .node-pulse { opacity:1; }
+  @keyframes pulse-ring {
+    0% { transform:scale(1); opacity:.6; }
+    100% { transform:scale(1.3); opacity:0; }
+  }
+
+  /* ── detail panel ── */
+  .panel {
+    width: 340px;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display:flex; flex-direction:column;
+    transition: width .3s;
+    overflow:hidden;
+    flex-shrink:0;
+  }
+  .panel.hidden { width:0; }
+
+  .panel-header {
+    padding: 20px 22px 14px;
+    border-bottom: 1px solid var(--border);
+    position:relative;
+  }
+  .panel-header::after {
+    content:'';
+    position:absolute; bottom:-1px; left:22px;
+    width:60px; height:2px;
+    background: var(--panel-color, var(--accent));
+  }
+  .panel-layer {
+    font-family:'Share Tech Mono', monospace;
+    font-size:10px; letter-spacing:2px; text-transform:uppercase;
+    color: var(--panel-color, var(--accent));
+    margin-bottom:6px;
+  }
+  .panel-title {
+    font-size:22px; font-weight:700; color:#fff; letter-spacing:1px;
+  }
+  .panel-full {
+    font-size:13px; color:var(--dim); margin-top:3px;
+  }
+
+  .panel-body {
+    padding: 18px 22px;
+    overflow-y: auto;
+    flex:1;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .panel-section { margin-bottom:20px; }
+  .panel-section-title {
+    font-family:'Share Tech Mono', monospace;
+    font-size:10px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--dim); margin-bottom:8px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .panel-section-title::after {
+    content:''; flex:1; height:1px;
+    background: var(--border);
+  }
+
+  .panel-desc {
+    font-size:14px; line-height:1.6; color:var(--text);
+  }
+
+  .analogy-box {
+    background: rgba(0,200,255,0.05);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--panel-color, var(--accent));
+    border-radius:4px;
+    padding: 10px 14px;
+    font-size:13px; line-height:1.6;
+    color: #a8c5da;
+    font-style:italic;
+  }
+
+  .tag-list {
+    display:flex; flex-wrap:wrap; gap:6px;
+  }
+  .tag {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius:3px;
+    padding: 3px 9px;
+    font-family:'Share Tech Mono', monospace;
+    font-size:11px; color:var(--text);
+  }
+
+  .use-list {
+    list-style:none;
+    display:flex; flex-direction:column; gap:5px;
+  }
+  .use-list li {
+    font-size:13px; line-height:1.5;
+    padding-left:14px; position:relative;
+    color:var(--text);
+  }
+  .use-list li::before {
+    content:'›';
+    position:absolute; left:0;
+    color: var(--panel-color, var(--accent));
+    font-size:15px; line-height:1.3;
+  }
+
+  .how-steps {
+    counter-reset:step;
+    display:flex; flex-direction:column; gap:7px;
+  }
+  .how-step {
+    display:flex; gap:10px; align-items:flex-start;
+    font-size:13px; line-height:1.5;
+  }
+  .step-num {
+    font-family:'Share Tech Mono', monospace;
+    font-size:10px; color:var(--panel-color, var(--accent));
+    background: rgba(0,200,255,0.08);
+    border: 1px solid var(--border);
+    border-radius:3px;
+    padding:2px 6px;
+    flex-shrink:0; margin-top:1px;
+  }
+
+  .close-btn {
+    position:absolute; top:16px; right:16px;
+    background:none; border: 1px solid var(--border);
+    color:var(--dim); width:26px; height:26px;
+    border-radius:4px; cursor:pointer; font-size:14px;
+    display:flex; align-items:center; justify-content:center;
+    transition: color .2s, border-color .2s;
+  }
+  .close-btn:hover { color:#fff; border-color: var(--accent); }
+
+  /* ── connection lines ── */
+  .conn-line {
+    stroke: rgba(0,200,255,0.12);
+    stroke-width:1;
+    fill:none;
+    stroke-dasharray: 4 4;
+  }
+  .conn-line.active {
+    stroke: var(--accent);
+    opacity:.5;
+    stroke-dasharray: none;
+  }
+
+  /* ── how-they-work-together strip ── */
+  .chain-strip {
+    padding: 14px 40px;
+    border-top: 1px solid var(--border);
+    background: rgba(0,255,157,0.02);
+    display:flex; align-items:center; gap:0;
+    overflow-x:auto; flex-wrap:nowrap;
+  }
+  .chain-item {
+    display:flex; align-items:center; gap:0;
+    flex-shrink:0;
+  }
+  .chain-node {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius:4px; padding: 6px 12px;
+    font-size:12px; letter-spacing:.5px;
+    font-weight:600; white-space:nowrap;
+    cursor:pointer;
+    transition: border-color .2s, color .2s;
+  }
+  .chain-node:hover { border-color:var(--accent); color:var(--accent); }
+  .chain-arrow {
+    font-size:16px; color:var(--dim); padding: 0 6px;
+    flex-shrink:0;
+  }
+  .chain-label {
+    font-family:'Share Tech Mono', monospace;
+    font-size:9px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--dim); padding: 0 30px 0 10px;
+    flex-shrink:0;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width:5px; height:5px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    SECSEC<span>//</span>OPS<br>
+    <span>MAP v1.0</span>
+  </div>
+  <div>
+    <h1>Security Stack <em>Interactive Map</em></h1>
+    <div class="subtitle">Click any node to explore the tool — layered defence architecture</div>
+  </div>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--c-perimeter)"></div>Perimeter</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--c-network)"></div>Network</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--c-endpoint)"></div>Endpoint</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--c-central)"></div>Centralised Ops</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--c-access)"></div>Access Control</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--c-data)"></div>Data Protection</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--c-arch)"></div>Architecture / Monitoring</div>
+</div>
+
+<div class="layout">
+  <div class="map-wrap" id="mapWrap">
+    <div class="map-inner" id="mapInner">
+
+      <!-- Layer band labels -->
+      <div class="layer-band" style="top:30px;height:90px;border-color:var(--c-perimeter)">
+        <span>Perimeter</span>
+      </div>
+      <div class="layer-band" style="top:135px;height:90px;border-color:var(--c-network)">
+        <span>Network</span>
+      </div>
+      <div class="layer-band" style="top:240px;height:90px;border-color:var(--c-endpoint)">
+        <span>Endpoint</span>
+      </div>
+      <div class="layer-band" style="top:345px;height:90px;border-color:var(--c-central)">
+        <span>Centralised Ops</span>
+      </div>
+      <div class="layer-band" style="top:450px;height:90px;border-color:var(--c-arch)">
+        <span>Architecture / Monitoring</span>
+      </div>
+
+      <!-- SVG connection lines -->
+      <svg class="connections" id="connSvg"></svg>
+
+      <!-- NODES -->
+
+      <!-- Perimeter layer -->
+      <div class="node" id="node-utm" style="left:80px;top:40px;--node-color:var(--c-perimeter)" onclick="openPanel('utm')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Perimeter</div>
+          <div class="node-title">UTM</div>
+          <div class="node-abbr">Unified Threat Mgmt</div>
+          <div class="node-icon">🛠</div>
+        </div>
+      </div>
+
+      <div class="node" id="node-nips" style="left:240px;top:40px;--node-color:var(--c-perimeter)" onclick="openPanel('nips')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Perimeter</div>
+          <div class="node-title">NIPS / NIDS</div>
+          <div class="node-abbr">Network IPS/IDS</div>
+          <div class="node-icon">🌐</div>
+        </div>
+      </div>
+
+      <div class="node" id="node-sase" style="left:420px;top:40px;--node-color:var(--c-perimeter)" onclick="openPanel('sase')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Perimeter</div>
+          <div class="node-title">SASE</div>
+          <div class="node-abbr">Secure Access SE</div>
+          <div class="node-icon">☁️</div>
+        </div>
+      </div>
+
+      <div class="node" id="node-sdwan" style="left:580px;top:40px;--node-color:var(--c-arch)" onclick="openPanel('sdwan')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Architecture</div>
+          <div class="node-title">SD-WAN</div>
+          <div class="node-abbr">Soft-Defined WAN</div>
+          <div class="node-icon">🌐</div>
+        </div>
+      </div>
+
+      <div class="node" id="node-sdn" style="left:720px;top:40px;--node-color:var(--c-arch)" onclick="openPanel('sdn')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Architecture</div>
+          <div class="node-title">SDN</div>
+          <div class="node-abbr">Soft-Defined Net</div>
+          <div class="node-icon">🔗</div>
+        </div>
+      </div>
+
+      <!-- Network layer -->
+      <div class="node" id="node-idsips" style="left:80px;top:150px;--node-color:var(--c-network)" onclick="openPanel('idsips')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Network</div>
+          <div class="node-title">IDS / IPS</div>
+          <div class="node-abbr">Intrusion Det/Prev</div>
+          <div class="node-icon">🔍</div>
+        </div>
+      </div>
+
+      <div class="node" id="node-nac" style="left:250px;top:150px;--node-color:var(--c-access)" onclick="openPanel('nac')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Access Control</div>
+          <div class="node-title">NAC</div>
+          <div class="node-abbr">Network Access Ctrl</div>
+          <div class="node-icon">🚪</div>
+        </div>
+      </div>
+
+      <div class="node" id="node-tap" style="left:420px;top:150px;--node-color:var(--c-arch)" onclick="openPanel('tap')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Monitoring</div>
+          <div class="node-title">Network TAP</div>
+          <div class="node-abbr">Traffic Analysis Pt</div>
+          <div class="node-icon">🔌</div>
+        </div>
+      </div>
+
+      <div class="node" id="node-mirror" style="left:570px;top:150px;--node-color:var(--c-arch)" onclick="openPanel('mirror')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Monitoring</div>
+          <div class="node-title">Port Mirroring</div>
+          <div class="node-abbr">SPAN / Traffic Copy</div>
+          <div class="node-icon">📋</div>
+        </div>
+      </div>
+
+      <div class="node" id="node-rep" style="left:720px;top:150px;--node-color:var(--c-network)" onclick="openPanel('rep')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Network</div>
+          <div class="node-title">Threat Intel</div>
+          <div class="node-abbr">Reputation Tools</div>
+          <div class="node-icon">🌐</div>
+        </div>
+      </div>
+
+      <!-- Endpoint layer -->
+      <div class="node" id="node-edr" style="left:300px;top:258px;--node-color:var(--c-endpoint)" onclick="openPanel('edr')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Endpoint</div>
+          <div class="node-title">EDR</div>
+          <div class="node-abbr">Endpoint Det & Resp</div>
+          <div class="node-icon">💻</div>
+        </div>
+      </div>
+
+      <div class="node" id="node-dlp" style="left:520px;top:258px;--node-color:var(--c-data)" onclick="openPanel('dlp')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Data Protection</div>
+          <div class="node-title">DLP</div>
+          <div class="node-abbr">Data Loss Prev</div>
+          <div class="node-icon">🏦</div>
+        </div>
+      </div>
+
+      <!-- Centralised Ops -->
+      <div class="node" id="node-siem" style="left:220px;top:365px;--node-color:var(--c-central)" onclick="openPanel('siem')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Centralised Ops</div>
+          <div class="node-title">SIEM</div>
+          <div class="node-abbr">Sec Info & Event Mgmt</div>
+          <div class="node-icon">📊</div>
+        </div>
+      </div>
+
+      <div class="node" id="node-soar" style="left:440px;top:365px;--node-color:var(--c-central)" onclick="openPanel('soar')">
+        <div class="node-pulse"></div>
+        <div class="node-inner">
+          <div class="node-tag">Centralised Ops</div>
+          <div class="node-title">SOAR</div>
+          <div class="node-abbr">Orch, Auto & Response</div>
+          <div class="node-icon">🤖</div>
+        </div>
+      </div>
+
+    </div><!-- map-inner -->
+  </div><!-- map-wrap -->
+
+  <!-- Detail panel -->
+  <div class="panel hidden" id="panel">
+    <div class="panel-header" id="panelHeader">
+      <button class="close-btn" onclick="closePanel()">✕</button>
+      <div class="panel-layer" id="panelLayer"></div>
+      <div class="panel-title" id="panelTitle"></div>
+      <div class="panel-full" id="panelFull"></div>
+    </div>
+    <div class="panel-body" id="panelBody"></div>
+  </div>
+</div>
+
+<!-- Chain strip -->
+<div class="chain-strip">
+  <div class="chain-label">Incident flow →</div>
+  <div class="chain-item">
+    <div class="chain-node" onclick="openPanel('edr')" style="border-color:var(--c-endpoint);color:var(--c-endpoint)">EDR</div>
+    <div class="chain-arrow">→</div>
+  </div>
+  <div class="chain-item">
+    <div class="chain-node" onclick="openPanel('siem')" style="border-color:var(--c-central);color:var(--c-central)">SIEM</div>
+    <div class="chain-arrow">→</div>
+  </div>
+  <div class="chain-item">
+    <div class="chain-node" onclick="openPanel('soar')" style="border-color:var(--c-central);color:var(--c-central)">SOAR</div>
+    <div class="chain-arrow">→</div>
+  </div>
+  <div class="chain-item">
+    <div class="chain-node" onclick="openPanel('nac')" style="border-color:var(--c-access);color:var(--c-access)">NAC</div>
+    <div class="chain-arrow">→</div>
+  </div>
+  <div class="chain-item">
+    <div class="chain-node" onclick="openPanel('utm')" style="border-color:var(--c-perimeter);color:var(--c-perimeter)">UTM / NIPS</div>
+  </div>
+  <div class="chain-label" style="padding-left:20px; color:var(--dim)">
+    ← Ransomware detection to containment
+  </div>
+</div>
+
+<script>
+const DATA = {
+  utm: {
+    layer: 'Perimeter', color: 'var(--c-perimeter)',
+    title: 'UTM', full: 'Unified Threat Management',
+    icon: '🛠',
+    desc: 'An all-in-one security appliance that combines multiple security functions into a single device at the network perimeter. Think of it as a Swiss Army knife — firewall, IDS/IPS, antivirus, VPN, web filtering, and email filtering in one box.',
+    analogy: '🏰 Castle gatehouse: guards check IDs (firewall), inspect packages (antivirus), block suspicious visitors (IDS/IPS), and log everything.',
+    how: ['Sits at the perimeter between Internet and internal network', 'Inspects all inbound and outbound traffic', 'Applies configured security policies (e.g. block Tor, scan for malware)'],
+    uses: ['Small/medium businesses — simplifies security management', 'Branch offices — consolidates multiple tools', 'Compliance environments (PCI-DSS cardholder data)'],
+    tools: ['Fortinet FortiGate', 'Palo Alto PA-Series', 'Sophos XGS', 'WatchGuard Firebox'],
+    tip: '⚠ Exam tip: UTM is a consolidation tool. Know pros (simple, cost-effective) vs cons (single point of failure, performance impact).',
+    connects: ['nips', 'siem', 'idsips']
+  },
+  nips: {
+    layer: 'Perimeter', color: 'var(--c-perimeter)',
+    title: 'NIPS / NIDS', full: 'Network Intrusion Prevention / Detection System',
+    icon: '🌐',
+    desc: 'NIPS blocks network-level attacks inline; NIDS passively detects them out-of-band. Both protect the network boundary.',
+    analogy: '👁 NIDS = security camera (records). NIPS = security guard (stops). Watchtowers on the castle wall.',
+    how: ['NIDS: placed on a network tap, alerts only — no blocking', 'NIPS: placed inline between networks, actively blocks traffic', 'Both use signature, anomaly, and heuristic detection methods'],
+    uses: ['Detecting port scans (e.g. Nmap)', 'Blocking malware C2 traffic', 'Stopping DoS/DDoS attacks'],
+    tools: ['Snort (IDS/IPS, open-source)', 'Suricata (high-performance)', 'Zeek / Bro (NIDS monitoring mode)', 'Cisco Firepower'],
+    tip: '⚠ Exam tip: NIPS is inline (blocks). NIDS is passive (alerts only). Performance impact differs.',
+    connects: ['utm', 'siem', 'idsips']
+  },
+  sase: {
+    layer: 'Perimeter / Cloud', color: 'var(--c-perimeter)',
+    title: 'SASE', full: 'Secure Access Service Edge',
+    icon: '☁️',
+    desc: 'Converges SD-WAN with cloud-delivered security (firewall, SWG, CASB, ZTNA). Security travels with the user rather than living at a fixed perimeter.',
+    analogy: '🏰 Mobile fortress that moves with the king — security is applied wherever the user goes.',
+    how: ['Combines networking and security in a cloud platform', 'ZTNA grants access based on identity, not location', 'Cloud-delivered firewall, SWG, and DLP as a service'],
+    uses: ['Remote workforce — secure access from anywhere', 'Cloud-first organisations (AWS, Azure, SaaS)', 'Replacing legacy VPN + perimeter models'],
+    tools: ['Palo Alto Prisma SASE', 'Cisco Umbrella + Viptela', 'Fortinet SASE'],
+    tip: '⚠ Exam tip: SASE = SD-WAN + security in the cloud. Focus on ZTNA and the cloud-delivered model vs on-prem UTM.',
+    connects: ['sdwan', 'utm']
+  },
+  sdwan: {
+    layer: 'Architecture', color: 'var(--c-arch)',
+    title: 'SD-WAN', full: 'Software-Defined Wide Area Network',
+    icon: '🌐',
+    desc: 'Uses software to manage and optimise WAN connections (MPLS, broadband, LTE), choosing the fastest route dynamically based on traffic conditions.',
+    analogy: '🚚 Royal courier service: if the main road (MPLS) is blocked, the courier automatically takes a detour (broadband).',
+    how: ['Uses multiple uplinks (MPLS + broadband + LTE)', 'Dynamically routes traffic based on latency, jitter, packet loss', 'Prioritises critical traffic (e.g. VoIP > file downloads)'],
+    uses: ['Branch office connectivity', 'Direct cloud/SaaS breakout without backhauling to HQ', 'WAN cost reduction (replacing expensive MPLS)'],
+    tools: ['Cisco Viptela', 'VMware Velocloud', 'Fortinet Secure SD-WAN'],
+    tip: '⚠ Exam tip: SD-WAN focuses on networking (not security). SASE adds security on top.',
+    connects: ['sase', 'sdn']
+  },
+  sdn: {
+    layer: 'Architecture', color: 'var(--c-arch)',
+    title: 'SDN', full: 'Software-Defined Networking',
+    icon: '🔗',
+    desc: 'Decouples the control plane (decision-making) from the data plane (traffic forwarding), centralising network management via a controller.',
+    analogy: '👑 Centralised command centre: the king (controller) decides where traffic goes; the knights (switches) follow orders.',
+    how: ['Controller (e.g. OpenDaylight, Cisco ACI) manages all network policies', 'Switches and routers forward traffic based on controller instructions', 'Enables dynamic, programmable network configuration'],
+    uses: ['Cloud data centres — dynamic, scalable networks', 'Network automation — auto-provisioning VLANs', 'Micro-segmentation in zero-trust environments'],
+    tools: ['Cisco ACI', 'VMware NSX', 'OpenDaylight'],
+    tip: '⚠ Exam tip: Know control plane vs data plane split. SDN is about programmability; SD-WAN is about WAN optimisation.',
+    connects: ['sdwan']
+  },
+  idsips: {
+    layer: 'Network', color: 'var(--c-network)',
+    title: 'IDS / IPS', full: 'Intrusion Detection / Prevention System',
+    icon: '🔍',
+    desc: 'IDS detects suspicious activity and alerts; IPS detects and actively blocks it. Detection methods include signature-based, anomaly-based, and heuristic (AI/ML).',
+    analogy: '📹 IDS = security camera (records). 💪 IPS = security guard (stops). Know who is coming before they cause damage.',
+    how: ['Signature-based: matches known attack fingerprints', 'Anomaly-based: flags deviation from baseline behaviour', 'Heuristic-based: uses AI/ML for unknown/new attacks'],
+    uses: ['Detecting port scans', 'Blocking malware command-and-control traffic', 'Stopping DoS/DDoS attacks'],
+    tools: ['Snort (open-source)', 'Suricata', 'Cisco Firepower'],
+    tip: '⚠ Exam tip: IDS = passive (alerts). IPS = active (blocks). Both can be host-based (HIDS/HIPS) or network-based (NIDS/NIPS).',
+    connects: ['nips', 'utm', 'siem', 'nac']
+  },
+  nac: {
+    layer: 'Access Control', color: 'var(--c-access)',
+    title: 'NAC', full: 'Network Access Control',
+    icon: '🚪',
+    desc: 'Controls who and what can access the network by checking device health, authenticating users/devices, and enforcing policies before allowing entry.',
+    analogy: '🎪 Bouncers at castle gates: check IDs (authenticate), check for weapons (compliance), decide who enters (enforce policies).',
+    how: ['Checks device health: antivirus running? OS patched?', 'Authenticates users and devices against policy', 'Enforces access: full access, guest VLAN, or quarantine'],
+    uses: ['Stopping unpatched/non-compliant devices from connecting', 'Enforcing BYOD security standards', 'Automatically quarantining compromised endpoints'],
+    tools: ['Cisco Identity Services Engine (ISE)', 'Aruba ClearPass', 'Microsoft NPS'],
+    tip: '⚠ Exam tip: Know agent-based (installs on device) vs agentless (network scan) NAC. Also inline vs out-of-band enforcement.',
+    connects: ['idsips', 'soar', 'edr']
+  },
+  tap: {
+    layer: 'Monitoring', color: 'var(--c-arch)',
+    title: 'Network TAP', full: 'Test Access Point',
+    icon: '🔌',
+    desc: 'A physical device that passively copies all network traffic with zero performance impact on the network. The gold standard for permanent, reliable monitoring.',
+    analogy: '🔭 Dedicated spyglass: always watching, never interfering. Traffic is mirrored to your SIEM or IDS without adding load.',
+    how: ['Physical inline or passive device', 'Copies all packets to a monitoring port', 'No load on the switch; cannot drop packets'],
+    uses: ['Permanent high-fidelity monitoring feeds for SIEM', 'Forensics and packet capture', 'IDS/IPS sensor feeds in high-throughput environments'],
+    tools: ['Garland Technology TAPs', 'Ixia Vision ONE', 'NETSCOUT nTAP'],
+    tip: '⚠ Exam tip: TAP = reliable, no packet drop, hardware required. Port mirroring = cheap but can drop packets under load.',
+    connects: ['mirror', 'siem', 'idsips']
+  },
+  mirror: {
+    layer: 'Monitoring', color: 'var(--c-arch)',
+    title: 'Port Mirroring', full: 'SPAN — Switched Port Analyser',
+    icon: '📋',
+    desc: 'Copies traffic from one or more switch ports to a designated monitoring port using switch software config. Cheap and easy but adds CPU load to the switch.',
+    analogy: '📜 Copying a royal decree to a scribe — convenient, but slows the clerk down during busy periods.',
+    how: ['Configured on managed switches (SPAN / RSPAN)', 'Selected port traffic is duplicated to a monitor port', 'Overloaded switches may drop mirrored packets'],
+    uses: ['Temporary network troubleshooting', 'Quick IDS sensor deployment without hardware TAPs', 'Traffic analysis in lab / dev environments'],
+    tools: ['Configured natively on Cisco / Juniper / Aruba switches'],
+    tip: '⚠ Exam tip: Port mirroring can drop packets if the switch is overloaded. Use a hardware TAP for production forensics.',
+    connects: ['tap', 'siem']
+  },
+  rep: {
+    layer: 'Network', color: 'var(--c-network)',
+    title: 'Threat Intel', full: 'Threat Data Reputation Tools',
+    icon: '🌐',
+    desc: 'Identifies and blocks malicious IPs, domains, and URLs by comparing against threat intelligence feeds. Enriches alerts from other tools with context.',
+    analogy: '🔭 Spyglass with a wanted-poster database — see if a traveller is known before they reach the gate.',
+    how: ['Compares IPs/domains/URLs against threat intel feeds', 'Blocks or alerts on connections to suspicious destinations', 'Feeds like AlienVault OTX, VirusTotal, Talos'],
+    uses: ['DNS filtering (OpenDNS / Cisco Umbrella)', 'Web filtering — block known phishing sites', 'Email security — block spam/phishing domains'],
+    tools: ['VirusTotal (multi-AV file/URL analysis)', 'Cisco Talos Intelligence', 'Palo Alto Threat Prevention', 'AlienVault OTX'],
+    tip: '⚠ Exam tip: Threat intelligence reputation tools are often integrated into UTM, NGFW, and SIEM to enrich raw alerts.',
+    connects: ['siem', 'utm', 'nips']
+  },
+  edr: {
+    layer: 'Endpoint', color: 'var(--c-endpoint)',
+    title: 'EDR', full: 'Endpoint Detection and Response',
+    icon: '💻',
+    desc: 'Monitors and responds to threats on individual endpoints — laptops, servers, mobile devices. Goes far beyond traditional antivirus to detect fileless malware and living-off-the-land attacks.',
+    analogy: '⚔️ Elite knights patrolling the village: monitor, fight bandits, and report everything back to the king (SIEM).',
+    how: ['Collects telemetry: processes, network connections, file changes', 'Uses AI/ML to detect anomalous behaviour (e.g. mass file encryption = ransomware)', 'Enables remote response: isolate device, kill process, collect forensic data'],
+    uses: ['Detecting ransomware (sudden file encryption)', 'Stopping zero-day exploits (suspicious PowerShell)', 'Post-breach investigation: which machine was the entry point?'],
+    tools: ['CrowdStrike Falcon', 'SentinelOne', 'Microsoft Defender for Endpoint'],
+    tip: '⚠ Exam tip: EDR fills the gap traditional AV leaves. Focus on fileless malware, living-off-the-land (LotL), and behavioural detection.',
+    connects: ['siem', 'soar', 'nac', 'dlp']
+  },
+  dlp: {
+    layer: 'Data Protection', color: 'var(--c-data)',
+    title: 'DLP', full: 'Data Loss Prevention',
+    icon: '🏦',
+    desc: 'Monitors, detects, and prevents unauthorised transfer of sensitive data (SSNs, credit card numbers, IP) across email, USB, web uploads, and cloud storage.',
+    analogy: '💰 Treasury guards checking no one smuggles gold out of the castle — on the roads (network), on horseback patrols (endpoint), and at the docks (cloud).',
+    how: ['Tags sensitive data (e.g. "Confidential: SSN")', 'Monitors channels: email, USB, cloud, web', 'Blocks or encrypts if sensitive data is about to leave'],
+    uses: ['Preventing accidental email leaks of customer data', 'GDPR / HIPAA / PCI-DSS compliance', 'Blocking unauthorised USB exfiltration'],
+    tools: ['Symantec DLP', 'Microsoft Purview (formerly Compliance)', 'Forcepoint DLP'],
+    tip: '⚠ Exam tip: Know DLP types — network, endpoint, email, cloud. DLP is a compliance cornerstone for GDPR/HIPAA/PCI-DSS.',
+    connects: ['edr', 'siem']
+  },
+  siem: {
+    layer: 'Centralised Ops', color: 'var(--c-central)',
+    title: 'SIEM', full: 'Security Information and Event Management',
+    icon: '📊',
+    desc: 'Aggregates, normalises, and correlates logs from across the entire environment — firewalls, IDS/IPS, endpoints, servers — to detect multi-stage attacks and support incident response.',
+    analogy: '📜 Royal scribes (record every event) and advisors (find patterns): "Why is the armory gate being tried every night at 3am?"',
+    how: ['Collects logs from all sources (firewalls, endpoints, servers, cloud)', 'Normalises data into a common format', 'Correlates events: "10 failed logins + privilege escalation = brute-force"', 'Fires alerts and dashboards for analyst review'],
+    uses: ['Incident response: which systems were compromised?', 'Compliance reporting: did we log all PII access?', 'Threat hunting: are there signs of a dormant APT?'],
+    tools: ['Splunk', 'IBM QRadar', 'Microsoft Sentinel', 'Elastic SIEM'],
+    tip: '⚠ Exam tip: SIEM = log aggregation + correlation + alerting. It tells you WHAT happened. SOAR tells you WHAT TO DO about it.',
+    connects: ['soar', 'edr', 'idsips', 'tap', 'mirror', 'dlp', 'rep']
+  },
+  soar: {
+    layer: 'Centralised Ops', color: 'var(--c-central)',
+    title: 'SOAR', full: 'Security Orchestration, Automation and Response',
+    icon: '🤖',
+    desc: 'Automates security operations by integrating with SIEM, EDR, and other tools to execute predefined playbooks — eliminating manual triage for routine incidents.',
+    analogy: '⚙️ Royal advisors who write the rules + automaton guards who enforce them: "If the river rises, close the floodgates automatically."',
+    how: ['Integrates with SIEM, EDR, NAC, firewall, ticketing systems', 'Executes playbooks on trigger (e.g. phishing → quarantine email + block URL)', 'No human needed for routine response actions'],
+    uses: ['Phishing: auto-quarantine malicious emails', 'Vulnerability response: auto-patch known CVEs', 'Incident response: auto-isolate compromised device'],
+    tools: ['Palo Alto Cortex XSOAR', 'TheHive', 'Splunk Phantom', 'Microsoft Sentinel (SOAR capabilities)'],
+    tip: '⚠ Exam tip: SIEM = "something happened." SOAR = "do something about it." SOAR automates what analysts would otherwise do manually.',
+    connects: ['siem', 'edr', 'nac', 'utm']
+  }
+};
+
+// Connection pairs to draw
+const CONNECTIONS = [
+  ['edr','siem'], ['siem','soar'], ['soar','nac'], ['soar','utm'],
+  ['idsips','siem'], ['nips','utm'], ['tap','siem'], ['mirror','siem'],
+  ['edr','nac'], ['dlp','siem'], ['rep','siem'], ['sase','sdwan'],
+  ['nips','siem'], ['idsips','nac']
+];
+
+let activeNode = null;
+
+function getCenter(id) {
+  const el = document.getElementById('node-' + id);
+  const parent = document.getElementById('mapInner');
+  if (!el) return null;
+  const er = el.getBoundingClientRect();
+  const pr = parent.getBoundingClientRect();
+  return {
+    x: er.left - pr.left + er.width / 2,
+    y: er.top - pr.top + er.height / 2
+  };
+}
+
+function drawConnections(activeId) {
+  const svg = document.getElementById('connSvg');
+  svg.innerHTML = '';
+  // set SVG size to map inner
+  const mi = document.getElementById('mapInner');
+  svg.setAttribute('viewBox', `0 0 ${mi.offsetWidth} ${mi.offsetHeight}`);
+
+  CONNECTIONS.forEach(([a, b]) => {
+    const ca = getCenter(a), cb = getCenter(b);
+    if (!ca || !cb) return;
+    const isActive = activeId && (a === activeId || b === activeId);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', ca.x); line.setAttribute('y1', ca.y);
+    line.setAttribute('x2', cb.x); line.setAttribute('y2', cb.y);
+    line.setAttribute('class', 'conn-line' + (isActive ? ' active' : ''));
+    if (isActive) {
+      const color = DATA[activeId]?.color || 'var(--accent)';
+      line.style.stroke = color;
+      line.style.opacity = '0.6';
+      line.style.strokeWidth = '1.5';
+    }
+    svg.appendChild(line);
+  });
+}
+
+function openPanel(id) {
+  const d = DATA[id];
+  if (!d) return;
+
+  // deactivate previous
+  if (activeNode) document.getElementById('node-' + activeNode)?.classList.remove('active');
+  activeNode = id;
+  document.getElementById('node-' + id)?.classList.add('active');
+
+  // panel header
+  const panel = document.getElementById('panel');
+  panel.classList.remove('hidden');
+  document.getElementById('panelLayer').textContent = d.layer;
+  document.getElementById('panelTitle').textContent = d.title;
+  document.getElementById('panelFull').textContent = d.full;
+  panel.querySelector('.panel-header').style.setProperty('--panel-color', d.color);
+  document.getElementById('panel').style.setProperty('--panel-color', d.color);
+
+  // panel body
+  let html = `
+    <div class="panel-section">
+      <div class="panel-section-title">What it is</div>
+      <p class="panel-desc">${d.desc}</p>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Analogy</div>
+      <div class="analogy-box">${d.analogy}</div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">How it works</div>
+      <div class="how-steps">
+        ${d.how.map((h,i) => `<div class="how-step"><span class="step-num">0${i+1}</span><span>${h}</span></div>`).join('')}
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Use cases</div>
+      <ul class="use-list">
+        ${d.uses.map(u => `<li>${u}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Example tools</div>
+      <div class="tag-list">
+        ${d.tools.map(t => `<span class="tag">${t}</span>`).join('')}
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="analogy-box" style="font-style:normal;font-size:12px;color:var(--accent2)">${d.tip}</div>
+    </div>
+  `;
+  document.getElementById('panelBody').innerHTML = html;
+
+  drawConnections(id);
+}
+
+function closePanel() {
+  document.getElementById('panel').classList.add('hidden');
+  if (activeNode) document.getElementById('node-' + activeNode)?.classList.remove('active');
+  activeNode = null;
+  drawConnections(null);
+}
+
+// Initial draw
+window.addEventListener('load', () => {
+  setTimeout(() => drawConnections(null), 100);
+});
+window.addEventListener('resize', () => drawConnections(activeNode));
+</script>
+</body>
+</html>

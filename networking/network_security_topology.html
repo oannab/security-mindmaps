@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Security Topology — CompTIA Security+ SY0-701</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050c14;
+    --bg2: #081420;
+    --grid: rgba(0,200,180,0.04);
+    --cyan: #00e5cc;
+    --cyan2: #00b3a0;
+    --amber: #ffb700;
+    --red: #ff4060;
+    --green: #39ff8a;
+    --blue: #4da6ff;
+    --purple: #b56eff;
+    --text: #c8e6e2;
+    --dim: #4a7a74;
+    --panel: rgba(5,20,30,0.97);
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Exo 2', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: 0;
+    animation: gridScroll 60s linear infinite;
+  }
+
+  @keyframes gridScroll {
+    from { background-position: 0 0; }
+    to { background-position: 40px 40px; }
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.07) 2px,
+      rgba(0,0,0,0.07) 4px
+    );
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  header {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 14px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(180deg, rgba(5,12,20,0.98) 60%, transparent);
+    border-bottom: 1px solid rgba(0,229,204,0.12);
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+
+  .title-block h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #fff;
+    text-transform: uppercase;
+  }
+
+  .title-block span {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 4px;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 1px;
+    animation: blink 2s step-end infinite;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  /* Canvas / Map area */
+  #map {
+    position: fixed; inset: 0;
+    z-index: 1;
+  }
+
+  svg#lines {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  /* Nodes */
+  .node {
+    position: absolute;
+    z-index: 10;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    transition: filter 0.2s;
+  }
+
+  .node:hover .ring { transform: scale(1.15); }
+  .node:hover .node-label { opacity: 1; color: #fff; }
+
+  .ring {
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s;
+    position: relative;
+  }
+
+  .ring::before {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    inset: -4px;
+    border: 1.5px solid currentColor;
+    opacity: 0.25;
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.25; }
+    50% { transform: scale(1.18); opacity: 0.08; }
+  }
+
+  .node.active .ring {
+    transform: scale(1.2);
+    box-shadow: 0 0 40px currentColor, 0 0 80px currentColor;
+  }
+
+  .node-icon {
+    font-size: 22px;
+    line-height: 1;
+    user-select: none;
+  }
+
+  .node-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: 8px;
+    opacity: 0.7;
+    white-space: nowrap;
+    transition: color 0.2s, opacity 0.2s;
+  }
+
+  /* Central node */
+  #node-center .ring {
+    width: 90px; height: 90px;
+    background: radial-gradient(circle, rgba(0,229,204,0.15), rgba(0,229,204,0.04));
+    border: 2px solid var(--cyan);
+    box-shadow: 0 0 30px rgba(0,229,204,0.3), inset 0 0 20px rgba(0,229,204,0.08);
+    color: var(--cyan);
+  }
+
+  #node-center .node-icon { font-size: 30px; }
+  #node-center .node-label { color: var(--cyan); opacity: 1; font-size: 11px; }
+
+  /* Satellite nodes */
+  .node-satellite .ring {
+    width: 64px; height: 64px;
+  }
+
+  /* Detail Panel */
+  #panel {
+    position: fixed;
+    top: 70px; right: -420px;
+    width: 380px;
+    max-height: calc(100vh - 90px);
+    z-index: 50;
+    background: var(--panel);
+    border: 1px solid rgba(0,229,204,0.2);
+    border-right: none;
+    overflow-y: auto;
+    transition: right 0.4s cubic-bezier(0.25,1,0.5,1);
+    scrollbar-width: thin;
+    scrollbar-color: var(--cyan2) var(--bg2);
+  }
+
+  #panel.open { right: 0; }
+
+  #panel-inner { padding: 24px; }
+
+  .panel-header {
+    display: flex; align-items: center; gap: 14px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(0,229,204,0.12);
+    margin-bottom: 20px;
+  }
+
+  .panel-icon-wrap {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .panel-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #fff;
+  }
+
+  .panel-subtitle {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    margin-top: 3px;
+    opacity: 0.6;
+  }
+
+  .panel-section {
+    margin-bottom: 20px;
+  }
+
+  .panel-section-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    border: 1px solid;
+    letter-spacing: 1px;
+    opacity: 0.85;
+  }
+
+  .item-list { list-style: none; }
+
+  .item-list li {
+    font-size: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 10px;
+    line-height: 1.5;
+  }
+
+  .item-list li:last-child { border-bottom: none; }
+
+  .item-key {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .item-val { opacity: 0.65; font-size: 11px; text-align: right; }
+
+  .analogy-box {
+    background: rgba(255,183,0,0.06);
+    border-left: 3px solid var(--amber);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 11px;
+    line-height: 1.6;
+    opacity: 0.85;
+  }
+
+  .exam-box {
+    background: rgba(0,229,204,0.06);
+    border-left: 3px solid var(--cyan);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 11px;
+    line-height: 1.6;
+    opacity: 0.85;
+  }
+
+  #close-btn {
+    position: absolute; top: 12px; right: 14px;
+    background: none; border: none;
+    color: var(--dim); font-size: 18px; cursor: pointer;
+    font-family: var(--mono);
+    transition: color 0.2s;
+    z-index: 5;
+  }
+
+  #close-btn:hover { color: var(--red); }
+
+  /* Connection lines */
+  .connector {
+    stroke-dasharray: 6 4;
+    stroke-width: 1;
+    opacity: 0.35;
+    animation: dashFlow 8s linear infinite;
+  }
+
+  @keyframes dashFlow {
+    to { stroke-dashoffset: -200; }
+  }
+
+  .connector.active { opacity: 0.9; stroke-width: 2; }
+
+  /* Legend */
+  #legend {
+    position: fixed;
+    bottom: 20px; left: 24px;
+    z-index: 50;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 1px;
+  }
+
+  .leg-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Status bar */
+  #statusbar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 28px;
+    background: rgba(5,12,20,0.95);
+    border-top: 1px solid rgba(0,229,204,0.1);
+    display: flex; align-items: center; gap: 24px;
+    padding: 0 20px;
+    z-index: 100;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 1px;
+  }
+
+  .status-item { display: flex; align-items: center; gap: 6px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+
+  @keyframes glowPulse { 50% { opacity: 0.3; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SEC+ SY0-701</div>
+  <div class="title-block">
+    <h1>Network Security</h1>
+    <span>Interactive Topology Map</span>
+  </div>
+  <div class="hint">▶ CLICK NODE TO EXPLORE</div>
+</header>
+
+<div id="map"></div>
+
+<svg id="lines" xmlns="http://www.w3.org/2000/svg"></svg>
+
+<div id="panel">
+  <button id="close-btn" onclick="closePanel()">✕</button>
+  <div id="panel-inner"></div>
+</div>
+
+<div id="legend">
+  <div class="leg-row"><div class="leg-dot" style="background:var(--cyan)"></div> Core Infrastructure</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--amber)"></div> Monitoring / Visibility</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--green)"></div> Access Control</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--blue)"></div> Configuration / Mgmt</div>
+  <div class="leg-row"><div class="leg-dot" style="background:var(--purple)"></div> Wireless Security</div>
+</div>
+
+<div id="statusbar">
+  <div class="status-item"><div class="status-dot"></div> SYSTEM ACTIVE</div>
+  <div class="status-item">NODES: 9</div>
+  <div class="status-item">CONNECTIONS: 9</div>
+  <div class="status-item">DOMAIN: NETWORK SECURITY</div>
+</div>
+
+<script>
+const NODES = [
+  {
+    id: 'firewall', label: 'Firewalls', icon: '🔥',
+    color: 'var(--cyan)', category: 'Core Infrastructure',
+    angle: 0,
+    data: {
+      subtitle: 'Perimeter Defense',
+      types: [
+        { key: 'Packet Filter', val: 'Blocks/allows by IP & port. Stateless.' },
+        { key: 'Stateful', val: 'Tracks active sessions. Context-aware.' },
+        { key: 'NGFW', val: 'Deep packet inspection to app layer.' },
+        { key: 'Screened Subnet', val: '3 interfaces: Internet · DMZ · Internal.' },
+      ],
+      tools: ['iptables', 'pfSense', 'Cisco ASA', 'Palo Alto NGFW'],
+      analogy: '🏰 Castle walls — screened subnet = outer wall + inner gate. DMZ is the courtyard; internal = keep.',
+      exam: 'Know the 3 interfaces of screened subnet. NGFW inspects at application layer.',
+    }
+  },
+  {
+    id: 'wireless', label: 'Wireless', icon: '📶',
+    color: 'var(--purple)', category: 'Wireless Security',
+    angle: 40,
+    data: {
+      subtitle: 'Wi-Fi Security Standards',
+      types: [
+        { key: 'WEP', val: 'Weak — RC4. Broken. Never use.' },
+        { key: 'WPA2', val: 'AES-CCMP. Solid, widely deployed.' },
+        { key: 'WPA3', val: 'SAE replaces PSK. Resistant to brute-force.' },
+        { key: '802.1X', val: 'Enterprise mode — RADIUS-backed VIP access.' },
+      ],
+      tools: ['WPA3-Enterprise', 'RADIUS', '802.1X', 'EAP-TLS'],
+      analogy: '🚪 Castle gates — WEP = chain-link fence, WPA2 = padlock, WPA3 = biometric scanner.',
+      exam: 'WPA3 uses SAE (Simultaneous Authentication of Equals). Enterprise mode uses 802.1X.',
+    }
+  },
+  {
+    id: 'nac', label: 'NAC', icon: '🔒',
+    color: 'var(--green)', category: 'Access Control',
+    angle: 80,
+    data: {
+      subtitle: 'Network Access Control',
+      types: [
+        { key: 'Agent-Based Pre-Admission', val: 'Checks patches & AV before granting access.' },
+        { key: 'Agentless Pre-Admission', val: 'Scans network passively — no agent installed.' },
+        { key: 'Post-Admission', val: 'Monitors behaviour after entry. Can quarantine.' },
+      ],
+      tools: ['Cisco ISE', 'ForeScout', '802.1X NAC', 'Aruba ClearPass'],
+      analogy: '🪪 Bouncer at the door — agent-based checks ID before entry; post-admission does random bag checks.',
+      exam: 'Agent-based pre-admission = most secure. Stops unpatched devices from spreading malware.',
+    }
+  },
+  {
+    id: 'flows', label: 'Net Flows', icon: '🌊',
+    color: 'var(--amber)', category: 'Monitoring / Visibility',
+    angle: 120,
+    data: {
+      subtitle: 'Traffic Flow Analysis',
+      types: [
+        { key: 'NetFlow', val: 'Cisco proprietary. Who talked to whom, when, how much.' },
+        { key: 'sFlow', val: 'Juniper. Packet sampling for high-speed links.' },
+        { key: 'IPFIX', val: 'IETF standard. Standardised NetFlow v9.' },
+      ],
+      tools: ['NetFlow Analyser', 'ntopng', 'SolarWinds NTA', 'Elastic + IPFIX'],
+      analogy: '🛂 Toll booth — records every car (packet) entering/exiting. Spot that 10 GB to Russia.',
+      exam: 'Use flow data to detect exfiltration and troubleshoot slow network. IPFIX = standardised.',
+    }
+  },
+  {
+    id: 'acl', label: 'ACLs', icon: '📋',
+    color: 'var(--green)', category: 'Access Control',
+    angle: 160,
+    data: {
+      subtitle: 'Access Control Lists',
+      types: [
+        { key: 'Standard ACL', val: 'Filters by source IP only.' },
+        { key: 'Extended ACL', val: 'Filters by src/dst IP, port, protocol.' },
+        { key: 'Named ACL', val: 'Human-readable names, easier management.' },
+      ],
+      tools: ['Cisco IOS ACL', 'iptables', 'Windows Firewall Rules', 'pfSense ACL'],
+      analogy: '📜 Guards rulebook — rules processed TOP-DOWN. First match wins. Order is everything.',
+      exam: 'ACLs are top-down. A "permit ip any any" before a deny lets traffic through — watch order!',
+    }
+  },
+  {
+    id: 'capture', label: 'Packet Capture', icon: '🔍',
+    color: 'var(--amber)', category: 'Monitoring / Visibility',
+    angle: 200,
+    data: {
+      subtitle: 'Traffic Capture & Analysis',
+      types: [
+        { key: 'Wireshark', val: 'GUI — deep protocol dissection. Best for analysis.' },
+        { key: 'tcpdump', val: 'CLI — lightweight, scriptable, remote capture.' },
+        { key: 'TShark', val: 'Terminal Wireshark — pipe-friendly output.' },
+      ],
+      tools: ['Wireshark', 'tcpdump', 'TShark', 'Zeek', 'Suricata'],
+      analogy: '🔭 Castle spyglass — hear every whispered conversation in the courtyard. Detect SYN floods live.',
+      exam: 'SYN flood = surge of SYN packets with no ACK. Wireshark is your exam best friend.',
+    }
+  },
+  {
+    id: 'iptables', label: 'iptables', icon: '🛠',
+    color: 'var(--cyan)', category: 'Core Infrastructure',
+    angle: 240,
+    data: {
+      subtitle: 'Linux Host Firewall',
+      types: [
+        { key: '-A INPUT', val: 'Append rule to INPUT chain (inbound).' },
+        { key: '-p tcp', val: 'Match TCP protocol.' },
+        { key: '--dport 22', val: 'Match destination port (e.g., SSH).' },
+        { key: '-s 10.0.10.0/24', val: 'Match source subnet.' },
+        { key: '-j DROP', val: 'Action: silently discard. No reply.' },
+      ],
+      tools: ['iptables', 'nftables', 'ufw', 'firewalld'],
+      analogy: '🎯 Custom gate — "drop all SSH from 10.0.10.0/24" = shoot at the gate anyone from that range.',
+      exam: 'Know the flags: -A (append), -p (proto), --dport, -s (source), -j DROP/ACCEPT/REJECT.',
+    }
+  },
+  {
+    id: 'snmp', label: 'SNMPv3', icon: '📡',
+    color: 'var(--blue)', category: 'Configuration / Mgmt',
+    angle: 280,
+    data: {
+      subtitle: 'Network Device Management',
+      types: [
+        { key: 'SNMPv1/v2', val: 'Community strings in cleartext. Insecure.' },
+        { key: 'SNMPv3 authPriv', val: 'Authentication + encryption. Use this.' },
+        { key: 'MIB', val: 'Management Information Base — object catalogue.' },
+        { key: 'OID', val: 'Object Identifier — address of each metric.' },
+      ],
+      tools: ['SNMPv3', 'Nagios', 'PRTG', 'Zabbix', 'LibreNMS'],
+      analogy: '📻 Walkie-talkies — v1/v2 = shouting secrets in public; v3 = encrypted, authenticated channel.',
+      exam: 'Always use SNMPv3 authPriv. v1/v2 community strings = cleartext credential exposure.',
+    }
+  },
+  {
+    id: 'ntp', label: 'NTP', icon: '⏰',
+    color: 'var(--blue)', category: 'Configuration / Mgmt',
+    angle: 320,
+    data: {
+      subtitle: 'Time Synchronisation',
+      types: [
+        { key: 'Stratum 0', val: 'Atomic clock / GPS — reference source.' },
+        { key: 'Stratum 1', val: 'Directly synced to stratum 0.' },
+        { key: 'Stratum 2+', val: 'Cascaded sync. Most enterprise devices here.' },
+        { key: 'NTPv3 Auth', val: 'MD5/SHA HMAC prevents time tampering.' },
+      ],
+      tools: ['ntpd', 'chrony', 'Windows Time Service', 'pool.ntp.org'],
+      analogy: '🕰 Castle clock tower — wrong time breaks Kerberos tickets, corrupts logs, breaks forensics.',
+      exam: 'Unsecured NTP = logs unreliable, Kerberos auth fails. Use NTPv3 with symmetric key auth.',
+    }
+  },
+];
+
+const CENTER = { id: 'center', label: 'NET SEC', icon: '🌐' };
+
+let activeNode = null;
+let nodeEls = {};
+let lineEls = {};
+
+function buildMap() {
+  const map = document.getElementById('map');
+  const svg = document.getElementById('lines');
+
+  // Center node
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+
+  const center = document.createElement('div');
+  center.className = 'node';
+  center.id = 'node-center';
+  center.style.left = cx + 'px';
+  center.style.top = cy + 'px';
+  center.innerHTML = `
+    <div class="ring"><div class="node-icon">${CENTER.icon}</div></div>
+    <div class="node-label">${CENTER.label}</div>
+  `;
+  map.appendChild(center);
+
+  // Radius — responsive
+  const R = Math.min(window.innerWidth, window.innerHeight) * 0.32;
+
+  NODES.forEach(n => {
+    const rad = (n.angle - 90) * Math.PI / 180;
+    const nx = cx + R * Math.cos(rad);
+    const ny = cy + R * Math.sin(rad);
+
+    // SVG line
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+    line.setAttribute('x2', nx); line.setAttribute('y2', ny);
+    line.setAttribute('stroke', n.color);
+    line.classList.add('connector');
+    line.id = 'line-' + n.id;
+    svg.appendChild(line);
+    lineEls[n.id] = line;
+
+    // Node element
+    const el = document.createElement('div');
+    el.className = 'node node-satellite';
+    el.id = 'node-' + n.id;
+    el.style.left = nx + 'px';
+    el.style.top = ny + 'px';
+    el.style.color = n.color;
+    el.innerHTML = `
+      <div class="ring" style="background: radial-gradient(circle, ${n.color}22, ${n.color}08); border: 1.5px solid ${n.color}; box-shadow: 0 0 16px ${n.color}44; color: ${n.color};">
+        <div class="node-icon">${n.icon}</div>
+      </div>
+      <div class="node-label" style="color:${n.color}">${n.label}</div>
+    `;
+    el.addEventListener('click', () => openPanel(n));
+    map.appendChild(el);
+    nodeEls[n.id] = el;
+  });
+}
+
+function openPanel(n) {
+  if (activeNode) {
+    nodeEls[activeNode].classList.remove('active');
+    lineEls[activeNode].classList.remove('active');
+  }
+  activeNode = n.id;
+  nodeEls[n.id].classList.add('active');
+  lineEls[n.id].classList.add('active');
+
+  const d = n.data;
+  const colorKey = n.color;
+
+  let typesHtml = '';
+  if (d.types) {
+    typesHtml = `
+      <div class="panel-section">
+        <div class="panel-section-title">Types / Variants</div>
+        <ul class="item-list">
+          ${d.types.map(t => `
+            <li>
+              <span class="item-key" style="color:${colorKey}">${t.key}</span>
+              <span class="item-val">${t.val}</span>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  let toolsHtml = '';
+  if (d.tools) {
+    toolsHtml = `
+      <div class="panel-section">
+        <div class="panel-section-title">Tools & Protocols</div>
+        <div class="tag-row">
+          ${d.tools.map(t => `<span class="tag" style="color:${colorKey}; border-color:${colorKey}44; background:${colorKey}11">${t}</span>`).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  document.getElementById('panel-inner').innerHTML = `
+    <div class="panel-header">
+      <div class="panel-icon-wrap" style="background:${colorKey}18; border: 1px solid ${colorKey}44;">${n.icon}</div>
+      <div>
+        <div class="panel-title" style="color:${colorKey}">${n.label}</div>
+        <div class="panel-subtitle">${d.subtitle}</div>
+      </div>
+    </div>
+    ${typesHtml}
+    ${toolsHtml}
+    <div class="panel-section">
+      <div class="panel-section-title">Analogy</div>
+      <div class="analogy-box">${d.analogy}</div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Exam Tip</div>
+      <div class="exam-box">${d.exam}</div>
+    </div>
+  `;
+
+  document.getElementById('panel').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('panel').classList.remove('open');
+  if (activeNode) {
+    nodeEls[activeNode].classList.remove('active');
+    lineEls[activeNode].classList.remove('active');
+    activeNode = null;
+  }
+}
+
+buildMap();
+
+window.addEventListener('resize', () => {
+  document.getElementById('map').innerHTML = '';
+  document.getElementById('lines').innerHTML = '';
+  nodeEls = {}; lineEls = {};
+  buildMap();
+});
+</script>
+</body>
+</html>
